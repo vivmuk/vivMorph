@@ -393,14 +393,12 @@
                 this.currentView = 'original';
                 this.currentTab = 'upload';
                 this.savedImages = JSON.parse(localStorage.getItem('savedImages') || '[]');
-                this.apiKey = localStorage.getItem('veniceApiKey');
-                console.log('vivMorph initialized, API key:', this.apiKey ? 'Found' : 'Not found');
+                console.log('vivMorph initialized for Netlify deployment');
                 this.init();
             }
 
             init() {
                 this.setupEventListeners();
-                this.checkApiKey();
                 this.loadSavedImages();
             }
 
@@ -677,11 +675,6 @@
             }
 
             async transformImage() {
-                if (!this.apiKey) {
-                    this.showApiKeyModal();
-                    return;
-                }
-
                 const prompt = document.getElementById('promptInput').value.trim();
                 if (!prompt) {
                     this.showError('Please enter a transformation prompt');
@@ -705,7 +698,6 @@
                     }
                     
                     console.log('Starting transformation...');
-                    console.log('API Key:', this.apiKey.substring(0, 10) + '...');
                     console.log('Prompt:', prompt);
                     
                     // Determine which image to use as the base based on edit mode toggle
@@ -731,13 +723,25 @@
                     
                     console.log('Sending request to Venice AI...');
                     
-                    const response = await fetch('https://api.venice.ai/api/v1/image/edit', {
+                    // Convert image to base64 for the serverless function
+                    let imageBase64;
+                    if (imageToUse === this.originalImageFile) {
+                        // Convert original file to base64
+                        imageBase64 = await this.fileToBase64(this.originalImageFile);
+                    } else {
+                        // Use transformed image base64
+                        imageBase64 = this.transformedImage;
+                    }
+                    
+                    const response = await fetch('/.netlify/functions/transform-image', {
                         method: 'POST',
                         headers: {
-                            'Authorization': `Bearer ${this.apiKey}`
-                            // Don't set Content-Type - let browser set it with boundary for multipart
+                            'Content-Type': 'application/json'
                         },
-                        body: formData
+                        body: JSON.stringify({
+                            image_url: `data:image/png;base64,${imageBase64}`,
+                            prompt: prompt
+                        })
                     });
                     
                     console.log('Response status:', response.status);
@@ -763,8 +767,12 @@
                         throw new Error(errorMessage);
                     }
 
-                    // Get the transformed image as blob
-                    const blob = await response.blob();
+                    // Get the transformed image URL from the response
+                    const data = await response.json();
+                    
+                    // Convert the image URL to base64 for storage
+                    const imageResponse = await fetch(data.image_url);
+                    const blob = await imageResponse.blob();
                     const base64 = await this.blobToBase64(blob);
                     
                     this.transformedImage = base64;
@@ -814,6 +822,18 @@
                 }
                 const byteArray = new Uint8Array(byteNumbers);
                 return new Blob([byteArray], { type: mimeType });
+            }
+
+            fileToBase64(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        const base64 = reader.result.split(',')[1];
+                        resolve(base64);
+                    };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
             }
 
             async shareImage() {
@@ -867,11 +887,6 @@
                     return;
                 }
 
-                if (!this.apiKey) {
-                    this.showApiKeyModal();
-                    return;
-                }
-
                 const optimizeBtn = document.getElementById('optimizeBtn');
                 const originalText = optimizeBtn.textContent;
                 
@@ -879,36 +894,13 @@
                     optimizeBtn.textContent = '⏳ Optimizing...';
                     optimizeBtn.disabled = true;
 
-                    const response = await fetch('https://api.venice.ai/api/v1/chat/completions', {
+                    const response = await fetch('/.netlify/functions/optimize-prompt', {
                         method: 'POST',
                         headers: {
-                            'Authorization': `Bearer ${this.apiKey}`,
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
-                            model: "llama-3.3-70b",
-                            messages: [
-                                {
-                                    role: "user",
-                                    content: `You are a FLUX.1 image editing prompt optimizer. Your task is to improve the following image transformation prompt to get better results from an AI image editor.
-
-FLUX.1 Kontext Best Practices:
-- Be specific and clear with precise language
-- Use accurate color names and detailed descriptions
-- Directly name subjects (avoid "she", "it", "this")
-- Use phrases like "while maintaining the same [facial features/composition/lighting]" to preserve important elements
-- Choose precise verbs like "change", "replace", "transform"
-- Include explicit composition control when changing backgrounds
-- Quote exact text changes when dealing with text in images
-
-Original prompt: "${userPrompt}"
-
-Please optimize this prompt following the guidelines above. Keep the same intent but make it more specific and effective. Return only the improved prompt, nothing else.`
-                                }
-                            ],
-                            temperature: 0.7,
-                            max_tokens: 200,
-                            stream: false
+                            prompt: userPrompt
                         })
                     });
 
@@ -917,7 +909,7 @@ Please optimize this prompt following the guidelines above. Keep the same intent
                     }
 
                     const data = await response.json();
-                    const optimizedPrompt = data.choices[0].message.content.trim();
+                    const optimizedPrompt = data.optimized_prompt;
                     
                     promptInput.value = optimizedPrompt;
                     
