@@ -359,21 +359,7 @@
         </div>
     </div>
 
-    <!-- API Key Modal -->
-    <div id="apiKeyModal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center" style="display: none; z-index: 9999;">
-        <div class="bg-[#10231c] border border-[#214a3c] rounded-lg p-6 m-4 max-w-md w-full shadow-2xl">
-            <h3 class="text-white text-lg font-bold mb-4">API Key Required</h3>
-            <p class="text-[#8ecdb7] mb-4">Please enter your Venice AI API key to transform images:</p>
-            <input id="apiKeyInput" type="password" placeholder="Enter your API key" value="ntmhtbP2fr_pOQsmuLPuN_nm6lm2INWKiNcvrdEfEC" class="w-full p-3 bg-[#214a3c] text-white rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-[#019863]" />
-            <div class="flex gap-2">
-                <button id="saveApiKey" class="flex-1 bg-[#019863] text-white px-4 py-2 rounded-lg hover:bg-[#017a50]">Save</button>
-                <button id="cancelApiKey" class="flex-1 bg-[#214a3c] text-white px-4 py-2 rounded-lg hover:bg-[#2a5a4a]">Cancel</button>
-            </div>
-            <div class="mt-2 text-center">
-                <button id="usePrefilledKey" class="text-[#8ecdb7] text-sm hover:text-white">Use Pre-filled Key</button>
-            </div>
-        </div>
-    </div>
+
 
     <!-- Error Modal -->
     <div id="errorModal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center" style="display: none; z-index: 9999;">
@@ -461,18 +447,7 @@
                     });
                 }
 
-                // API Key modal
-                document.getElementById('saveApiKey').addEventListener('click', () => {
-                    this.saveApiKey();
-                });
-
-                document.getElementById('cancelApiKey').addEventListener('click', () => {
-                    this.hideApiKeyModal();
-                });
-
-                document.getElementById('usePrefilledKey').addEventListener('click', () => {
-                    this.saveApiKey();
-                });
+                
 
                 // Error modal
                 document.getElementById('closeError').addEventListener('click', () => {
@@ -533,40 +508,7 @@
                 });
             }
 
-            checkApiKey() {
-                if (!this.apiKey) {
-                    // Show modal after a short delay to ensure DOM is ready
-                    setTimeout(() => {
-                        this.showApiKeyModal();
-                    }, 100);
-                }
-            }
 
-            showApiKeyModal() {
-                console.log('Showing API key modal');
-                const modal = document.getElementById('apiKeyModal');
-                if (modal) {
-                    modal.style.display = 'flex';
-                } else {
-                    console.error('API key modal not found');
-                }
-            }
-
-            hideApiKeyModal() {
-                document.getElementById('apiKeyModal').style.display = 'none';
-            }
-
-            saveApiKey() {
-                const key = document.getElementById('apiKeyInput').value.trim();
-                if (key) {
-                    this.apiKey = key;
-                    localStorage.setItem('veniceApiKey', key);
-                    console.log('API key saved:', key.substring(0, 10) + '...');
-                    this.hideApiKeyModal();
-                } else {
-                    this.showError('Please enter a valid API key');
-                }
-            }
 
             showError(message) {
                 document.getElementById('errorMessage').textContent = message;
