@@ -126,57 +126,12 @@
                              <path d="M74.34,85.66A8,8,0,0,1,85.66,74.34L120,108.69V24a8,8,0,0,1,16,0v84.69l34.34-34.35a8,8,0,0,1,11.32,11.32l-48,48a8,8,0,0,1-11.32,0ZM240,136v64a16,16,0,0,1-16,16H32a16,16,0,0,1-16-16V136a16,16,0,0,1,16-16H84.4a4,4,0,0,1,2.83,1.17L111,145a24,24,0,0,0,34,0l23.8-23.8A4,4,0,0,1,171.6,120H224A16,16,0,0,1,240,136Zm-40,32a12,12,0,1,0-12,12A12,12,0,0,0,200,168Z"></path>
                          </svg>
                      </button>
-                     <button id="savedTab" class="flex items-center justify-center w-12 h-12 rounded-full transition-all duration-300 text-gray-400 hover:text-white hover:bg-gradient-to-r hover:from-cyan-500/20 hover:to-purple-500/20 ml-2">
-                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
-                             <path d="M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40Zm0,16V158.75l-26.07-26.06a16,16,0,0,0-22.63,0l-20,20-44-44a16,16,0,0,0-22.62,0L40,149.37V56ZM40,172l52-52,80,80H40Zm176,28H194.63l-36-36,20-20L216,181.38V200ZM144,100a12,12,0,1,1,12,12A12,12,0,0,1,144,100Z"></path>
-                         </svg>
-                     </button>
+
                  </div>
              </div>
          </div>
          
-         <!-- Saved Images Content -->
-         <div id="saved-content" class="flex-1 hidden">
-            <div class="p-4 lg:p-8">
-                <div class="max-w-6xl mx-auto">
-                    <div class="text-center mb-8">
-                        <h2 class="text-white text-xl lg:text-2xl font-bold mb-2">Your Saved Images</h2>
-                        <p class="text-gray-300 text-sm lg:text-base">All your transformed images are saved locally on your device</p>
-                    </div>
-                    
-                    <div id="savedImagesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <!-- Saved images will be populated here -->
-                    </div>
-                    
-                    <div id="noSavedImages" class="text-center py-12">
-                        <div class="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-cyan-400/20 to-purple-500/20 border border-cyan-400/30 rounded-full flex items-center justify-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="text-cyan-400" viewBox="0 0 256 256">
-                                <path d="M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40Zm0,16V158.75l-26.07-26.06a16,16,0,0,0-22.63,0l-20,20-44-44a16,16,0,0,0-22.62,0L40,149.37V56ZM40,172l52-52,80,80H40Zm176,28H194.63l-36-36,20-20L216,181.38V200ZM144,100a12,12,0,1,1,12,12A12,12,0,0,1,144,100Z"></path>
-                            </svg>
-                        </div>
-                        <h3 class="text-white text-lg font-semibold mb-2">No Saved Images Yet</h3>
-                        <p class="text-gray-400 text-sm">Transform some images to see them here!</p>
-                    </div>
-                    
-                    <div class="text-center mt-8 space-y-4">
-                        <div class="bg-[#1a1a1a] border border-[#333] rounded-lg p-4 max-w-md mx-auto">
-                            <h3 class="text-white text-sm font-semibold mb-2">📊 Storage Management</h3>
-                            <div id="storageInfo" class="text-gray-400 text-xs mb-3">
-                                <!-- Storage info will be populated here -->
-                            </div>
-                            <div class="flex gap-2">
-                                <button id="clearSavedImages" class="flex-1 px-3 py-2 bg-red-500/20 text-red-400 border border-red-500/30 rounded text-xs hover:bg-red-500/30 transition-colors">
-                                    🗑️ Clear All
-                                </button>
-                                <button id="compressImages" class="flex-1 px-3 py-2 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded text-xs hover:bg-blue-500/30 transition-colors">
-                                    🗜️ Compress
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+
     </div>
 
     <!-- Edit Screen -->
@@ -206,32 +161,7 @@
 
             <!-- Image Display Area -->
             <div class="flex-1 flex flex-col lg:w-2/3">
-                <!-- Desktop Header -->
-                <div class="hidden lg:flex items-center bg-black p-6 justify-between border-b border-[#333]">
-                    <div class="flex items-center gap-4">
-                        <div id="backBtn-desktop" class="text-white flex items-center cursor-pointer hover:bg-[#333] rounded-lg p-2 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256" class="mr-2">
-                                <path d="M224,128a8,8,0,0,1-8,8H59.31l58.35,58.34a8,8,0,0,1-11.32,11.32l-72-72a8,8,0,0,1,0-11.32l72-72a8,8,0,0,1,11.32,11.32L59.31,120H216A8,8,0,0,1,224,128Z"></path>
-                            </svg>
-                            <span class="text-sm font-medium">Back</span>
-                        </div>
-                        <h2 class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500 text-xl font-bold">vivMorph</h2>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <button id="downloadBtn-desktop" class="flex cursor-pointer items-center justify-center rounded-lg h-10 px-4 bg-[#333] text-white hover:bg-[#444] border border-[#333] hover:border-cyan-400/50 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256" class="mr-2">
-                                <path d="M74.34,85.66A8,8,0,0,1,85.66,74.34L120,108.69V24a8,8,0,0,1,16,0v84.69l34.34-34.35a8,8,0,0,1,11.32,11.32l-48,48a8,8,0,0,1-11.32,0ZM240,136v64a16,16,0,0,1-16,16H32a16,16,0,0,1-16-16V136a16,16,0,0,1,16-16H84.4a4,4,0,0,1,2.83,1.17L111,145a24,24,0,0,0,34,0l23.8-23.8A4,4,0,0,1,171.6,120H224A16,16,0,0,1,240,136Zm-40,32a12,12,0,1,0-12,12A12,12,0,0,0,200,168Z"></path>
-                            </svg>
-                            <span class="text-sm">Download</span>
-                        </button>
-                        <button id="shareBtn-desktop" class="flex cursor-pointer items-center justify-center rounded-lg h-10 px-4 bg-[#333] text-white hover:bg-[#444] border border-[#333] hover:border-purple-400/50 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256" class="mr-2">
-                                <path d="M229.66,109.66l-48,48a8,8,0,0,1-11.32-11.32L204.69,112H165a88,88,0,0,0-85.23,66,8,8,0,0,1-15.5-4A103.94,103.94,0,0,1,165,96h39.71L170.34,61.66a8,8,0,0,1,11.32-11.32l48,48A8,8,0,0,1,229.66,109.66ZM192,208H40V88a8,8,0,0,0-16,0V208a16,16,0,0,0,16,16H192a8,8,0,0,0,0-16Z"></path>
-                            </svg>
-                            <span class="text-sm">Share</span>
-                        </button>
-                    </div>
-                </div>
+
 
                 <!-- Image Container -->
                 <div class="flex-1 flex items-center justify-center p-4 lg:p-8">
@@ -269,26 +199,19 @@
             <div class="lg:w-1/3 bg-black lg:border-l border-[#333] flex flex-col">
                 <!-- Presets -->
                 <div class="p-4 lg:p-6 border-b border-[#333]">
-                    <h3 class="text-white text-lg font-semibold mb-4">Quick Styles</h3>
-                    <div class="grid grid-cols-2 lg:grid-cols-1 gap-3">
-                        <button class="preset-btn flex h-12 items-center justify-start gap-3 rounded-lg bg-[#1a1a1a] border border-[#333] px-4 cursor-pointer hover:bg-[#2a2a2a] hover:border-green-400/50 transition-colors" data-prompt="Transform into Studio Ghibli art style while maintaining the same composition and subjects">
-                            <div class="w-8 h-8 rounded bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center">
-                                <span class="text-white text-xs font-bold">🎨</span>
-                            </div>
-                            <span class="text-white text-sm font-medium">Studio Ghibli</span>
+                    <h3 class="text-white text-sm font-semibold mb-3">Quick Styles</h3>
+                    <div class="grid grid-cols-2 lg:grid-cols-1 gap-2">
+                        <button class="preset-btn flex h-8 items-center justify-start gap-2 rounded-lg bg-[#1a1a1a] border border-[#333] px-3 cursor-pointer hover:bg-[#2a2a2a] hover:border-green-400/50 transition-colors" data-prompt="Transform into Studio Ghibli art style while maintaining the same composition and subjects">
+                            <span class="text-green-400 text-sm">🎨</span>
+                            <span class="text-white text-xs font-medium">Ghibli</span>
                         </button>
-                        <button class="preset-btn flex h-12 items-center justify-start gap-3 rounded-lg bg-[#1a1a1a] border border-[#333] px-4 cursor-pointer hover:bg-[#2a2a2a] hover:border-red-400/50 transition-colors" data-prompt="Add Donald Trump seamlessly participating in the same activity as the original subjects, maintaining natural lighting and composition while ensuring he blends perfectly with the scene">
-                            <div class="w-8 h-8 rounded bg-gradient-to-br from-red-400 to-blue-500 flex items-center justify-center">
-                                <span class="text-white text-xs font-bold">🇺🇸</span>
-                            </div>
-                            <span class="text-white text-sm font-medium">Add Trump</span>
+                        <button class="preset-btn flex h-8 items-center justify-start gap-2 rounded-lg bg-[#1a1a1a] border border-[#333] px-3 cursor-pointer hover:bg-[#2a2a2a] hover:border-red-400/50 transition-colors" data-prompt="Add Donald Trump seamlessly participating in the same activity as the original subjects, maintaining natural lighting and composition while ensuring he blends perfectly with the scene">
+                            <span class="text-red-400 text-sm">🇺🇸</span>
+                            <span class="text-white text-xs font-medium">Trump</span>
                         </button>
-
-                        <button class="preset-btn flex h-12 items-center justify-start gap-3 rounded-lg bg-[#1a1a1a] border border-[#333] px-4 cursor-pointer hover:bg-[#2a2a2a] hover:border-cyan-400/50 transition-colors" data-prompt="Change the background to a beautiful vacation destination like tropical beach, mountain resort, or exotic island while keeping all subjects and maintaining accurate camera angle, position, and composition">
-                            <div class="w-8 h-8 rounded bg-gradient-to-br from-cyan-400 to-purple-500 flex items-center justify-center">
-                                <span class="text-white text-xs font-bold">🏖️</span>
-                            </div>
-                            <span class="text-white text-sm font-medium">Vacation BG</span>
+                        <button class="preset-btn flex h-8 items-center justify-start gap-2 rounded-lg bg-[#1a1a1a] border border-[#333] px-3 cursor-pointer hover:bg-[#2a2a2a] hover:border-cyan-400/50 transition-colors" data-prompt="Change the background to a beautiful vacation destination like tropical beach, mountain resort, or exotic island while keeping all subjects and maintaining accurate camera angle, position, and composition">
+                            <span class="text-cyan-400 text-sm">🏖️</span>
+                            <span class="text-white text-xs font-medium">Vacation</span>
                         </button>
                     </div>
                 </div>
@@ -357,6 +280,29 @@
                 </div>
             </div>
         </div>
+        
+        <!-- Bottom Action Navigation -->
+        <div class="bg-black border-t border-[#333] px-4 py-3">
+            <div class="flex justify-center">
+                <div class="flex bg-[#1a1a1a] rounded-full p-1 gap-2">
+                    <button id="backBtn-bottom" class="flex items-center justify-center w-12 h-12 rounded-full transition-all duration-300 text-gray-400 hover:text-white hover:bg-gradient-to-r hover:from-cyan-500/20 hover:to-purple-500/20">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
+                            <path d="M224,128a8,8,0,0,1-8,8H59.31l58.35,58.34a8,8,0,0,1-11.32,11.32l-72-72a8,8,0,0,1,0-11.32l72-72a8,8,0,0,1,11.32,11.32L59.31,120H216A8,8,0,0,1,224,128Z"></path>
+                        </svg>
+                    </button>
+                    <button id="downloadBtn-bottom" class="flex items-center justify-center w-12 h-12 rounded-full transition-all duration-300 text-gray-400 hover:text-white hover:bg-gradient-to-r hover:from-cyan-500/20 hover:to-purple-500/20">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
+                            <path d="M74.34,85.66A8,8,0,0,1,85.66,74.34L120,108.69V24a8,8,0,0,1,16,0v84.69l34.34-34.35a8,8,0,0,1,11.32,11.32l-48,48a8,8,0,0,1-11.32,0ZM240,136v64a16,16,0,0,1-16,16H32a16,16,0,0,1-16-16V136a16,16,0,0,1,16-16H84.4a4,4,0,0,1,2.83,1.17L111,145a24,24,0,0,0,34,0l23.8-23.8A4,4,0,0,1,171.6,120H224A16,16,0,0,1,240,136Zm-40,32a12,12,0,1,0-12,12A12,12,0,0,0,200,168Z"></path>
+                        </svg>
+                    </button>
+                    <button id="shareBtn-bottom" class="flex items-center justify-center w-12 h-12 rounded-full transition-all duration-300 text-gray-400 hover:text-white hover:bg-gradient-to-r hover:from-cyan-500/20 hover:to-purple-500/20">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
+                            <path d="M229.66,109.66l-48,48a8,8,0,0,1-11.32-11.32L204.69,112H165a88,88,0,0,0-85.23,66,8,8,0,0,1-15.5-4A103.94,103.94,0,0,1,165,96h39.71L170.34,61.66a8,8,0,0,1,11.32-11.32l48,48A8,8,0,0,1,229.66,109.66ZM192,208H40V88a8,8,0,0,0-16,0V208a16,16,0,0,0,16,16H192a8,8,0,0,0,0-16Z"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
 
@@ -377,15 +323,12 @@
                 this.originalImageFile = null; // Store the original file
                 this.transformedImage = null;
                 this.currentView = 'original';
-                this.currentTab = 'upload';
-                this.savedImages = JSON.parse(localStorage.getItem('savedImages') || '[]');
                 console.log('vivMorph initialized for Netlify deployment');
                 this.init();
             }
 
             init() {
                 this.setupEventListeners();
-                this.loadSavedImages();
             }
 
             setupEventListeners() {
@@ -435,14 +378,14 @@
                     this.optimizePrompt();
                 });
 
-                // Download buttons - mobile and desktop
+                // Download buttons - mobile and bottom
                 document.getElementById('downloadBtn').addEventListener('click', () => {
                     this.downloadImage();
                 });
 
-                const downloadBtnDesktop = document.getElementById('downloadBtn-desktop');
-                if (downloadBtnDesktop) {
-                    downloadBtnDesktop.addEventListener('click', () => {
+                const downloadBtnBottom = document.getElementById('downloadBtn-bottom');
+                if (downloadBtnBottom) {
+                    downloadBtnBottom.addEventListener('click', () => {
                         this.downloadImage();
                     });
                 }
@@ -454,14 +397,14 @@
                     this.hideErrorModal();
                 });
 
-                // Share buttons - mobile and desktop
+                // Share buttons - mobile and bottom
                 document.getElementById('shareBtn').addEventListener('click', () => {
                     this.shareImage();
                 });
 
-                const shareBtnDesktop = document.getElementById('shareBtn-desktop');
-                if (shareBtnDesktop) {
-                    shareBtnDesktop.addEventListener('click', () => {
+                const shareBtnBottom = document.getElementById('shareBtn-bottom');
+                if (shareBtnBottom) {
+                    shareBtnBottom.addEventListener('click', () => {
                         this.shareImage();
                     });
                 }
@@ -478,15 +421,6 @@
                     }
                 });
 
-                // Tab switching
-                document.getElementById('uploadTab').addEventListener('click', () => {
-                    this.switchTab('upload');
-                });
-
-                document.getElementById('savedTab').addEventListener('click', () => {
-                    this.switchTab('saved');
-                });
-
                 // Upload new image button
                 document.getElementById('uploadNewBtn').addEventListener('click', () => {
                     document.getElementById('fileInput').click();
@@ -495,16 +429,6 @@
                 // Edit mode toggle
                 document.getElementById('editModeToggle').addEventListener('change', (e) => {
                     this.updateEditMode(e.target.checked);
-                });
-
-                // Clear saved images
-                document.getElementById('clearSavedImages').addEventListener('click', () => {
-                    this.clearSavedImages();
-                });
-
-                // Compress images
-                document.getElementById('compressImages').addEventListener('click', () => {
-                    this.compressImages();
                 });
             }
 
@@ -550,8 +474,7 @@
                     this.showEditScreen();
                     this.displayImage();
                     
-                    // Try to save original image to local storage (non-blocking)
-                    this.saveImageToLocal(base64, 'Original upload', false);
+
                 } catch (error) {
                     this.showError('Error processing image: ' + error.message);
                 }
@@ -727,9 +650,7 @@
                     this.currentView = 'transformed';
                     this.displayImage();
                     
-                    // Try to save transformed image to local storage (non-blocking)
-                    const currentPrompt = document.getElementById('promptInput').value.trim();
-                    this.saveImageToLocal(base64, currentPrompt, true);
+
                     
                 } catch (error) {
                     console.error('Transformation error:', error);
@@ -872,30 +793,7 @@
                 }
             }
 
-            // Tab management
-            switchTab(tab) {
-                this.currentTab = tab;
-                const uploadTab = document.getElementById('uploadTab');
-                const savedTab = document.getElementById('savedTab');
-                const uploadContent = document.getElementById('upload-content');
-                const savedContent = document.getElementById('saved-content');
 
-                if (tab === 'upload') {
-                    uploadTab.classList.add('bg-gradient-to-r', 'from-cyan-500', 'to-purple-500', 'text-white');
-                    uploadTab.classList.remove('text-gray-400');
-                    savedTab.classList.remove('bg-gradient-to-r', 'from-cyan-500', 'to-purple-500', 'text-white');
-                    savedTab.classList.add('text-gray-400');
-                    uploadContent.classList.remove('hidden');
-                    savedContent.classList.add('hidden');
-                } else {
-                    savedTab.classList.add('bg-gradient-to-r', 'from-cyan-500', 'to-purple-500', 'text-white');
-                    savedTab.classList.remove('text-gray-400');
-                    uploadTab.classList.remove('bg-gradient-to-r', 'from-cyan-500', 'to-purple-500', 'text-white');
-                    uploadTab.classList.add('text-gray-400');
-                    savedContent.classList.remove('hidden');
-                    uploadContent.classList.add('hidden');
-                }
-            }
 
             // Edit mode management
             updateEditMode(enabled) {
@@ -923,216 +821,11 @@
                 }
             }
 
-            // Save image to local storage (with error handling)
-            saveImageToLocal(imageData, prompt, isTransformed = false) {
-                try {
-                    // Check if we're close to storage limit (rough estimate)
-                    const currentStorage = JSON.stringify(this.savedImages).length;
-                    const estimatedNewSize = imageData.length + 200; // rough overhead
-                    
-                    if (currentStorage + estimatedNewSize > 4000000) { // 4MB safety limit
-                        console.warn('Storage nearly full, skipping save to prevent quota exceeded');
-                        this.showStorageWarning();
-                        return;
-                    }
 
-                    const imageInfo = {
-                        id: Date.now(),
-                        data: imageData,
-                        prompt: prompt || 'No prompt',
-                        timestamp: new Date().toISOString(),
-                        isTransformed: isTransformed
-                    };
-                    
-                    this.savedImages.push(imageInfo);
-                    localStorage.setItem('savedImages', JSON.stringify(this.savedImages));
-                    this.loadSavedImages();
-                    console.log('Image saved successfully');
-                } catch (error) {
-                    console.warn('Failed to save image to localStorage:', error.message);
-                    if (error.name === 'QuotaExceededError') {
-                        this.showStorageWarning();
-                    }
-                }
-            }
 
-            // Show storage warning
-            showStorageWarning() {
-                // Create a temporary notification
-                const notification = document.createElement('div');
-                notification.className = 'fixed top-4 right-4 bg-yellow-500/20 border border-yellow-500/50 text-yellow-300 px-4 py-3 rounded-lg z-50 max-w-sm';
-                notification.innerHTML = `
-                    <div class="flex items-start gap-3">
-                        <span class="text-xl">⚠️</span>
-                        <div>
-                            <h4 class="font-semibold mb-1">Storage Almost Full</h4>
-                            <p class="text-xs">Clear some saved images to continue saving new ones.</p>
-                        </div>
-                    </div>
-                `;
-                document.body.appendChild(notification);
-                
-                // Auto remove after 5 seconds
-                setTimeout(() => {
-                    if (notification.parentNode) {
-                        notification.parentNode.removeChild(notification);
-                    }
-                }, 5000);
-            }
 
-            // Load and display saved images
-            loadSavedImages() {
-                const grid = document.getElementById('savedImagesGrid');
-                const noSavedImages = document.getElementById('noSavedImages');
-                const storageInfo = document.getElementById('storageInfo');
-                
-                // Update storage info
-                if (storageInfo) {
-                    const storageSize = JSON.stringify(this.savedImages).length;
-                    const storageMB = (storageSize / 1024 / 1024).toFixed(2);
-                    const storagePercent = Math.min((storageSize / 5000000) * 100, 100).toFixed(1); // Assume 5MB limit
-                    storageInfo.innerHTML = `${this.savedImages.length} images • ${storageMB}MB used • ${storagePercent}% of storage`;
-                }
-                
-                if (this.savedImages.length === 0) {
-                    noSavedImages.classList.remove('hidden');
-                    grid.innerHTML = '';
-                    return;
-                }
-                
-                noSavedImages.classList.add('hidden');
-                
-                grid.innerHTML = this.savedImages.map(img => `
-                    <div class="bg-[#1a1a1a] border border-[#333] rounded-lg overflow-hidden hover:border-cyan-400/50 transition-colors">
-                        <div class="aspect-square bg-center bg-cover bg-no-repeat" style="background-image: url(data:image/png;base64,${img.data})"></div>
-                        <div class="p-4">
-                            <p class="text-white text-sm font-medium mb-1">${img.isTransformed ? '🎨 Transformed' : '📷 Original'}</p>
-                            <p class="text-gray-400 text-xs mb-2 line-clamp-2">${img.prompt}</p>
-                            <p class="text-gray-500 text-xs">${new Date(img.timestamp).toLocaleDateString()}</p>
-                            <div class="flex gap-2 mt-3">
-                                <button onclick="vivMorph.downloadSavedImage('${img.id}')" class="flex-1 bg-cyan-500/20 text-cyan-400 px-3 py-1 rounded text-xs hover:bg-cyan-500/30 transition-colors">
-                                    Download
-                                </button>
-                                <button onclick="vivMorph.deleteSavedImage('${img.id}')" class="bg-red-500/20 text-red-400 px-3 py-1 rounded text-xs hover:bg-red-500/30 transition-colors">
-                                    Delete
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `).join('');
-            }
 
-            // Download saved image
-            downloadSavedImage(id) {
-                const image = this.savedImages.find(img => img.id == id);
-                if (image) {
-                    const link = document.createElement('a');
-                    link.href = `data:image/png;base64,${image.data}`;
-                    link.download = `saved-image-${id}.png`;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                }
-            }
 
-            // Delete saved image
-            deleteSavedImage(id) {
-                this.savedImages = this.savedImages.filter(img => img.id != id);
-                localStorage.setItem('savedImages', JSON.stringify(this.savedImages));
-                this.loadSavedImages();
-            }
-
-            // Clear all saved images
-            clearSavedImages() {
-                if (confirm('Are you sure you want to delete all saved images? This cannot be undone.')) {
-                    this.savedImages = [];
-                    localStorage.setItem('savedImages', JSON.stringify(this.savedImages));
-                    this.loadSavedImages();
-                }
-            }
-
-            // Compress saved images to save storage space
-            async compressImages() {
-                if (this.savedImages.length === 0) {
-                    alert('No images to compress');
-                    return;
-                }
-
-                if (!confirm(`Compress ${this.savedImages.length} images to save storage space? This will reduce image quality but free up space.`)) {
-                    return;
-                }
-
-                const compressBtn = document.getElementById('compressImages');
-                const originalText = compressBtn.textContent;
-                compressBtn.textContent = '🗜️ Compressing...';
-                compressBtn.disabled = true;
-
-                try {
-                    const compressedImages = [];
-                    
-                    for (let i = 0; i < this.savedImages.length; i++) {
-                        const img = this.savedImages[i];
-                        try {
-                            // Create a canvas to compress the image
-                            const canvas = document.createElement('canvas');
-                            const ctx = canvas.getContext('2d');
-                            const image = new Image();
-                            
-                            await new Promise((resolve, reject) => {
-                                image.onload = resolve;
-                                image.onerror = reject;
-                                image.src = `data:image/png;base64,${img.data}`;
-                            });
-
-                            // Reduce size by 50% and quality
-                            canvas.width = Math.max(image.width * 0.5, 400);
-                            canvas.height = Math.max(image.height * 0.5, 400);
-                            
-                            ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
-                            
-                            // Convert to JPEG with lower quality
-                            const compressedData = canvas.toDataURL('image/jpeg', 0.6).split(',')[1];
-                            
-                            compressedImages.push({
-                                ...img,
-                                data: compressedData
-                            });
-                        } catch (error) {
-                            console.warn('Failed to compress image:', error);
-                            // Keep original if compression fails
-                            compressedImages.push(img);
-                        }
-                    }
-                    
-                    this.savedImages = compressedImages;
-                    localStorage.setItem('savedImages', JSON.stringify(this.savedImages));
-                    this.loadSavedImages();
-                    
-                    // Show success notification
-                    const notification = document.createElement('div');
-                    notification.className = 'fixed top-4 right-4 bg-green-500/20 border border-green-500/50 text-green-300 px-4 py-3 rounded-lg z-50';
-                    notification.innerHTML = `
-                        <div class="flex items-center gap-2">
-                            <span>✅</span>
-                            <span>Images compressed successfully!</span>
-                        </div>
-                    `;
-                    document.body.appendChild(notification);
-                    
-                    setTimeout(() => {
-                        if (notification.parentNode) {
-                            notification.parentNode.removeChild(notification);
-                        }
-                    }, 3000);
-                    
-                } catch (error) {
-                    console.error('Error compressing images:', error);
-                    alert('Failed to compress images. Please try again.');
-                } finally {
-                    compressBtn.textContent = originalText;
-                    compressBtn.disabled = false;
-                }
-            }
         }
 
         // Initialize the app when DOM is loaded
