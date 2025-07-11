@@ -40,32 +40,33 @@ export const handler = async (event, context) => {
           'Access-Control-Allow-Origin': '*',
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ error: 'Image URL and prompt are required' }),
+        body: JSON.stringify({ error: 'Image and prompt are required' }),
       };
     }
 
-    // Make the request to Venice AI
-    const response = await fetch('https://api.venice.ai/api/v1/images/generations', {
+    // Extract base64 from data URL if needed
+    let imageBase64 = image_url;
+    if (image_url.startsWith('data:image/')) {
+      imageBase64 = image_url.split(',')[1];
+    }
+
+    // Make the request to Venice AI using the correct endpoint
+    const response = await fetch('https://api.venice.ai/api/v1/image/edit', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'flux-1-schnell',
         prompt: prompt,
-        image_url: image_url,
-        width: 1024,
-        height: 1024,
-        guidance_scale: 3.5,
-        num_inference_steps: 4,
-        seed: Math.floor(Math.random() * 1000000)
+        image: imageBase64
       })
     });
 
     const data = await response.json();
     
     if (!response.ok) {
+      console.error('Venice AI API Error:', data);
       return {
         statusCode: response.status,
         headers: {
@@ -84,7 +85,7 @@ export const handler = async (event, context) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        image_url: data.data[0].url
+        image_url: `data:image/png;base64,${data.image}`
       }),
     };
 
@@ -96,7 +97,7 @@ export const handler = async (event, context) => {
         'Access-Control-Allow-Origin': '*',
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ error: 'Internal server error' }),
+      body: JSON.stringify({ error: 'Internal server error: ' + error.message }),
     };
   }
 }; 
