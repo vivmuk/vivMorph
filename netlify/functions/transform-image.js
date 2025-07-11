@@ -27,19 +27,8 @@ export const handler = async (event, context) => {
   }
 
   try {
-    // Get the API key from environment variables
-    const API_KEY = process.env.VENICE_API_KEY;
-    
-    if (!API_KEY) {
-      return {
-        statusCode: 500,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ error: 'API key not configured' }),
-      };
-    }
+    // Hardcoded API key
+    const API_KEY = 'ntmhtbP2fr_pOQsmuLPuN_nm6lm2INWKiNcvrdEfEC';
 
     // Parse the request body
     const { image_url, prompt } = JSON.parse(event.body);
