@@ -409,10 +409,7 @@
                     });
                 }
 
-                // Settings button
-                document.getElementById('settingsBtn').addEventListener('click', () => {
-                    this.showApiKeyModal();
-                });
+
 
                 // Keyboard shortcuts
                 document.addEventListener('keydown', (e) => {
@@ -598,14 +595,15 @@
                         imageBase64 = this.transformedImage;
                     }
                     
-                    const response = await fetch('/.netlify/functions/transform-image', {
+                    const response = await fetch('https://api.venice.ai/api/v1/image/edit', {
                         method: 'POST',
                         headers: {
+                            'Authorization': 'Bearer ntmhtbP2fr_pOQsmuLPuN_nm6lm2INWKiNcvrdEfEC',
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
-                            image_url: `data:image/png;base64,${imageBase64}`,
-                            prompt: prompt
+                            prompt: prompt,
+                            image: imageBase64
                         })
                     });
                     
@@ -632,15 +630,11 @@
                         throw new Error(errorMessage);
                     }
 
-                    // Get the transformed image URL from the response
+                    // Get the transformed image from the response
                     const data = await response.json();
                     
-                    // Convert the image URL to base64 for storage
-                    const imageResponse = await fetch(data.image_url);
-                    const blob = await imageResponse.blob();
-                    const base64 = await this.blobToBase64(blob);
-                    
-                    this.transformedImage = base64;
+                    // Venice AI returns the image as base64 directly
+                    this.transformedImage = data.image;
                     
                     // Switch to transformed view FIRST (before saving)
                     const transformedRadio = document.querySelector('input[value="transformed"]');
@@ -757,13 +751,26 @@
                     optimizeBtn.textContent = '⏳ Optimizing...';
                     optimizeBtn.disabled = true;
 
-                    const response = await fetch('/.netlify/functions/optimize-prompt', {
+                    const response = await fetch('https://api.venice.ai/api/v1/chat/completions', {
                         method: 'POST',
                         headers: {
+                            'Authorization': 'Bearer ntmhtbP2fr_pOQsmuLPuN_nm6lm2INWKiNcvrdEfEC',
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
-                            prompt: userPrompt
+                            model: 'llama-3.3-70b',
+                            messages: [
+                                {
+                                    role: 'system',
+                                    content: 'You are an expert AI prompt optimizer for image generation. Your task is to take a user\'s simple prompt and transform it into a detailed, specific prompt that will produce better image generation results. Focus on adding descriptive details about lighting, composition, style, and visual elements while keeping the core intent. Return only the optimized prompt, nothing else.'
+                                },
+                                {
+                                    role: 'user',
+                                    content: `Optimize this image generation prompt: "${userPrompt}"`
+                                }
+                            ],
+                            max_tokens: 150,
+                            temperature: 0.7
                         })
                     });
 
@@ -772,7 +779,7 @@
                     }
 
                     const data = await response.json();
-                    const optimizedPrompt = data.optimized_prompt;
+                    const optimizedPrompt = data.choices[0].message.content.trim();
                     
                     promptInput.value = optimizedPrompt;
                     
