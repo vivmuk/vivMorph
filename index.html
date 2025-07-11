@@ -631,10 +631,16 @@
                     }
 
                     // Get the transformed image from the response
-                    const data = await response.json();
-                    
-                    // Venice AI returns the image as base64 directly
-                    this.transformedImage = data.image;
+                    if (response.headers.get('content-type')?.includes('application/json')) {
+                        // If it's JSON, parse it
+                        const data = await response.json();
+                        this.transformedImage = data.image;
+                    } else {
+                        // If it's binary image data, convert to base64
+                        const blob = await response.blob();
+                        const base64 = await this.blobToBase64(blob);
+                        this.transformedImage = base64;
+                    }
                     
                     // Switch to transformed view FIRST (before saving)
                     const transformedRadio = document.querySelector('input[value="transformed"]');
