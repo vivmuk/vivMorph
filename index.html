@@ -11,7 +11,6 @@
       href="https://fonts.googleapis.com/css2?display=swap&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900&amp;family=Plus+Jakarta+Sans%3Awght%40400%3B500%3B700%3B800"
     />
     <title>vivMorph - AI Image Transformation</title>
-    <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64," />
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <style>
         .line-clamp-2 {
@@ -141,31 +140,31 @@
                 <!-- Image Container -->
                 <div class="flex-1 flex items-center justify-center p-4 lg:p-8">
                     <div class="w-full max-w-4xl rounded-lg flex relative bg-[#1a1a1a] border border-[#333] overflow-hidden min-h-[300px] lg:min-h-[400px]">
-                        <div id="imageContainer" class="w-full flex items-center justify-center text-white relative">
-                            <div id="loadingSpinner" class="hidden absolute inset-0 flex items-center justify-center bg-black bg-opacity-75 z-10">
-                                <div class="text-center max-w-md w-full mx-4">
-                                    <div class="mb-6">
-                                        <div class="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-cyan-400/20 to-purple-500/20 border border-cyan-400/30 rounded-full flex items-center justify-center">
-                                            <svg class="animate-spin h-8 w-8 text-cyan-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                            </svg>
-                                        </div>
-                                        <p class="text-white text-lg font-semibold mb-2">Transforming your image...</p>
-                                        <p class="text-gray-400 text-sm mb-4">Please wait while AI works its magic ✨</p>
+                        <div id="imageContainer" class="w-full flex items-center justify-center text-white">
+                        </div>
+                        <div id="loadingSpinner" class="hidden absolute inset-0 flex items-center justify-center bg-black bg-opacity-75 z-10">
+                            <div class="text-center max-w-md w-full mx-4">
+                                <div class="mb-6">
+                                    <div class="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-cyan-400/20 to-purple-500/20 border border-cyan-400/30 rounded-full flex items-center justify-center">
+                                        <svg class="animate-spin h-8 w-8 text-cyan-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
                                     </div>
-                                    
-                                    <!-- Progress Bar -->
-                                    <div class="w-full bg-gray-700 rounded-full h-3 mb-4 relative">
-                                        <div id="progressBar" class="bg-gradient-to-r from-cyan-500 to-purple-500 h-3 rounded-full transition-all duration-300 ease-out" style="width: 0%"></div>
-                                        <div class="absolute inset-0 flex items-center justify-center">
-                                            <span id="progressPercent" class="text-white text-xs font-bold">0%</span>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Progress Text -->
-                                    <p id="progressText" class="text-cyan-400 text-sm font-medium">Initializing...</p>
+                                    <p class="text-white text-lg font-semibold mb-2">Transforming your image...</p>
+                                    <p class="text-gray-400 text-sm mb-4">Please wait while AI works its magic ✨</p>
                                 </div>
+                                
+                                <!-- Progress Bar -->
+                                <div class="w-full bg-gray-700 rounded-full h-3 mb-4 relative">
+                                    <div id="progressBar" class="bg-gradient-to-r from-cyan-500 to-purple-500 h-3 rounded-full transition-all duration-300 ease-out" style="width: 0%"></div>
+                                    <div class="absolute inset-0 flex items-center justify-center">
+                                        <span id="progressPercent" class="text-white text-xs font-bold">0%</span>
+                                    </div>
+                                </div>
+                                
+                                <!-- Progress Text -->
+                                <p id="progressText" class="text-cyan-400 text-sm font-medium">Initializing...</p>
                             </div>
                         </div>
                     </div>
@@ -264,6 +263,12 @@
                                         <path d="M74.34,85.66A8,8,0,0,1,85.66,74.34L120,108.69V24a8,8,0,0,1,16,0v84.69l34.34-34.35a8,8,0,0,1,11.32,11.32l-48,48a8,8,0,0,1-11.32,0ZM240,136v64a16,16,0,0,1-16,16H32a16,16,0,0,1-16-16V136a16,16,0,0,1,16-16H84.4a4,4,0,0,1,2.83,1.17L111,145a24,24,0,0,0,34,0l23.8-23.8A4,4,0,0,1,171.6,120H224A16,16,0,0,1,240,136Zm-40,32a12,12,0,1,0-12,12A12,12,0,0,0,200,168Z"></path>
                                     </svg>
                                     <span class="text-white text-sm font-medium">Upload New Image</span>
+                                </button>
+                                <button id="downloadBtn" class="w-full flex items-center justify-center gap-2 p-3 bg-[#1a1a1a] border border-[#333] rounded-lg hover:bg-[#2a2a2a] hover:border-cyan-400/50 transition-colors hidden">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="text-cyan-400" viewBox="0 0 256 256">
+                                        <path d="M192,128a8,8,0,0,1-8,8H136v40a8,8,0,0,1-16,0V136H72a8,8,0,0,1-5.66-13.66l48-48a8,8,0,0,1,11.32,0l48,48A8,8,0,0,1,192,128ZM32,208a8,8,0,0,0,8,8H216a8,8,0,0,0,0-16H40A8,8,0,0,0,32,208Z"></path>
+                                    </svg>
+                                    <span class="text-white text-sm font-medium">Download Image</span>
                                 </button>
                             </div>
                         </div>
@@ -368,6 +373,10 @@
                 });
 
                 
+                // Download button
+                document.getElementById('downloadBtn').addEventListener('click', () => {
+                    this.downloadImage();
+                });
 
                 // Error modal
                 document.getElementById('closeError').addEventListener('click', () => {
@@ -477,11 +486,15 @@
                 // Clear the file input
                 document.getElementById('fileInput').value = '';
                 
-                // Hide bottom navigation
-                this.updateBottomNavVisibility();
-            }
-
-            showEditScreen() {
+                // Hide download button
+                const downloadBtn = document.getElementById('downloadBtn');
+                if (downloadBtn) downloadBtn.classList.add('hidden');
+                 
+                 // Hide bottom navigation
+                 this.updateBottomNavVisibility();
+             }
+ 
+             showEditScreen() {
                 document.getElementById('upload-screen').style.display = 'none';
                 document.getElementById('edit-screen').style.display = 'flex';
             }
@@ -521,12 +534,6 @@
                     img.classList.add('opacity-0', 'transition-opacity', 'duration-300');
                     
                     container.appendChild(img);
-                    
-                    // Add loading spinner overlay back if it exists
-                    const loadingSpinner = document.getElementById('loadingSpinner');
-                    if (loadingSpinner) {
-                        container.appendChild(loadingSpinner);
-                    }
                 } else if (this.currentView === 'transformed') {
                     container.innerHTML = '<p class="text-gray-400">No transformed image yet</p>';
                 } else {
@@ -668,12 +675,16 @@
                     this.currentView = 'transformed';
                     this.displayImage();
                     
-                    // Show bottom navigation now that we have a transformed image
-                    this.updateBottomNavVisibility();
-                    
+                    // Unhide the main download button
+                    const downloadBtn = document.getElementById('downloadBtn');
+                    if (downloadBtn) downloadBtn.classList.remove('hidden');
 
-                    
-                } catch (error) {
+                     // Show bottom navigation now that we have a transformed image
+                     this.updateBottomNavVisibility();
+                     
+ 
+                     
+                 } catch (error) {
                     console.error('Transformation error:', error);
                     this.showError('Failed to transform image: ' + error.message);
                 } finally {
