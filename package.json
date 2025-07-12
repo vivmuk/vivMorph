@@ -1,0 +1,24 @@
+{
+  "name": "inpainting",
+  "version": "1.0.0",
+  "description": "A modern, responsive web application that allows users to upload images and transform them using Venice AI's powerful image editing API.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vivmuk/vivMorph.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/vivmuk/vivMorph/issues"
+  },
+  "homepage": "https://github.com/vivmuk/vivMorph#readme",
+  "dependencies": {
+    "@capacitor/cli": "^7.4.2",
+    "@capacitor/core": "^7.4.2"
+  }
+}
