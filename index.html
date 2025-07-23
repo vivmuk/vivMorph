@@ -36,9 +36,24 @@
 
             </div>
             
+            <!-- Upload Mode Toggle -->
+            <div class="flex justify-center px-4 mb-6">
+                <div class="flex h-12 items-center justify-center rounded-lg bg-[#1a1a1a] border border-[#333] p-1">
+                    <label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-lg px-4 has-[:checked]:bg-gradient-to-r has-[:checked]:from-cyan-500/20 has-[:checked]:to-purple-500/20 has-[:checked]:border has-[:checked]:border-cyan-400/50 has-[:checked]:text-white text-gray-400 text-sm font-medium leading-normal transition-colors">
+                        <span class="truncate">Single Image</span>
+                        <input type="radio" name="uploadMode" class="invisible w-0" value="single" checked />
+                    </label>
+                    <label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-lg px-4 has-[:checked]:bg-gradient-to-r has-[:checked]:from-cyan-500/20 has-[:checked]:to-purple-500/20 has-[:checked]:border has-[:checked]:border-cyan-400/50 has-[:checked]:text-white text-gray-400 text-sm font-medium leading-normal transition-colors">
+                        <span class="truncate">Merge Images</span>
+                        <input type="radio" name="uploadMode" class="invisible w-0" value="merge" />
+                    </label>
+                </div>
+            </div>
+            
             <!-- Upload Area -->
             <div class="flex-1 flex items-center justify-center p-4 lg:p-8">
-                <div class="text-center max-w-lg mx-auto w-full">
+                <!-- Single Image Upload -->
+                <div id="single-upload" class="text-center max-w-lg mx-auto w-full">
                     <div class="mb-8">
                         <div class="w-24 h-24 lg:w-32 lg:h-32 mx-auto mb-6 bg-gradient-to-br from-cyan-400/20 to-purple-500/20 border border-cyan-400/30 rounded-full flex items-center justify-center">
                             <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" class="text-cyan-400" viewBox="0 0 256 256">
@@ -61,6 +76,81 @@
                     
                     <p class="text-gray-400 text-xs lg:text-sm mt-4">Supports JPEG, PNG, WebP up to 10MB</p>
                 </div>
+
+                <!-- Dual Image Upload -->
+                <div id="merge-upload" class="text-center max-w-2xl mx-auto w-full" style="display: none;">
+                    <div class="mb-8">
+                        <div class="w-24 h-24 lg:w-32 lg:h-32 mx-auto mb-6 bg-gradient-to-br from-purple-400/20 to-pink-500/20 border border-purple-400/30 rounded-full flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" class="text-purple-400" viewBox="0 0 256 256">
+                                <path d="M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40ZM40,56H216V200H40Z"></path>
+                                <path d="M88,104a16,16,0,1,1-16,16A16,16,0,0,1,88,104Zm80,0a16,16,0,1,1-16,16A16,16,0,0,1,168,104Z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-white text-xl lg:text-2xl font-bold mb-2">Merge Two Images with AI</h3>
+                        <p class="text-gray-300 text-sm lg:text-base mb-6">Upload two images: AI will choose the best scene and add the other subject</p>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <!-- Left Image Upload -->
+                        <div class="bg-[#1a1a1a] border border-[#333] rounded-lg p-6">
+                            <div class="mb-4">
+                                <div class="w-16 h-16 mx-auto mb-3 bg-gradient-to-br from-cyan-400/20 to-purple-500/20 border border-cyan-400/30 rounded-full flex items-center justify-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="text-cyan-400" viewBox="0 0 256 256">
+                                        <path d="M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40Zm0,16V158.75l-26.07-26.06a16,16,0,0,0-22.63,0l-20,20-44-44a16,16,0,0,0-22.62,0L40,149.37V56ZM40,172l52-52,80,80H40Zm176,28H194.63l-36-36,20-20L216,181.38V200ZM144,100a12,12,0,1,1,12,12A12,12,0,0,1,144,100Z"></path>
+                                    </svg>
+                                </div>
+                                <h4 class="text-white text-lg font-semibold mb-2">Left Image</h4>
+                                <p class="text-gray-400 text-sm">First image to merge</p>
+                            </div>
+                            <input type="file" id="leftFileInput" accept="image/*" style="display: none;" />
+                            <button id="leftUploadBtn" class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-cyan-500 to-purple-500 text-white rounded-lg font-semibold hover:from-cyan-400 hover:to-purple-400 transition-all duration-300">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256">
+                                    <path d="M74.34,85.66A8,8,0,0,1,85.66,74.34L120,108.69V24a8,8,0,0,1,16,0v84.69l34.34-34.35a8,8,0,0,1,11.32,11.32l-48,48a8,8,0,0,1-11.32,0ZM240,136v64a16,16,0,0,1-16,16H32a16,16,0,0,1-16-16V136a16,16,0,0,1,16-16H84.4a4,4,0,0,1,2.83,1.17L111,145a24,24,0,0,0,34,0l23.8-23.8A4,4,0,0,1,171.6,120H224A16,16,0,0,1,240,136Zm-40,32a12,12,0,1,0-12,12A12,12,0,0,0,200,168Z"></path>
+                                </svg>
+                                <span>Upload Left Image</span>
+                            </button>
+                            <div id="leftImagePreview" class="mt-3 hidden">
+                                <img id="leftPreviewImg" class="w-full h-24 object-cover rounded-lg border border-[#333]" alt="Left image preview" />
+                            </div>
+                        </div>
+
+                        <!-- Right Image Upload -->
+                        <div class="bg-[#1a1a1a] border border-[#333] rounded-lg p-6">
+                            <div class="mb-4">
+                                <div class="w-16 h-16 mx-auto mb-3 bg-gradient-to-br from-purple-400/20 to-pink-500/20 border border-purple-400/30 rounded-full flex items-center justify-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="text-purple-400" viewBox="0 0 256 256">
+                                        <path d="M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40Zm0,16V158.75l-26.07-26.06a16,16,0,0,0-22.63,0l-20,20-44-44a16,16,0,0,0-22.62,0L40,149.37V56ZM40,172l52-52,80,80H40Zm176,28H194.63l-36-36,20-20L216,181.38V200ZM144,100a12,12,0,1,1,12,12A12,12,0,0,1,144,100Z"></path>
+                                    </svg>
+                                </div>
+                                <h4 class="text-white text-lg font-semibold mb-2">Right Image</h4>
+                                <p class="text-gray-400 text-sm">Second image to merge</p>
+                            </div>
+                            <input type="file" id="rightFileInput" accept="image/*" style="display: none;" />
+                            <button id="rightUploadBtn" class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-semibold hover:from-purple-400 hover:to-pink-400 transition-all duration-300">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256">
+                                    <path d="M74.34,85.66A8,8,0,0,1,85.66,74.34L120,108.69V24a8,8,0,0,1,16,0v84.69l34.34-34.35a8,8,0,0,1,11.32,11.32l-48,48a8,8,0,0,1-11.32,0ZM240,136v64a16,16,0,0,1-16,16H32a16,16,0,0,1-16-16V136a16,16,0,0,1,16-16H84.4a4,4,0,0,1,2.83,1.17L111,145a24,24,0,0,0,34,0l23.8-23.8A4,4,0,0,1,171.6,120H224A16,16,0,0,1,240,136Zm-40,32a12,12,0,1,0-12,12A12,12,0,0,0,200,168Z"></path>
+                                </svg>
+                                <span>Upload Right Image</span>
+                            </button>
+                            <div id="rightImagePreview" class="mt-3 hidden">
+                                <img id="rightPreviewImg" class="w-full h-24 object-cover rounded-lg border border-[#333]" alt="Right image preview" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Generate Collage Button -->
+                    <div class="flex justify-center">
+                        <button id="generateCollageBtn" class="flex min-w-[200px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-14 px-8 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-base font-bold leading-normal tracking-[0.015em] hover:from-purple-400 hover:to-pink-400 transition-all duration-300 shadow-lg hover:shadow-purple-500/25 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="mr-2" viewBox="0 0 256 256">
+                                <path d="M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40ZM40,56H216V200H40Z"></path>
+                                <path d="M88,104a16,16,0,1,1-16,16A16,16,0,0,1,88,104Zm80,0a16,16,0,1,1-16,16A16,16,0,0,1,168,104Z"></path>
+                            </svg>
+                            <span class="truncate">Generate Collage</span>
+                        </button>
+                    </div>
+                    
+                    <p class="text-gray-400 text-xs lg:text-sm mt-4">AI will choose the best scene and add the other subject</p>
+                </div>
             </div>
         </div>
         <!-- Tips Section -->
@@ -69,6 +159,20 @@
                 <h3 class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500 text-lg font-bold mb-4 text-center">
                     🚀 Pro Tips for Better AI Transformations
                 </h3>
+                <div id="merge-tips" class="mb-6 p-4 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-lg hidden">
+                    <h4 class="text-purple-400 font-semibold mb-2 text-center">🔄 Image Merge Mode Tips</h4>
+                    <p class="text-gray-300 text-sm text-center mb-3">AI analyzes both images to choose the best scene and adds the other subject naturally into it.</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                        <div class="bg-[#1a1a1a] border border-[#333] rounded p-3">
+                            <span class="text-purple-400 font-semibold">📸</span>
+                            <span class="text-gray-300">Choose images with similar lighting and perspective for best results</span>
+                        </div>
+                        <div class="bg-[#1a1a1a] border border-[#333] rounded p-3">
+                            <span class="text-pink-400 font-semibold">🎯</span>
+                            <span class="text-gray-300">AI chooses the best scene and adds the other subject naturally</span>
+                        </div>
+                    </div>
+                </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                     <div class="bg-[#1a1a1a] border border-[#333] rounded-lg p-4 hover:border-cyan-400/50 transition-colors">
                         <div class="flex items-start gap-3">
@@ -254,6 +358,10 @@
                             <span class="text-amber-400 text-sm">🧔</span>
                             <span class="text-white text-xs font-medium">Beards</span>
                         </button>
+                        <button class="preset-btn flex h-8 items-center justify-start gap-2 rounded-lg bg-[#1a1a1a] border border-[#333] px-3 cursor-pointer hover:bg-[#2a2a2a] hover:border-indigo-400/50 transition-colors" data-prompt="Create a unified scene by determining which image has the better scene/environment and using that as the base. Add the subject from the other image into that base scene, keeping the added subject exactly the same - same person, same face, same facial features, same hair, same clothing, same everything. Do not change any facial features or create a new person. Keep any existing subjects in the base scene exactly as they are. The added subject must be properly scaled to match the size and proportions of the base scene. The goal is to add the new subject to the existing scene without changing anyone, maintaining proper scale and perspective.">
+                            <span class="text-indigo-400 text-sm">🔄</span>
+                            <span class="text-white text-xs font-medium">Merge</span>
+                        </button>
                     </div>
                 </div>
 
@@ -370,6 +478,11 @@
                 this.originalImageFile = null; // Store the original file
                 this.transformedImage = null;
                 this.currentView = 'original';
+                this.uploadMode = 'single'; // 'single' or 'merge'
+                this.leftImage = null;
+                this.rightImage = null;
+                this.leftImageFile = null;
+                this.rightImageFile = null;
                 console.log('vivMorph initialized for Netlify deployment');
                 this.init();
             }
@@ -379,13 +492,42 @@
             }
 
             setupEventListeners() {
-                // File upload
+                // Upload mode toggle
+                document.querySelectorAll('input[name="uploadMode"]').forEach(radio => {
+                    radio.addEventListener('change', (e) => {
+                        this.switchUploadMode(e.target.value);
+                    });
+                });
+
+                // Single image upload
                 document.getElementById('uploadBtn').addEventListener('click', () => {
                     document.getElementById('fileInput').click();
                 });
 
                 document.getElementById('fileInput').addEventListener('change', (e) => {
                     this.handleFileUpload(e);
+                });
+
+                // Dual image upload
+                document.getElementById('leftUploadBtn').addEventListener('click', () => {
+                    document.getElementById('leftFileInput').click();
+                });
+
+                document.getElementById('leftFileInput').addEventListener('change', (e) => {
+                    this.handleLeftImageUpload(e);
+                });
+
+                document.getElementById('rightUploadBtn').addEventListener('click', () => {
+                    document.getElementById('rightFileInput').click();
+                });
+
+                document.getElementById('rightFileInput').addEventListener('change', (e) => {
+                    this.handleRightImageUpload(e);
+                });
+
+                // Generate collage button
+                document.getElementById('generateCollageBtn').addEventListener('click', () => {
+                    this.generateCollage();
                 });
 
                 // Navigation - bottom and header back buttons
@@ -478,21 +620,286 @@
                 document.getElementById('errorModal').style.display = 'none';
             }
 
-            async handleFileUpload(event) {
+            switchUploadMode(mode) {
+                this.uploadMode = mode;
+                const singleUpload = document.getElementById('single-upload');
+                const mergeUpload = document.getElementById('merge-upload');
+                const mergeTips = document.getElementById('merge-tips');
+                
+                if (mode === 'single') {
+                    singleUpload.style.display = 'block';
+                    mergeUpload.style.display = 'none';
+                    mergeTips.classList.add('hidden');
+                } else {
+                    singleUpload.style.display = 'none';
+                    mergeUpload.style.display = 'block';
+                    mergeTips.classList.remove('hidden');
+                }
+                
+                // Reset state when switching modes
+                this.resetUploadState();
+            }
+
+            resetUploadState() {
+                this.originalImage = null;
+                this.originalImageFile = null;
+                this.transformedImage = null;
+                this.leftImage = null;
+                this.rightImage = null;
+                this.leftImageFile = null;
+                this.rightImageFile = null;
+                
+                // Reset UI
+                document.getElementById('generateCollageBtn').disabled = true;
+                document.getElementById('leftImagePreview').classList.add('hidden');
+                document.getElementById('rightImagePreview').classList.add('hidden');
+            }
+
+            async handleLeftImageUpload(event) {
                 const file = event.target.files[0];
                 if (!file) return;
 
+                if (!this.validateImageFile(file)) return;
+
+                try {
+                    this.leftImageFile = file;
+                    const base64 = await this.fileToBase64(file);
+                    this.leftImage = base64;
+                    
+                    // Show preview
+                    const preview = document.getElementById('leftImagePreview');
+                    const previewImg = document.getElementById('leftPreviewImg');
+                    previewImg.src = `data:image/jpeg;base64,${base64}`;
+                    preview.classList.remove('hidden');
+                    
+                    this.checkCollageReady();
+                    
+                } catch (error) {
+                    this.showError('Error processing left image: ' + error.message);
+                }
+            }
+
+            async handleRightImageUpload(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                if (!this.validateImageFile(file)) return;
+
+                try {
+                    this.rightImageFile = file;
+                    const base64 = await this.fileToBase64(file);
+                    this.rightImage = base64;
+                    
+                    // Show preview
+                    const preview = document.getElementById('rightImagePreview');
+                    const previewImg = document.getElementById('rightPreviewImg');
+                    previewImg.src = `data:image/jpeg;base64,${base64}`;
+                    preview.classList.remove('hidden');
+                    
+                    this.checkCollageReady();
+                    
+                } catch (error) {
+                    this.showError('Error processing right image: ' + error.message);
+                }
+            }
+
+            validateImageFile(file) {
                 // Validate file type
                 if (!file.type.startsWith('image/')) {
                     this.showError('Please select a valid image file');
-                    return;
+                    return false;
                 }
 
                 // Check file size (10MB limit)
                 if (file.size > 10 * 1024 * 1024) {
                     this.showError('Image file is too large. Please select a file smaller than 10MB');
+                    return false;
+                }
+
+                return true;
+            }
+
+            checkCollageReady() {
+                const generateBtn = document.getElementById('generateCollageBtn');
+                if (this.leftImage && this.rightImage) {
+                    generateBtn.disabled = false;
+                } else {
+                    generateBtn.disabled = true;
+                }
+            }
+
+            async generateCollage() {
+                if (!this.leftImage || !this.rightImage) {
+                    this.showError('Please upload both images first');
                     return;
                 }
+
+                const generateBtn = document.getElementById('generateCollageBtn');
+                const originalText = generateBtn.innerHTML;
+                
+                try {
+                    generateBtn.disabled = true;
+                    generateBtn.innerHTML = '<span class="truncate">Generating...</span>';
+
+                    // Create a simple side-by-side collage
+                    const collage = await this.createCollage(this.leftImage, this.rightImage);
+                    
+                    // Use vision model to analyze the images and generate a merge prompt
+                    const mergePrompt = await this.generateMergePrompt(this.leftImage, this.rightImage);
+                    
+                    // Set the collage as the original image
+                    this.originalImage = collage;
+                    this.originalImageFile = await this.base64ToFile(collage, 'collage.png');
+                    this.transformedImage = null;
+                    
+                    // Switch to original view
+                    this.currentView = 'original';
+                    const originalRadio = document.querySelector('input[value="original"]');
+                    if (originalRadio) {
+                        originalRadio.checked = true;
+                    }
+                    
+                    // Show edit screen
+                    this.showEditScreen();
+                    this.displayImage();
+                    
+                    // Set the generated prompt
+                    document.getElementById('promptInput').value = mergePrompt;
+                    
+                    // Update bottom navigation visibility
+                    this.updateBottomNavVisibility();
+                    
+                } catch (error) {
+                    console.error('Error generating collage:', error);
+                    this.showError('Failed to generate collage: ' + error.message);
+                } finally {
+                    generateBtn.disabled = false;
+                    generateBtn.innerHTML = originalText;
+                }
+            }
+
+            async createCollage(leftImage, rightImage) {
+                return new Promise((resolve) => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    // Load both images
+                    const leftImg = new Image();
+                    const rightImg = new Image();
+                    
+                    let imagesLoaded = 0;
+                    const onImageLoad = () => {
+                        imagesLoaded++;
+                        if (imagesLoaded === 2) {
+                            // Calculate dimensions for side-by-side layout
+                            const maxHeight = 512;
+                            const leftAspectRatio = leftImg.width / leftImg.height;
+                            const rightAspectRatio = rightImg.width / rightImg.height;
+                            
+                            // Scale images to fit side by side
+                            const leftHeight = Math.min(maxHeight, leftImg.height);
+                            const leftWidth = leftHeight * leftAspectRatio;
+                            const rightHeight = Math.min(maxHeight, rightImg.height);
+                            const rightWidth = rightHeight * rightAspectRatio;
+                            
+                            // Set canvas size
+                            canvas.width = leftWidth + rightWidth + 20; // 20px gap
+                            canvas.height = Math.max(leftHeight, rightHeight);
+                            
+                            // Fill background
+                            ctx.fillStyle = '#1a1a1a';
+                            ctx.fillRect(0, 0, canvas.width, canvas.height);
+                            
+                            // Draw images side by side
+                            ctx.drawImage(leftImg, 0, (canvas.height - leftHeight) / 2, leftWidth, leftHeight);
+                            ctx.drawImage(rightImg, leftWidth + 20, (canvas.height - rightHeight) / 2, rightWidth, rightHeight);
+                            
+                            // Convert to base64
+                            const base64 = canvas.toDataURL('image/png').split(',')[1];
+                            resolve(base64);
+                        }
+                    };
+                    
+                    leftImg.onload = onImageLoad;
+                    rightImg.onload = onImageLoad;
+                    
+                    leftImg.src = `data:image/jpeg;base64,${leftImage}`;
+                    rightImg.src = `data:image/jpeg;base64,${rightImage}`;
+                });
+            }
+
+            /**
+             * Generates an AI-powered merge prompt that focuses on creating a unified scene
+             * where both subjects appear together naturally, rather than just a collage.
+             * The vision model analyzes both images and suggests how to position both people
+             * in the same environment, like they're on vacation or sharing an experience.
+             */
+            async generateMergePrompt(leftImage, rightImage) {
+                try {
+                    const response = await fetch('https://api.venice.ai/api/v1/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': 'Bearer ntmhtbP2fr_pOQsmuLPuN_nm6lm2INWKiNcvrdEfEC',
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            model: 'mistral-32-24b',
+                            messages: [
+                                {
+                                    role: 'system',
+                                    content: 'You are an expert at analyzing images and creating detailed prompts for seamless image merging. Your task is to examine two images and generate a concise, focused prompt (under 800 tokens) that describes how to merge them into a single, unified scene. Analyze both images to determine which has the better scene/environment, then use that as the base scene and add the subject from the other image into it. CRITICAL: The subject being added must remain EXACTLY the same - same person, same face, same facial features, same hair, same clothing, same everything. Do not change any facial features, do not create a new person, do not modify the subject in any way. Keep any existing subjects in the base scene exactly as they are. The added subject must be properly scaled to match the size and proportions of the base scene. The goal is to add the new subject to the existing scene without changing anyone, maintaining proper scale and perspective. Return ONLY the prompt text, no additional explanations or text.'
+                                },
+                                {
+                                    role: 'user',
+                                    content: [
+                                        {
+                                            type: 'text',
+                                            text: 'Analyze these two images and create a concise prompt for merging them into a single scene. Determine which image has the better scene/environment and use that as the base. Add the subject from the other image into that base scene, keeping the added subject exactly the same - same person, same face, same facial features, same hair, same clothing, same everything. Do not change any facial features or create a new person. Keep any existing subjects in the base scene exactly as they are. The added subject must be properly scaled to match the size and proportions of the base scene. The goal is to add the new subject to the existing scene without changing anyone, maintaining proper scale and perspective. Return ONLY the prompt text.'
+                                        },
+                                        {
+                                            type: 'image_url',
+                                            image_url: {
+                                                url: `data:image/jpeg;base64,${leftImage}`
+                                            }
+                                        },
+                                        {
+                                            type: 'image_url',
+                                            image_url: {
+                                                url: `data:image/jpeg;base64,${rightImage}`
+                                            }
+                                        }
+                                    ]
+                                }
+                            ],
+                            max_tokens: 800,
+                            temperature: 0.7
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    return data.choices[0].message.content.trim();
+                    
+                } catch (error) {
+                    console.error('Error generating merge prompt:', error);
+                    // Enhanced fallback prompt
+                    return 'Create a unified scene by determining which image has the better scene/environment and using that as the base. Add the subject from the other image into that base scene, keeping the added subject exactly the same - same person, same face, same facial features, same hair, same clothing, same everything. Do not change any facial features or create a new person. Keep any existing subjects in the base scene exactly as they are. The added subject must be properly scaled to match the size and proportions of the base scene. The goal is to add the new subject to the existing scene without changing anyone, maintaining proper scale and perspective.';
+                }
+            }
+
+            async base64ToFile(base64, filename) {
+                const blob = await this.base64ToBlob(base64, 'image/png');
+                return new File([blob], filename, { type: 'image/png' });
+            }
+
+            async handleFileUpload(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                if (!this.validateImageFile(file)) return;
 
                 try {
                     // Store the original file for API calls
@@ -542,8 +949,13 @@
                 document.getElementById('upload-screen').style.display = 'flex';
                 document.getElementById('edit-screen').style.display = 'none';
                 
-                // Clear the file input
+                // Clear all file inputs
                 document.getElementById('fileInput').value = '';
+                document.getElementById('leftFileInput').value = '';
+                document.getElementById('rightFileInput').value = '';
+                
+                // Reset upload state
+                this.resetUploadState();
                 
                 // Hide download button
                 const downloadBtn = document.getElementById('downloadBtn');

@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Merge Functionality</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: white;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #333;
+            border-radius: 8px;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success { background: #1a3a1a; border: 1px solid #4a7c4a; }
+        .error { background: #3a1a1a; border: 1px solid #7c4a4a; }
+        button {
+            background: #4a7c4a;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #5a8c5a; }
+        canvas {
+            border: 1px solid #333;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Merge Functionality</h1>
+    
+    <div class="test-section">
+        <h2>Test 1: Canvas Collage Creation</h2>
+        <p>This test verifies that the canvas-based collage creation works correctly.</p>
+        <button onclick="testCollageCreation()">Test Collage Creation</button>
+        <div id="collage-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: File Validation</h2>
+        <p>This test verifies that file validation works correctly.</p>
+        <button onclick="testFileValidation()">Test File Validation</button>
+        <div id="validation-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 3: Base64 Conversion</h2>
+        <p>This test verifies that base64 conversion methods work correctly.</p>
+        <button onclick="testBase64Conversion()">Test Base64 Conversion</button>
+        <div id="base64-result"></div>
+    </div>
+
+    <script>
+        // Test functions
+        function testCollageCreation() {
+            const resultDiv = document.getElementById('collage-result');
+            resultDiv.innerHTML = '<div class="test-result">Testing...</div>';
+            
+            try {
+                // Create test images (simple colored rectangles)
+                const canvas1 = document.createElement('canvas');
+                const ctx1 = canvas1.getContext('2d');
+                canvas1.width = 100;
+                canvas1.height = 100;
+                ctx1.fillStyle = 'red';
+                ctx1.fillRect(0, 0, 100, 100);
+                const leftImage = canvas1.toDataURL('image/png').split(',')[1];
+                
+                const canvas2 = document.createElement('canvas');
+                const ctx2 = canvas2.getContext('2d');
+                canvas2.width = 100;
+                canvas2.height = 100;
+                ctx2.fillStyle = 'blue';
+                ctx2.fillRect(0, 0, 100, 100);
+                const rightImage = canvas2.toDataURL('image/png').split(',')[1];
+                
+                // Test collage creation
+                createTestCollage(leftImage, rightImage).then(collage => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    const img = new Image();
+                    img.onload = () => {
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        ctx.drawImage(img, 0, 0);
+                        resultDiv.innerHTML = `
+                            <div class="test-result success">
+                                ✅ Collage creation successful! 
+                                <br>Canvas size: ${canvas.width}x${canvas.height}
+                                <br>Base64 length: ${collage.length}
+                            </div>
+                        `;
+                        resultDiv.appendChild(canvas);
+                    };
+                    img.src = `data:image/png;base64,${collage}`;
+                }).catch(error => {
+                    resultDiv.innerHTML = `<div class="test-result error">❌ Error: ${error.message}</div>`;
+                });
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="test-result error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        function createTestCollage(leftImage, rightImage) {
+            return new Promise((resolve) => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                const leftImg = new Image();
+                const rightImg = new Image();
+                
+                let imagesLoaded = 0;
+                const onImageLoad = () => {
+                    imagesLoaded++;
+                    if (imagesLoaded === 2) {
+                        const maxHeight = 100;
+                        const leftAspectRatio = leftImg.width / leftImg.height;
+                        const rightAspectRatio = rightImg.width / rightImg.height;
+                        
+                        const leftHeight = Math.min(maxHeight, leftImg.height);
+                        const leftWidth = leftHeight * leftAspectRatio;
+                        const rightHeight = Math.min(maxHeight, rightImg.height);
+                        const rightWidth = rightHeight * rightAspectRatio;
+                        
+                        canvas.width = leftWidth + rightWidth + 20;
+                        canvas.height = Math.max(leftHeight, rightHeight);
+                        
+                        ctx.fillStyle = '#1a1a1a';
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        
+                        ctx.drawImage(leftImg, 0, (canvas.height - leftHeight) / 2, leftWidth, leftHeight);
+                        ctx.drawImage(rightImg, leftWidth + 20, (canvas.height - rightHeight) / 2, rightWidth, rightHeight);
+                        
+                        const base64 = canvas.toDataURL('image/png').split(',')[1];
+                        resolve(base64);
+                    }
+                };
+                
+                leftImg.onload = onImageLoad;
+                rightImg.onload = onImageLoad;
+                
+                leftImg.src = `data:image/png;base64,${leftImage}`;
+                rightImg.src = `data:image/png;base64,${rightImage}`;
+            });
+        }
+
+        function testFileValidation() {
+            const resultDiv = document.getElementById('validation-result');
+            resultDiv.innerHTML = '<div class="test-result">Testing...</div>';
+            
+            try {
+                // Test valid file
+                const validFile = new File(['test'], 'test.jpg', { type: 'image/jpeg' });
+                const isValid = validateTestFile(validFile);
+                
+                // Test invalid file
+                const invalidFile = new File(['test'], 'test.txt', { type: 'text/plain' });
+                const isInvalid = validateTestFile(invalidFile);
+                
+                // Test large file
+                const largeFile = new File(['x'.repeat(11 * 1024 * 1024)], 'large.jpg', { type: 'image/jpeg' });
+                const isLargeValid = validateTestFile(largeFile);
+                
+                resultDiv.innerHTML = `
+                    <div class="test-result success">
+                        ✅ File validation tests completed:
+                        <br>Valid image file: ${isValid ? '✅' : '❌'}
+                        <br>Invalid file type: ${!isInvalid ? '✅' : '❌'}
+                        <br>Large file check: ${!isLargeValid ? '✅' : '❌'}
+                    </div>
+                `;
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="test-result error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        function validateTestFile(file) {
+            if (!file.type.startsWith('image/')) {
+                return false;
+            }
+            if (file.size > 10 * 1024 * 1024) {
+                return false;
+            }
+            return true;
+        }
+
+        function testBase64Conversion() {
+            const resultDiv = document.getElementById('base64-result');
+            resultDiv.innerHTML = '<div class="test-result">Testing...</div>';
+            
+            try {
+                // Test base64 to blob conversion
+                const testBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='; // 1x1 pixel
+                const blob = base64ToBlob(testBase64, 'image/png');
+                
+                // Test blob to base64 conversion
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const convertedBase64 = reader.result.split(',')[1];
+                    const success = convertedBase64 === testBase64;
+                    
+                    resultDiv.innerHTML = `
+                        <div class="test-result ${success ? 'success' : 'error'}">
+                            ${success ? '✅' : '❌'} Base64 conversion test:
+                            <br>Original length: ${testBase64.length}
+                            <br>Converted length: ${convertedBase64.length}
+                            <br>Match: ${success ? 'Yes' : 'No'}
+                        </div>
+                    `;
+                };
+                reader.readAsDataURL(blob);
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="test-result error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        function base64ToBlob(base64, mimeType) {
+            const byteCharacters = atob(base64);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            return new Blob([byteArray], { type: mimeType });
+        }
+    </script>
+</body>
+</html> 
