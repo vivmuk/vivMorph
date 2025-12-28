@@ -9,7 +9,7 @@ A modern, responsive web application that allows users to upload images and tran
 - **Preset Transformations**: Quick-access buttons for common transformations
 - **Real-time Preview**: Toggle between original and transformed images
 - **Modern UI**: Dark theme with beautiful animations and responsive design
-- **Local Storage**: Securely stores API key locally
+- **Secure API Key**: API key stored as environment variable in Netlify
 - **Download Support**: Save transformed images directly to your device
 
 ## Setup Instructions
@@ -18,9 +18,22 @@ A modern, responsive web application that allows users to upload images and tran
 
 1. Visit [Venice AI](https://venice.ai) and create an account
 2. Navigate to your API settings and generate an API key
-3. Keep this key secure - you'll need it to use the app
+3. Keep this key secure - you'll need it to configure the app
 
-### 2. Run the Application
+### 2. Deploy to Netlify
+
+#### Set Environment Variable
+
+1. Go to your Netlify dashboard
+2. Navigate to **Site settings** → **Environment variables**
+3. Add a new environment variable:
+   - **Key**: `VENICE_AI_API_KEY`
+   - **Value**: Your Venice AI API key
+4. Redeploy your site for the changes to take effect
+
+The app uses Netlify serverless functions to securely proxy API calls, keeping your API key on the server side.
+
+### 3. Run the Application Locally (Development)
 
 #### Option A: Local HTTP Server (Recommended)
 For best results, run a local HTTP server to avoid CORS issues:
@@ -39,18 +52,16 @@ php -S localhost:8000
 Then visit `http://localhost:8000` in your browser.
 
 #### Option B: Direct File Access
-Simply open the `index.html` file in your web browser. The app will:
+Simply open the `index.html` file in your web browser.
 
-1. Prompt you to enter your Venice AI API key on first use
-2. Store the key securely in your browser's local storage
-3. Be ready to transform images!
+**Note**: For local development, you'll need to set up the environment variable. For production, deploy to Netlify and configure the environment variable in the Netlify dashboard.
 
-### 3. Test the API (Optional)
+### 4. Test the API (Optional)
 
 Use the included `test-api.html` file to verify your API key works:
 
 1. Open `test-api.html` in your browser
-2. Your API key is pre-filled - just click "Test Models Endpoint"
+2. Enter your API key and click "Test Models Endpoint"
 3. If successful, try uploading an image and testing the transformation
 
 ## How to Use
@@ -118,7 +129,7 @@ Use the included `test-api.html` file to verify your API key works:
 
 ## Privacy & Security
 
-- **API Key**: Stored locally in your browser only
+- **API Key**: Stored securely as environment variable in Netlify (server-side only)
 - **Images**: Processed by Venice AI's secure servers
 - **No Data Collection**: This app doesn't collect or store any personal data
 - **Local Processing**: All file handling happens in your browser
@@ -128,7 +139,7 @@ Use the included `test-api.html` file to verify your API key works:
 ### Common Issues
 
 **"API Key Required" Error**
-- Ensure you've entered a valid Venice AI API key
+- Ensure you've set the `VENICE_AI_API_KEY` environment variable in Netlify
 - Check that your key hasn't expired
 - Verify the key format (no extra spaces)
 
@@ -203,4 +214,4 @@ This project is open source and available under the MIT License.
 
 ---
 
-**Note**: This app requires a valid Venice AI API key to function. The key is stored locally in your browser and is not transmitted to any third parties other than Venice AI for image processing. 
+**Note**: This app requires a valid Venice AI API key to function. The key is stored securely as an environment variable in Netlify and is never exposed to the client-side code. 
