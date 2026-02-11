@@ -1,0 +1,27 @@
+{
+  "name": "vivMorph - AI Image Editor",
+  "short_name": "vivMorph",
+  "description": "Transform images with AI-powered editing models",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#6366f1",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='32' fill='%236366f1'/%3E%3Cpolygon points='96 24 48 112 88 112 80 168 144 80 104 80 96 24' fill='white' stroke='white' stroke-width='4' stroke-linejoin='round'/%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='80' fill='%236366f1'/%3E%3Cpolygon points='256 64 128 298 234 298 214 448 384 214 278 214 256 64' fill='white' stroke='white' stroke-width='8' stroke-linejoin='round'/%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["photo", "utilities"],
+  "screenshots": [],
+  "prefer_related_applications": false
+}

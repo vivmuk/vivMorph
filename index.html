@@ -2,1508 +2,990 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
-    <link
-      rel="stylesheet"
-      as="style"
-      onload="this.rel='stylesheet'"
-      href="https://fonts.googleapis.com/css2?display=swap&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900&amp;family=Plus+Jakarta+Sans%3Awght%40400%3B500%3B700%3B800"
-    />
-    <title>vivMorph - AI Image Transformation</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>vivMorph - AI Image Editor</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="vivMorph">
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?display=swap&family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600" />
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script src="https://cdn.jsdelivr.net/npm/piexifjs@1.0.6/piexif.min.js"></script>
-    <style>
-        .line-clamp-2 {
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        surface: { 0: '#09090b', 1: '#111113', 2: '#18181b', 3: '#1f1f23', 4: '#27272a' },
+                        accent: { DEFAULT: '#6366f1', light: '#818cf8', dim: '#4f46e5' },
+                        neon: { cyan: '#22d3ee', purple: '#a78bfa', pink: '#f472b6', green: '#34d399' }
+                    },
+                    animation: {
+                        'float': 'float 6s ease-in-out infinite',
+                        'slide-up': 'slideUp 0.4s ease-out',
+                        'fade-in': 'fadeIn 0.3s ease-out',
+                    },
+                    keyframes: {
+                        float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-8px)' } },
+                        slideUp: { '0%': { transform: 'translateY(20px)', opacity: '0' }, '100%': { transform: 'translateY(0)', opacity: '1' } },
+                        fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+                    }
+                }
+            }
         }
+    </script>
+    <style>
+        * { -webkit-tap-highlight-color: transparent; }
+        body { background: #09090b; overflow: hidden; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 4px; }
+        .glass-heavy { background: rgba(17,17,19,0.85); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); }
+        .drop-zone { transition: all 0.3s ease; }
+        .drop-zone.drag-over { border-color: #6366f1 !important; background: rgba(99,102,241,0.08) !important; }
+        textarea:focus { box-shadow: 0 0 0 2px rgba(99,102,241,0.25); }
+        .grid-bg {
+            background-image: linear-gradient(rgba(99,102,241,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(99,102,241,0.03) 1px, transparent 1px);
+            background-size: 32px 32px;
+        }
+        .noise::after {
+            content:''; position:fixed; inset:0; opacity:0.015; pointer-events:none; z-index:9999;
+            background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+        }
+        .pulse-dot { width:6px; height:6px; border-radius:50%; background:#34d399; animation: pulseDot 2s ease-in-out infinite; }
+        @keyframes pulseDot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.5)} }
+        .preset-pill { transition: all 0.2s ease; }
+        .preset-pill:hover { transform: translateY(-1px); }
+        .preset-pill:active { transform: translateY(0); }
+
+        /* Compare slider */
+        .compare-wrap { position:relative; overflow:hidden; cursor:col-resize; touch-action:none; }
+        .compare-wrap img { display:block; width:100%; height:100%; object-fit:contain; pointer-events:none; user-select:none; }
+        .compare-clip { position:absolute; inset:0; overflow:hidden; }
+        .compare-handle { position:absolute; top:0; bottom:0; width:3px; background:#6366f1; z-index:10; transform:translateX(-50%); }
+        .compare-handle::after { content:''; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:28px; height:28px; border-radius:50%; background:#6366f1; border:2px solid white; box-shadow:0 0 12px rgba(99,102,241,0.6); }
+
+        /* Mask canvas */
+        .mask-canvas { position:absolute; inset:0; z-index:5; cursor:crosshair; }
+        .mask-canvas.eraser { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Ccircle cx='12' cy='12' r='10' fill='none' stroke='white' stroke-width='2'/%3E%3Cline x1='6' y1='12' x2='18' y2='12' stroke='white' stroke-width='2'/%3E%3C/svg%3E") 12 12, crosshair; }
+
+        /* History thumbnails */
+        .history-thumb { transition: all 0.2s ease; }
+        .history-thumb:hover { transform: scale(1.05); }
+        .history-thumb.active { ring: 2px solid #6366f1; }
     </style>
 </head>
-<body style='font-family: "Plus Jakarta Sans", "Noto Sans", sans-serif;'>
-    
-    <!-- Main Upload Screen -->
-    <div id="upload-screen" class="relative flex size-full min-h-screen flex-col bg-black justify-between group/design-root overflow-x-hidden">
+<body class="font-sans text-white h-screen w-screen overflow-hidden noise grid-bg select-none">
+    <div id="app" class="h-screen w-screen flex flex-col">
 
-        
-        <!-- Upload Content -->
-        <div id="upload-content" class="flex-1">
-            <!-- Header -->
-            <div class="flex items-center bg-black p-4 pb-2 justify-center lg:px-8">
-                <h2 class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 text-lg lg:text-2xl font-bold leading-tight tracking-[-0.015em] text-center">vivMorph</h2>
-
-            </div>
-            
-            <!-- Upload Mode Toggle -->
-            <div class="flex justify-center px-4 mb-6">
-                <div class="flex h-12 items-center justify-center rounded-lg bg-[#1a1a1a] border border-[#333] p-1">
-                    <label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-lg px-4 has-[:checked]:bg-gradient-to-r has-[:checked]:from-cyan-500/20 has-[:checked]:to-purple-500/20 has-[:checked]:border has-[:checked]:border-cyan-400/50 has-[:checked]:text-white text-gray-400 text-sm font-medium leading-normal transition-colors">
-                        <span class="truncate">Single Image</span>
-                        <input type="radio" name="uploadMode" class="invisible w-0" value="single" checked />
-                    </label>
-                    <label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-lg px-4 has-[:checked]:bg-gradient-to-r has-[:checked]:from-cyan-500/20 has-[:checked]:to-purple-500/20 has-[:checked]:border has-[:checked]:border-cyan-400/50 has-[:checked]:text-white text-gray-400 text-sm font-medium leading-normal transition-colors">
-                        <span class="truncate">Merge Images</span>
-                        <input type="radio" name="uploadMode" class="invisible w-0" value="merge" />
-                    </label>
+        <!-- TOP BAR -->
+        <header class="glass-heavy border-b border-white/5 px-3 py-2 flex items-center justify-between z-50 shrink-0">
+            <div class="flex items-center gap-2.5">
+                <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-accent to-neon-cyan flex items-center justify-center">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
                 </div>
+                <h1 class="text-sm font-bold tracking-tight">
+                    <span class="bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent">viv</span><span class="bg-gradient-to-r from-accent-light to-neon-cyan bg-clip-text text-transparent">Morph</span>
+                </h1>
             </div>
-            
-            <!-- Upload Area -->
-            <div class="flex-1 flex items-center justify-center p-4 lg:p-8">
-                <!-- Single Image Upload -->
-                <div id="single-upload" class="text-center max-w-lg mx-auto w-full">
-                    <div class="mb-8">
-                        <div class="w-24 h-24 lg:w-32 lg:h-32 mx-auto mb-6 bg-gradient-to-br from-cyan-400/20 to-purple-500/20 border border-cyan-400/30 rounded-full flex items-center justify-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" class="text-cyan-400" viewBox="0 0 256 256">
-                                <path d="M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40Zm0,16V158.75l-26.07-26.06a16,16,0,0,0-22.63,0l-20,20-44-44a16,16,0,0,0-22.62,0L40,149.37V56ZM40,172l52-52,80,80H40Zm176,28H194.63l-36-36,20-20L216,181.38V200ZM144,100a12,12,0,1,1,12,12A12,12,0,0,1,144,100Z"></path>
-                            </svg>
+            <div class="flex items-center gap-2">
+                <div class="pulse-dot hidden" id="statusDot"></div>
+                <span class="text-[10px] font-mono text-zinc-500 hidden sm:inline" id="statusText"></span>
+                <button id="historyToggleBtn" class="p-1.5 rounded-lg bg-surface-3 border border-white/5 hover:border-accent/30 transition-all text-zinc-400 hover:text-white hidden" title="History">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                </button>
+                <button id="modelSelectorBtn" class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface-3 border border-white/5 hover:border-accent/30 transition-all text-[11px] font-medium text-zinc-300 hover:text-white">
+                    <span id="activeModelName" class="truncate max-w-[100px] sm:max-w-[160px]">Qwen Edit 2511</span>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- MAIN CONTENT -->
+        <main class="flex-1 flex flex-col lg:flex-row overflow-hidden min-h-0">
+            <!-- LEFT: Canvas -->
+            <div class="flex-1 flex flex-col min-h-0 min-w-0">
+                <div class="flex-1 flex items-center justify-center p-2 sm:p-3 lg:p-4 min-h-0 relative">
+                    <!-- Drop Zone -->
+                    <div id="dropZone" class="drop-zone w-full h-full max-w-3xl max-h-[70vh] mx-auto rounded-2xl border-2 border-dashed border-zinc-700 flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-accent/40 transition-all group">
+                        <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-accent/10 to-neon-cyan/10 border border-accent/20 flex items-center justify-center animate-float">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-accent-light"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
                         </div>
-                        <h3 class="text-white text-xl lg:text-2xl font-bold mb-2">Transform Your Images with AI</h3>
-                        <p class="text-gray-300 text-sm lg:text-base mb-6">Upload any image and use natural language to transform it with cutting-edge AI technology</p>
+                        <p class="text-xs font-semibold text-zinc-300">Drop image here or click to upload</p>
+                        <p class="text-[10px] text-zinc-600">JPEG, PNG, WebP up to 25MB &middot; or Ctrl+V to paste</p>
+                        <button id="uploadBtn" class="mt-1 px-4 py-1.5 rounded-lg bg-accent hover:bg-accent-light text-white text-xs font-semibold transition-all">Choose File</button>
+                        <input type="file" id="fileInput" accept="image/*" class="hidden" />
                     </div>
-                    
-                    <div class="flex justify-center">
-                        <input type="file" id="fileInput" accept="image/*" style="display: none;" />
-                        <button id="uploadBtn" class="flex min-w-[200px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-14 px-8 bg-gradient-to-r from-cyan-500 to-purple-500 text-white text-base font-bold leading-normal tracking-[0.015em] hover:from-cyan-400 hover:to-purple-400 transition-all duration-300 shadow-lg hover:shadow-cyan-500/25">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="mr-2" viewBox="0 0 256 256">
-                                <path d="M74.34,85.66A8,8,0,0,1,85.66,74.34L120,108.69V24a8,8,0,0,1,16,0v84.69l34.34-34.35a8,8,0,0,1,11.32,11.32l-48,48a8,8,0,0,1-11.32,0ZM240,136v64a16,16,0,0,1-16,16H32a16,16,0,0,1-16-16V136a16,16,0,0,1,16-16H84.4a4,4,0,0,1,2.83,1.17L111,145a24,24,0,0,0,34,0l23.8-23.8A4,4,0,0,1,171.6,120H224A16,16,0,0,1,240,136Zm-40,32a12,12,0,1,0-12,12A12,12,0,0,0,200,168Z"></path>
-                            </svg>
-                            <span class="truncate">Upload Image</span>
+
+                    <!-- Image Display -->
+                    <div id="imageDisplay" class="hidden w-full h-full max-w-4xl max-h-[75vh] mx-auto relative rounded-2xl overflow-hidden border border-white/5 bg-surface-1">
+                        <!-- Normal single image view -->
+                        <div id="imageContainer" class="w-full h-full flex items-center justify-center"></div>
+
+                        <!-- Compare slider view (hidden by default) -->
+                        <div id="compareContainer" class="hidden compare-wrap w-full h-full">
+                            <img id="compareOriginal" class="w-full h-full" alt="Original" />
+                            <div id="compareClip" class="compare-clip">
+                                <img id="compareTransformed" class="w-full h-full" alt="Transformed" />
+                            </div>
+                            <div id="compareHandle" class="compare-handle" style="left:50%"></div>
+                        </div>
+
+                        <!-- Mask painting canvas overlay -->
+                        <canvas id="maskCanvas" class="mask-canvas hidden"></canvas>
+
+                        <!-- Loading overlay -->
+                        <div id="loadingOverlay" class="hidden absolute inset-0 bg-surface-0/80 backdrop-blur-sm flex flex-col items-center justify-center z-20">
+                            <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-accent/20 to-neon-cyan/20 border border-accent/30 flex items-center justify-center mb-3">
+                                <svg class="animate-spin h-6 w-6 text-accent-light" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>
+                            </div>
+                            <p id="progressText" class="text-xs font-medium text-zinc-300 mb-2">Transforming...</p>
+                            <div class="w-40 h-1 bg-surface-4 rounded-full overflow-hidden">
+                                <div id="progressBar" class="h-full bg-gradient-to-r from-accent to-neon-cyan rounded-full transition-all duration-500" style="width:0%"></div>
+                            </div>
+                            <p id="progressPercent" class="text-[10px] font-mono text-zinc-500 mt-1.5">0%</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bottom Controls Bar -->
+                <div id="imageControls" class="hidden shrink-0 px-3 pb-2 flex items-center justify-between gap-2 flex-wrap">
+                    <div class="flex items-center gap-1.5">
+                        <div class="flex rounded-md bg-surface-2 border border-white/5 p-0.5">
+                            <button id="viewOriginalBtn" class="px-2 py-1 rounded text-[10px] font-medium bg-accent/20 text-accent-light border border-accent/30">Original</button>
+                            <button id="viewTransformedBtn" class="px-2 py-1 rounded text-[10px] font-medium text-zinc-500 hover:text-zinc-300">Transformed</button>
+                            <button id="viewCompareBtn" class="px-2 py-1 rounded text-[10px] font-medium text-zinc-500 hover:text-zinc-300" title="Side-by-side compare">Compare</button>
+                        </div>
+                        <!-- Mask tools -->
+                        <div id="maskTools" class="hidden flex items-center gap-1 ml-1">
+                            <button id="maskBrushBtn" class="px-2 py-1 rounded text-[10px] font-medium bg-pink-500/20 text-pink-400 border border-pink-500/30" title="Paint mask">Brush</button>
+                            <button id="maskEraserBtn" class="px-2 py-1 rounded text-[10px] font-medium text-zinc-500 hover:text-zinc-300" title="Erase mask">Eraser</button>
+                            <button id="maskClearBtn" class="px-2 py-1 rounded text-[10px] font-medium text-zinc-500 hover:text-red-400" title="Clear mask">Clear</button>
+                            <input id="maskSizeSlider" type="range" min="5" max="80" value="25" class="w-16 h-4" title="Brush size" />
+                            <span id="maskSizeLabel" class="text-[9px] font-mono text-zinc-500 w-5">25</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <button id="maskToggleBtn" class="p-1.5 rounded-lg bg-surface-2 border border-white/5 hover:border-pink-500/30 transition-all text-zinc-400 hover:text-pink-400" title="Toggle mask painting">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
                         </button>
-                    </div>
-                    
-                    <p class="text-gray-400 text-xs lg:text-sm mt-4">Supports JPEG, PNG, WebP up to 10MB</p>
-                </div>
-
-                <!-- Dual Image Upload -->
-                <div id="merge-upload" class="text-center max-w-2xl mx-auto w-full" style="display: none;">
-                    <div class="mb-8">
-                        <div class="w-24 h-24 lg:w-32 lg:h-32 mx-auto mb-6 bg-gradient-to-br from-purple-400/20 to-pink-500/20 border border-purple-400/30 rounded-full flex items-center justify-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" class="text-purple-400" viewBox="0 0 256 256">
-                                <path d="M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40ZM40,56H216V200H40Z"></path>
-                                <path d="M88,104a16,16,0,1,1-16,16A16,16,0,0,1,88,104Zm80,0a16,16,0,1,1-16,16A16,16,0,0,1,168,104Z"></path>
-                            </svg>
-                        </div>
-                        <h3 class="text-white text-xl lg:text-2xl font-bold mb-2">Merge Two Images with AI</h3>
-                        <p class="text-gray-300 text-sm lg:text-base mb-6">Upload two separate images: AI will merge subjects from one image into the scene of the other</p>
-                    </div>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                        <!-- Left Image Upload -->
-                        <div class="bg-[#1a1a1a] border border-[#333] rounded-lg p-6">
-                            <div class="mb-4">
-                                <div class="w-16 h-16 mx-auto mb-3 bg-gradient-to-br from-cyan-400/20 to-purple-500/20 border border-cyan-400/30 rounded-full flex items-center justify-center">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="text-cyan-400" viewBox="0 0 256 256">
-                                        <path d="M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40Zm0,16V158.75l-26.07-26.06a16,16,0,0,0-22.63,0l-20,20-44-44a16,16,0,0,0-22.62,0L40,149.37V56ZM40,172l52-52,80,80H40Zm176,28H194.63l-36-36,20-20L216,181.38V200ZM144,100a12,12,0,1,1,12,12A12,12,0,0,1,144,100Z"></path>
-                                    </svg>
-                                </div>
-                                <h4 class="text-white text-lg font-semibold mb-2">Left Image</h4>
-                                <p class="text-gray-400 text-sm">First image to merge</p>
-                            </div>
-                            <input type="file" id="leftFileInput" accept="image/*" style="display: none;" />
-                            <button id="leftUploadBtn" class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-cyan-500 to-purple-500 text-white rounded-lg font-semibold hover:from-cyan-400 hover:to-purple-400 transition-all duration-300">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256">
-                                    <path d="M74.34,85.66A8,8,0,0,1,85.66,74.34L120,108.69V24a8,8,0,0,1,16,0v84.69l34.34-34.35a8,8,0,0,1,11.32,11.32l-48,48a8,8,0,0,1-11.32,0ZM240,136v64a16,16,0,0,1-16,16H32a16,16,0,0,1-16-16V136a16,16,0,0,1,16-16H84.4a4,4,0,0,1,2.83,1.17L111,145a24,24,0,0,0,34,0l23.8-23.8A4,4,0,0,1,171.6,120H224A16,16,0,0,1,240,136Zm-40,32a12,12,0,1,0-12,12A12,12,0,0,0,200,168Z"></path>
-                                </svg>
-                                <span>Upload Left Image</span>
-                            </button>
-                            <div id="leftImagePreview" class="mt-3 hidden">
-                                <img id="leftPreviewImg" class="w-full h-24 object-cover rounded-lg border border-[#333]" alt="Left image preview" />
-                            </div>
-                        </div>
-
-                        <!-- Right Image Upload -->
-                        <div class="bg-[#1a1a1a] border border-[#333] rounded-lg p-6">
-                            <div class="mb-4">
-                                <div class="w-16 h-16 mx-auto mb-3 bg-gradient-to-br from-purple-400/20 to-pink-500/20 border border-purple-400/30 rounded-full flex items-center justify-center">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="text-purple-400" viewBox="0 0 256 256">
-                                        <path d="M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40Zm0,16V158.75l-26.07-26.06a16,16,0,0,0-22.63,0l-20,20-44-44a16,16,0,0,0-22.62,0L40,149.37V56ZM40,172l52-52,80,80H40Zm176,28H194.63l-36-36,20-20L216,181.38V200ZM144,100a12,12,0,1,1,12,12A12,12,0,0,1,144,100Z"></path>
-                                    </svg>
-                                </div>
-                                <h4 class="text-white text-lg font-semibold mb-2">Right Image</h4>
-                                <p class="text-gray-400 text-sm">Second image to merge</p>
-                            </div>
-                            <input type="file" id="rightFileInput" accept="image/*" style="display: none;" />
-                            <button id="rightUploadBtn" class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-semibold hover:from-purple-400 hover:to-pink-400 transition-all duration-300">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256">
-                                    <path d="M74.34,85.66A8,8,0,0,1,85.66,74.34L120,108.69V24a8,8,0,0,1,16,0v84.69l34.34-34.35a8,8,0,0,1,11.32,11.32l-48,48a8,8,0,0,1-11.32,0ZM240,136v64a16,16,0,0,1-16,16H32a16,16,0,0,1-16-16V136a16,16,0,0,1,16-16H84.4a4,4,0,0,1,2.83,1.17L111,145a24,24,0,0,0,34,0l23.8-23.8A4,4,0,0,1,171.6,120H224A16,16,0,0,1,240,136Zm-40,32a12,12,0,1,0-12,12A12,12,0,0,0,200,168Z"></path>
-                                </svg>
-                                <span>Upload Right Image</span>
-                            </button>
-                            <div id="rightImagePreview" class="mt-3 hidden">
-                                <img id="rightPreviewImg" class="w-full h-24 object-cover rounded-lg border border-[#333]" alt="Right image preview" />
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Generate Collage Button -->
-                    <div class="flex justify-center">
-                        <button id="generateCollageBtn" class="flex min-w-[200px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-14 px-8 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-base font-bold leading-normal tracking-[0.015em] hover:from-purple-400 hover:to-pink-400 transition-all duration-300 shadow-lg hover:shadow-purple-500/25 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="mr-2" viewBox="0 0 256 256">
-                                <path d="M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40ZM40,56H216V200H40Z"></path>
-                                <path d="M88,104a16,16,0,1,1-16,16A16,16,0,0,1,88,104Zm80,0a16,16,0,1,1-16,16A16,16,0,0,1,168,104Z"></path>
-                            </svg>
-                            <span class="truncate">Generate Collage</span>
+                        <button id="uploadNewBtn" class="p-1.5 rounded-lg bg-surface-2 border border-white/5 hover:border-accent/30 transition-all text-zinc-400 hover:text-white" title="Upload new">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                         </button>
-                    </div>
-                    
-                    <p class="text-gray-400 text-xs lg:text-sm mt-4">AI will merge subjects from one image into the scene of the other</p>
-                </div>
-            </div>
-        </div>
-        <!-- Tips Section -->
-        <div class="border-t border-[#333] bg-[#111] px-4 py-6 lg:px-8">
-            <div class="max-w-4xl mx-auto">
-                <h3 class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500 text-lg font-bold mb-4 text-center">
-                    🚀 Pro Tips for Better AI Transformations
-                </h3>
-                <div id="merge-tips" class="mb-6 p-4 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-lg hidden">
-                    <h4 class="text-purple-400 font-semibold mb-2 text-center">🔄 Image Merge Mode Tips</h4>
-                    <p class="text-gray-300 text-sm text-center mb-3">AI analyzes both images to choose the best scene and adds the other subject naturally into it.</p>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                        <div class="bg-[#1a1a1a] border border-[#333] rounded p-3">
-                            <span class="text-purple-400 font-semibold">📸</span>
-                            <span class="text-gray-300">Choose images with similar lighting and perspective for best results</span>
-                        </div>
-                        <div class="bg-[#1a1a1a] border border-[#333] rounded p-3">
-                            <span class="text-pink-400 font-semibold">🎯</span>
-                            <span class="text-gray-300">AI merges subjects from one image into the scene of the other</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div class="bg-[#1a1a1a] border border-[#333] rounded-lg p-4 hover:border-cyan-400/50 transition-colors">
-                        <div class="flex items-start gap-3">
-                            <span class="text-2xl">🎯</span>
-                            <div>
-                                <h4 class="text-cyan-400 font-semibold mb-1">Be Specific & Clear</h4>
-                                <p class="text-gray-300">Use precise colors, detailed descriptions, and clear action verbs. Avoid vague terms.</p>
+                        <button id="downloadBtn" class="hidden p-1.5 rounded-lg bg-surface-2 border border-white/5 hover:border-neon-green/30 transition-all text-zinc-400 hover:text-neon-green" title="Download">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        </button>
+                        <label class="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-surface-2 border border-white/5 cursor-pointer" title="Iterate on transformed">
+                            <span class="text-[10px] text-zinc-500 hidden sm:inline">Iterate</span>
+                            <div class="relative">
+                                <input type="checkbox" id="editModeToggle" class="sr-only peer">
+                                <div class="w-7 h-3.5 bg-surface-4 rounded-full peer-checked:bg-accent/60 transition-all"></div>
+                                <div class="absolute top-0.5 left-0.5 w-2.5 h-2.5 bg-zinc-400 rounded-full peer-checked:translate-x-3.5 peer-checked:bg-white transition-all"></div>
                             </div>
-                        </div>
-                    </div>
-                    <div class="bg-[#1a1a1a] border border-[#333] rounded-lg p-4 hover:border-purple-400/50 transition-colors">
-                        <div class="flex items-start gap-3">
-                            <span class="text-2xl">🔒</span>
-                            <div>
-                                <h4 class="text-purple-400 font-semibold mb-1">Preserve What Matters</h4>
-                                <p class="text-gray-300">Use "while maintaining the same [facial features/composition/lighting]" to protect important elements.</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="bg-[#1a1a1a] border border-[#333] rounded-lg p-4 hover:border-pink-400/50 transition-colors">
-                        <div class="flex items-start gap-3">
-                            <span class="text-2xl">👤</span>
-                            <div>
-                                <h4 class="text-pink-400 font-semibold mb-1">Name Subjects Directly</h4>
-                                <p class="text-gray-300">Use "The woman with short hair" instead of "She" or "It" for better recognition.</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="bg-[#1a1a1a] border border-[#333] rounded-lg p-4 hover:border-yellow-400/50 transition-colors">
-                        <div class="flex items-start gap-3">
-                            <span class="text-2xl">⚡</span>
-                            <div>
-                                <h4 class="text-yellow-400 font-semibold mb-1">Use the ✨ Optimize Button</h4>
-                                <p class="text-gray-300">Let AI improve your prompts using these best practices automatically!</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-                 </div>
-         
-         <!-- Bottom Tab Navigation -->
-         <div class="bg-black border-t border-[#333] px-4 py-3">
-             <div class="flex justify-center">
-                 <div class="flex bg-[#1a1a1a] rounded-full p-1">
-                     <button id="uploadTab" class="flex items-center justify-center w-12 h-12 rounded-full transition-all duration-300 bg-gradient-to-r from-cyan-500 to-purple-500 text-white">
-                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
-                             <path d="M74.34,85.66A8,8,0,0,1,85.66,74.34L120,108.69V24a8,8,0,0,1,16,0v84.69l34.34-34.35a8,8,0,0,1,11.32,11.32l-48,48a8,8,0,0,1-11.32,0ZM240,136v64a16,16,0,0,1-16,16H32a16,16,0,0,1-16-16V136a16,16,0,0,1,16-16H84.4a4,4,0,0,1,2.83,1.17L111,145a24,24,0,0,0,34,0l23.8-23.8A4,4,0,0,1,171.6,120H224A16,16,0,0,1,240,136Zm-40,32a12,12,0,1,0-12,12A12,12,0,0,0,200,168Z"></path>
-                         </svg>
-                     </button>
-
-                 </div>
-             </div>
-         </div>
-         
-
-    </div>
-
-    <!-- Edit Screen -->
-    <div id="edit-screen" class="relative flex size-full min-h-screen flex-col bg-black justify-between group/design-root overflow-x-hidden lg:flex-row" style="display: none;">
-        <!-- Header with Back Button -->
-        <div class="flex items-center bg-black p-4 pb-2 justify-between lg:px-8 border-b border-[#333] lg:hidden">
-            <button id="backBtn-header" class="flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 text-gray-400 hover:text-white hover:bg-gradient-to-r hover:from-cyan-500/20 hover:to-purple-500/20">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
-                    <path d="M224,128a8,8,0,0,1-8,8H59.31l58.35,58.34a8,8,0,0,1-11.32,11.32l-72-72a8,8,0,0,1,0-11.32l72-72a8,8,0,0,1,11.32,11.32L59.31,120H216A8,8,0,0,1,224,128Z"></path>
-                </svg>
-            </button>
-            <h2 class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 text-lg font-bold leading-tight tracking-[-0.015em] text-center">vivMorph</h2>
-            <div class="w-10 h-10"></div> <!-- Spacer for center alignment -->
-        </div>
-
-        <!-- Desktop Header with Back Button -->
-        <div class="hidden lg:flex items-center bg-black p-4 pb-2 justify-between lg:px-8 border-b border-[#333] lg:absolute lg:top-0 lg:left-0 lg:right-0 lg:z-10">
-            <button id="backBtn-desktop" class="flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 text-gray-400 hover:text-white hover:bg-gradient-to-r hover:from-cyan-500/20 hover:to-purple-500/20">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
-                    <path d="M224,128a8,8,0,0,1-8,8H59.31l58.35,58.34a8,8,0,0,1-11.32,11.32l-72-72a8,8,0,0,1,0-11.32l72-72a8,8,0,0,1,11.32,11.32L59.31,120H216A8,8,0,0,1,224,128Z"></path>
-                </svg>
-            </button>
-            <h2 class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 text-lg font-bold leading-tight tracking-[-0.015em] text-center">vivMorph</h2>
-            <div class="w-10 h-10"></div> <!-- Spacer for center alignment -->
-        </div>
-
-        <!-- Main Content Area -->
-        <div class="flex-1 flex flex-col lg:flex-row lg:pt-16">
-
-            <!-- Image Display Area -->
-            <div class="flex-1 flex flex-col lg:w-2/3">
-
-                <!-- Image Container -->
-                <div class="flex-1 flex items-center justify-center p-4 lg:p-8">
-                    <div class="w-full max-w-4xl rounded-lg flex relative bg-[#1a1a1a] border border-[#333] overflow-hidden min-h-[300px] lg:min-h-[400px]">
-                        <div id="imageContainer" class="w-full flex items-center justify-center text-white">
-                        </div>
-                        <div id="loadingSpinner" class="hidden absolute inset-0 flex items-center justify-center bg-black bg-opacity-75 z-10">
-                            <div class="text-center max-w-md w-full mx-4">
-                                <div class="mb-6">
-                                    <div class="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-cyan-400/20 to-purple-500/20 border border-cyan-400/30 rounded-full flex items-center justify-center">
-                                        <svg class="animate-spin h-8 w-8 text-cyan-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                    </div>
-                                    <p class="text-white text-lg font-semibold mb-2">Transforming your image...</p>
-                                    <p class="text-gray-400 text-sm mb-4">Please wait while AI works its magic ✨</p>
-                                </div>
-                                
-                                <!-- Progress Bar -->
-                                <div class="w-full bg-gray-700 rounded-full h-3 mb-4 relative">
-                                    <div id="progressBar" class="bg-gradient-to-r from-cyan-500 to-purple-500 h-3 rounded-full transition-all duration-300 ease-out" style="width: 0%"></div>
-                                    <div class="absolute inset-0 flex items-center justify-center">
-                                        <span id="progressPercent" class="text-white text-xs font-bold">0%</span>
-                                    </div>
-                                </div>
-                                
-                                <!-- Progress Text -->
-                                <p id="progressText" class="text-cyan-400 text-sm font-medium">Initializing...</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Download Button Under Image -->
-                <div id="downloadSection" class="flex justify-center px-4 pb-4 lg:px-8 hidden">
-                    <button id="downloadBtn-under-image" class="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg font-semibold hover:from-green-400 hover:to-emerald-400 transition-all duration-300 shadow-lg hover:shadow-green-500/25">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
-                            <path d="M74.34,85.66A8,8,0,0,1,85.66,74.34L120,108.69V24a8,8,0,0,1,16,0v84.69l34.34-34.35a8,8,0,0,1,11.32,11.32l-48,48a8,8,0,0,1-11.32,0ZM240,136v64a16,16,0,0,1-16,16H32a16,16,0,0,1-16-16V136a16,16,0,0,1,16-16H84.4a4,4,0,0,1,2.83,1.17L111,145a24,24,0,0,0,34,0l23.8-23.8A4,4,0,0,1,171.6,120H224A16,16,0,0,1,240,136Zm-40,32a12,12,0,1,0-12,12A12,12,0,0,0,200,168Z"></path>
-                        </svg>
-                        <span>Download Image</span>
-                    </button>
-                </div>
-
-                <!-- Image Toggle -->
-                <div class="flex px-4 py-3 lg:px-8">
-                    <div class="flex h-12 flex-1 max-w-md mx-auto lg:mx-0 items-center justify-center rounded-lg bg-[#1a1a1a] border border-[#333] p-1">
-                        <label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-lg px-4 has-[:checked]:bg-gradient-to-r has-[:checked]:from-cyan-500/20 has-[:checked]:to-purple-500/20 has-[:checked]:border has-[:checked]:border-cyan-400/50 has-[:checked]:text-white text-gray-400 text-sm font-medium leading-normal transition-colors">
-                            <span class="truncate">Original</span>
-                            <input type="radio" name="imageToggle" class="invisible w-0" value="original" checked />
-                        </label>
-                        <label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-lg px-4 has-[:checked]:bg-gradient-to-r has-[:checked]:from-cyan-500/20 has-[:checked]:to-purple-500/20 has-[:checked]:border has-[:checked]:border-cyan-400/50 has-[:checked]:text-white text-gray-400 text-sm font-medium leading-normal transition-colors">
-                            <span class="truncate">Transformed</span>
-                            <input type="radio" name="imageToggle" class="invisible w-0" value="transformed" />
                         </label>
                     </div>
                 </div>
-            </div>
 
-            <!-- Control Panel -->
-            <div class="lg:w-1/3 bg-black lg:border-l border-[#333] flex flex-col">
-                <!-- Presets -->
-                <div class="p-4 lg:p-6 border-b border-[#333]">
-                    <h3 class="text-white text-sm font-semibold mb-3">Quick Styles</h3>
-                    <div class="grid grid-cols-2 lg:grid-cols-1 gap-2">
-                        <button class="preset-btn flex h-8 items-center justify-start gap-2 rounded-lg bg-[#1a1a1a] border border-[#333] px-3 cursor-pointer hover:bg-[#2a2a2a] hover:border-green-400/50 transition-colors" data-prompt="Transform into Studio Ghibli art style while maintaining the same composition and subjects">
-                            <span class="text-green-400 text-sm">🎨</span>
-                            <span class="text-white text-xs font-medium">Ghibli</span>
-                        </button>
-                        <button class="preset-btn flex h-8 items-center justify-start gap-2 rounded-lg bg-[#1a1a1a] border border-[#333] px-3 cursor-pointer hover:bg-[#2a2a2a] hover:border-red-400/50 transition-colors" data-prompt="Add Donald Trump seamlessly participating in the same activity as the original subjects, maintaining natural lighting and composition while ensuring he blends perfectly with the scene">
-                            <span class="text-red-400 text-sm">🇺🇸</span>
-                            <span class="text-white text-xs font-medium">Trump</span>
-                        </button>
-                        <button class="preset-btn flex h-8 items-center justify-start gap-2 rounded-lg bg-[#1a1a1a] border border-[#333] px-3 cursor-pointer hover:bg-[#2a2a2a] hover:border-cyan-400/50 transition-colors" data-prompt="Replace the background with a tropical beach with white sand, clear blue water, and palm trees while maintaining the same facial features, expressions, body positions, and clothing of all people. Keep accurate camera angle, position, and composition.">
-                            <span class="text-cyan-400 text-sm">🏖️</span>
-                            <span class="text-white text-xs font-medium">Vacation</span>
-                        </button>
-                        <button class="preset-btn flex h-8 items-center justify-start gap-2 rounded-lg bg-[#1a1a1a] border border-[#333] px-3 cursor-pointer hover:bg-[#2a2a2a] hover:border-yellow-400/50 transition-colors" data-prompt="Add beer bottles or wine glasses naturally in the hands of each person while maintaining the same facial features, expressions, hair, and body positions. Keep accurate camera angle, position, and composition exactly as shown.">
-                            <span class="text-yellow-400 text-sm">🍺</span>
-                            <span class="text-white text-xs font-medium">Drinks</span>
-                        </button>
-                        <button class="preset-btn flex h-8 items-center justify-start gap-2 rounded-lg bg-[#1a1a1a] border border-[#333] px-3 cursor-pointer hover:bg-[#2a2a2a] hover:border-orange-400/50 transition-colors" data-prompt="Change clothing to authentic ancient Middle Eastern robes, tunics, and sandals while maintaining the same facial features, expressions, hair color, and body positions of each person. Replace background with ancient Jerusalem stone buildings. Keep accurate camera angle, position, and composition.">
-                            <span class="text-orange-400 text-sm">✝️</span>
-                            <span class="text-white text-xs font-medium">Biblical</span>
-                        </button>
-                        <button class="preset-btn flex h-8 items-center justify-start gap-2 rounded-lg bg-[#1a1a1a] border border-[#333] px-3 cursor-pointer hover:bg-[#2a2a2a] hover:border-pink-400/50 transition-colors" data-prompt="Randomly swap and exchange the faces of all people in the picture with each other, ensuring natural blending and maintaining the same body positions, clothing, and composition exactly as shown.">
-                            <span class="text-pink-400 text-sm">🔄</span>
-                            <span class="text-white text-xs font-medium">Face Swap</span>
-                        </button>
-                        <button class="preset-btn flex h-8 items-center justify-start gap-2 rounded-lg bg-[#1a1a1a] border border-[#333] px-3 cursor-pointer hover:bg-[#2a2a2a] hover:border-purple-400/50 transition-colors" data-prompt="Change clothing to medieval fantasy Westeros-style leather armor, noble house colors, and dark cloaks while maintaining the same facial features, expressions, hair color, and body positions. Replace background with stone castle throne room. Keep accurate camera angle, position, and composition.">
-                            <span class="text-purple-400 text-sm">⚔️</span>
-                            <span class="text-white text-xs font-medium">GOT</span>
-                        </button>
-                        <button class="preset-btn flex h-8 items-center justify-start gap-2 rounded-lg bg-[#1a1a1a] border border-[#333] px-3 cursor-pointer hover:bg-[#2a2a2a] hover:border-amber-400/50 transition-colors" data-prompt="Add well-groomed full beards to each person in the picture while maintaining the same facial features, expressions, eye color, hair color, and body positions. Keep accurate camera angle, position, and composition exactly as shown.">
-                            <span class="text-amber-400 text-sm">🧔</span>
-                            <span class="text-white text-xs font-medium">Beards</span>
-                        </button>
-                        <button class="preset-btn flex h-8 items-center justify-start gap-2 rounded-lg bg-[#1a1a1a] border border-[#333] px-3 cursor-pointer hover:bg-[#2a2a2a] hover:border-indigo-400/50 transition-colors" data-prompt="Create a unified scene by determining which image has the better scene/environment and using that as the base. Add the subject from the other image into that base scene, keeping the added subject exactly the same - same person, same face, same facial features, same hair, same clothing, same everything. Do not change any facial features or create a new person. Keep any existing subjects in the base scene exactly as they are. The added subject must be properly scaled to match the size and proportions of the base scene. The goal is to add the new subject to the existing scene without changing anyone, maintaining proper scale and perspective.">
-                            <span class="text-indigo-400 text-sm">🔄</span>
-                            <span class="text-white text-xs font-medium">Merge</span>
-                        </button>
+                <!-- History Strip -->
+                <div id="historyStrip" class="hidden shrink-0 border-t border-white/5 bg-surface-1/50">
+                    <div class="flex items-center gap-2 px-3 py-2 overflow-x-auto">
+                        <span class="text-[9px] font-semibold text-zinc-500 uppercase tracking-wider shrink-0">History</span>
+                        <div id="historyItems" class="flex gap-1.5 items-center"></div>
+                        <button id="clearHistoryBtn" class="shrink-0 text-[9px] text-zinc-600 hover:text-red-400 transition-colors px-1.5 py-0.5 rounded" title="Clear history">Clear</button>
                     </div>
                 </div>
+            </div>
 
-
-
-                <!-- Prompt Input -->
-                <div class="p-4 lg:p-6 flex-1">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-white text-lg font-semibold">Transform Prompt</h3>
-                        <button id="optimizeBtn" class="bg-gradient-to-r from-yellow-400 to-orange-500 text-black px-4 py-2 rounded-lg text-sm font-bold hover:from-yellow-300 hover:to-orange-400 transition-all duration-300 shadow-lg hover:shadow-yellow-400/25 border-2 border-yellow-400/50 hover:border-yellow-400">
-                            ✨ AI Optimize
-                        </button>
+            <!-- RIGHT: Control Panel -->
+            <div class="lg:w-[360px] xl:w-[400px] shrink-0 border-t lg:border-t-0 lg:border-l border-white/5 flex flex-col bg-surface-1/50 max-h-[40vh] lg:max-h-none overflow-hidden">
+                <div class="p-3 flex-1 overflow-y-auto min-h-0">
+                    <!-- Quick Presets -->
+                    <div class="mb-3">
+                        <h3 class="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-2">Quick Styles</h3>
+                        <div class="flex flex-wrap gap-1">
+                            <button class="preset-pill px-2 py-0.5 rounded-full bg-surface-3 border border-white/5 text-[10px] font-medium text-zinc-400 hover:text-white hover:border-green-500/30 hover:bg-green-500/10 transition-all" data-prompt="Transform into Studio Ghibli art style while maintaining the same composition and subjects">Ghibli</button>
+                            <button class="preset-pill px-2 py-0.5 rounded-full bg-surface-3 border border-white/5 text-[10px] font-medium text-zinc-400 hover:text-white hover:border-cyan-500/30 hover:bg-cyan-500/10 transition-all" data-prompt="Replace the background with a tropical beach with white sand, clear blue water, and palm trees while maintaining the same facial features, expressions, body positions, and clothing of all people.">Vacation</button>
+                            <button class="preset-pill px-2 py-0.5 rounded-full bg-surface-3 border border-white/5 text-[10px] font-medium text-zinc-400 hover:text-white hover:border-yellow-500/30 hover:bg-yellow-500/10 transition-all" data-prompt="Add beer bottles or wine glasses naturally in the hands of each person while maintaining the same facial features, expressions, hair, and body positions.">Drinks</button>
+                            <button class="preset-pill px-2 py-0.5 rounded-full bg-surface-3 border border-white/5 text-[10px] font-medium text-zinc-400 hover:text-white hover:border-orange-500/30 hover:bg-orange-500/10 transition-all" data-prompt="Change clothing to authentic ancient Middle Eastern robes, tunics, and sandals while maintaining the same facial features. Replace background with ancient Jerusalem stone buildings.">Biblical</button>
+                            <button class="preset-pill px-2 py-0.5 rounded-full bg-surface-3 border border-white/5 text-[10px] font-medium text-zinc-400 hover:text-white hover:border-pink-500/30 hover:bg-pink-500/10 transition-all" data-prompt="Randomly swap and exchange the faces of all people in the picture with each other, ensuring natural blending and maintaining the same body positions, clothing, and composition.">Face Swap</button>
+                            <button class="preset-pill px-2 py-0.5 rounded-full bg-surface-3 border border-white/5 text-[10px] font-medium text-zinc-400 hover:text-white hover:border-purple-500/30 hover:bg-purple-500/10 transition-all" data-prompt="Change clothing to medieval fantasy Westeros-style leather armor. Replace background with stone castle throne room.">GOT</button>
+                            <button class="preset-pill px-2 py-0.5 rounded-full bg-surface-3 border border-white/5 text-[10px] font-medium text-zinc-400 hover:text-white hover:border-amber-500/30 hover:bg-amber-500/10 transition-all" data-prompt="Add well-groomed full beards to each person while maintaining the same facial features, expressions, eye color, hair color, and body positions.">Beards</button>
+                            <button class="preset-pill px-2 py-0.5 rounded-full bg-surface-3 border border-white/5 text-[10px] font-medium text-zinc-400 hover:text-white hover:border-red-500/30 hover:bg-red-500/10 transition-all" data-prompt="Add Donald Trump seamlessly participating in the same activity as the original subjects, maintaining natural lighting and composition.">Trump</button>
+                            <button class="preset-pill px-2 py-0.5 rounded-full bg-surface-3 border border-white/5 text-[10px] font-medium text-zinc-400 hover:text-white hover:border-indigo-500/30 hover:bg-indigo-500/10 transition-all" data-prompt="Colorize this image with vibrant, natural colors while preserving all details, textures, and composition exactly as shown.">Colorize</button>
+                        </div>
                     </div>
-                    <div class="space-y-4">
-                        <textarea id="promptInput" placeholder="Describe how you want to transform your image..." class="w-full h-32 lg:h-40 resize-none rounded-lg text-white bg-[#1a1a1a] border border-[#333] focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 placeholder:text-gray-400 p-4 text-sm leading-relaxed"></textarea>
-                        
-                        <div class="flex gap-3">
-                            <button id="submitBtn" class="flex-1 cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-4 bg-gradient-to-r from-cyan-500 to-purple-500 text-white text-sm font-bold leading-normal tracking-[0.015em] hover:from-cyan-400 hover:to-purple-400 transition-all duration-300 shadow-lg hover:shadow-cyan-500/25 disabled:opacity-50 disabled:cursor-not-allowed flex">
-                                <span class="truncate">Transform Image</span>
+
+                    <!-- Prompt -->
+                    <div class="mb-3">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <h3 class="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Prompt</h3>
+                            <button id="optimizeBtn" class="flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-[9px] font-semibold text-amber-400 hover:bg-amber-500/20 transition-all">
+                                <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L9.19 8.63L2 9.24l5.46 4.73L5.82 21L12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61z"/></svg>
+                                AI Optimize
                             </button>
                         </div>
-                        <div id="iterationIndicator" class="text-xs text-gray-400 text-center py-2 hidden">
-                            <span class="bg-purple-500/20 text-purple-400 px-2 py-1 rounded-full border border-purple-500/30">
-                                🔄 Transforming from current result
-                            </span>
+                        <textarea id="promptInput" placeholder="Describe your edit..." class="w-full h-20 lg:h-28 resize-none rounded-xl bg-surface-2 border border-white/5 focus:border-accent/40 focus:outline-none text-xs text-zinc-200 placeholder:text-zinc-600 p-2.5 leading-relaxed transition-all"></textarea>
+                    </div>
+
+                    <!-- Aspect Ratio -->
+                    <div class="mb-3">
+                        <h3 class="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Aspect Ratio</h3>
+                        <div class="flex flex-wrap gap-1">
+                            <button class="aspect-btn px-2 py-0.5 rounded-md bg-surface-3 border border-accent/30 text-[10px] font-medium text-accent-light" data-ratio="auto">Auto</button>
+                            <button class="aspect-btn px-2 py-0.5 rounded-md bg-surface-3 border border-white/5 text-[10px] font-medium text-zinc-500 hover:text-zinc-300 transition-all" data-ratio="1:1">1:1</button>
+                            <button class="aspect-btn px-2 py-0.5 rounded-md bg-surface-3 border border-white/5 text-[10px] font-medium text-zinc-500 hover:text-zinc-300 transition-all" data-ratio="3:2">3:2</button>
+                            <button class="aspect-btn px-2 py-0.5 rounded-md bg-surface-3 border border-white/5 text-[10px] font-medium text-zinc-500 hover:text-zinc-300 transition-all" data-ratio="16:9">16:9</button>
+                            <button class="aspect-btn px-2 py-0.5 rounded-md bg-surface-3 border border-white/5 text-[10px] font-medium text-zinc-500 hover:text-zinc-300 transition-all" data-ratio="9:16">9:16</button>
+                            <button class="aspect-btn px-2 py-0.5 rounded-md bg-surface-3 border border-white/5 text-[10px] font-medium text-zinc-500 hover:text-zinc-300 transition-all" data-ratio="4:5">4:5</button>
                         </div>
-                        
-                        <div class="bg-[#1a1a1a] border border-[#333] rounded-lg p-4">
-                            <p class="text-gray-300 text-xs leading-relaxed mb-2">
-                                <span class="text-cyan-400 font-semibold">💡 Pro Tip:</span> For best results, be specific about what to change while mentioning what should stay the same.
-                            </p>
-                            <p class="text-gray-400 text-xs leading-relaxed">
-                                Try: "Transform into [style] while maintaining the same [subjects/composition]"
-                            </p>
+                    </div>
+
+                    <!-- Model Info -->
+                    <div class="rounded-xl bg-surface-2 border border-white/5 p-2.5 mb-3">
+                        <div class="flex items-center justify-between mb-0.5">
+                            <span class="text-[10px] font-semibold text-zinc-400">Active Model</span>
+                            <span id="modelPrice" class="text-[9px] font-mono text-neon-green">$0.04</span>
                         </div>
-                        
-                        <!-- Transform Options -->
-                        <div class="mt-6 pt-4 border-t border-[#333]">
-                            <h4 class="text-white text-sm font-semibold mb-3">Transform Options</h4>
-                            <div class="space-y-3">
-                                <div class="flex items-center justify-between p-3 bg-[#1a1a1a] border border-[#333] rounded-lg">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-8 h-8 bg-gradient-to-br from-cyan-400/20 to-purple-500/20 border border-cyan-400/30 rounded-full flex items-center justify-center">
-                                            <span class="text-cyan-400 text-xs">🔄</span>
-                                        </div>
-                                        <div>
-                                            <h5 class="text-white text-sm font-medium">Use Transformed Image</h5>
-                                            <p class="text-gray-400 text-xs">ON = Use transformed as seed, OFF = Use original</p>
-                                        </div>
-                                    </div>
-                                    <label class="relative inline-flex items-center cursor-pointer">
-                                        <input type="checkbox" id="editModeToggle" class="sr-only peer">
-                                        <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-cyan-500 peer-checked:to-purple-500"></div>
-                                    </label>
-                                </div>
-                                <button id="uploadNewBtn" class="w-full flex items-center justify-center gap-2 p-3 bg-[#1a1a1a] border border-[#333] rounded-lg hover:bg-[#2a2a2a] hover:border-green-400/50 transition-colors">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="text-green-400" viewBox="0 0 256 256">
-                                        <path d="M74.34,85.66A8,8,0,0,1,85.66,74.34L120,108.69V24a8,8,0,0,1,16,0v84.69l34.34-34.35a8,8,0,0,1,11.32,11.32l-48,48a8,8,0,0,1-11.32,0ZM240,136v64a16,16,0,0,1-16,16H32a16,16,0,0,1-16-16V136a16,16,0,0,1,16-16H84.4a4,4,0,0,1,2.83,1.17L111,145a24,24,0,0,0,34,0l23.8-23.8A4,4,0,0,1,171.6,120H224A16,16,0,0,1,240,136Zm-40,32a12,12,0,1,0-12,12A12,12,0,0,0,200,168Z"></path>
-                                    </svg>
-                                    <span class="text-white text-sm font-medium">Upload New Image</span>
-                                </button>
-                                <button id="downloadBtn" class="w-full flex items-center justify-center gap-2 p-3 bg-[#1a1a1a] border border-[#333] rounded-lg hover:bg-[#2a2a2a] hover:border-cyan-400/50 transition-colors hidden">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="text-cyan-400" viewBox="0 0 256 256">
-                                        <path d="M192,128a8,8,0,0,1-8,8H136v40a8,8,0,0,1-16,0V136H72a8,8,0,0,1-5.66-13.66l48-48a8,8,0,0,1,11.32,0l48,48A8,8,0,0,1,192,128ZM32,208a8,8,0,0,0,8,8H216a8,8,0,0,0,0-16H40A8,8,0,0,0,32,208Z"></path>
-                                    </svg>
-                                    <span class="text-white text-sm font-medium">Download Image</span>
-                                </button>
-                            </div>
+                        <p id="modelNameDisplay" class="text-xs font-semibold text-white mb-1">Qwen Edit 2511</p>
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <span id="modelPrivacy" class="text-[9px] px-1 py-0.5 rounded bg-surface-3 text-zinc-500 font-mono">private</span>
+                            <span id="modelMaxPrompt" class="text-[9px] px-1 py-0.5 rounded bg-surface-3 text-zinc-500 font-mono">1500 chars</span>
+                            <span id="modelCombine" class="text-[9px] px-1 py-0.5 rounded bg-surface-3 text-zinc-500 font-mono hidden">combine</span>
                         </div>
                     </div>
                 </div>
+
+                <!-- Transform Button -->
+                <div class="p-3 pt-0 shrink-0">
+                    <button id="submitBtn" class="w-full h-10 rounded-xl bg-gradient-to-r from-accent to-accent-dim hover:from-accent-light hover:to-accent text-white text-xs font-bold transition-all hover:shadow-lg hover:shadow-accent/20 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                        <span>Transform</span>
+                    </button>
+                    <p class="text-[9px] text-zinc-600 text-center mt-1.5">Ctrl+Enter to transform</p>
+                </div>
             </div>
-        </div>
-        
-        <!-- Bottom Action Navigation -->
-        <div id="bottomNav" class="bg-black border-t border-[#333] px-4 py-3 hidden">
-            <div class="flex justify-center">
-                <div class="flex bg-[#1a1a1a] rounded-full p-1 gap-2">
-                    <button id="backBtn-bottom" class="flex items-center justify-center w-12 h-12 rounded-full transition-all duration-300 text-gray-400 hover:text-white hover:bg-gradient-to-r hover:from-cyan-500/20 hover:to-purple-500/20">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
-                            <path d="M224,128a8,8,0,0,1-8,8H59.31l58.35,58.34a8,8,0,0,1-11.32,11.32l-72-72a8,8,0,0,1,0-11.32l72-72a8,8,0,0,1,11.32,11.32L59.31,120H216A8,8,0,0,1,224,128Z"></path>
-                        </svg>
-                    </button>
-                    <button id="downloadBtn-bottom" class="flex items-center justify-center w-12 h-12 rounded-full transition-all duration-300 text-gray-400 hover:text-white hover:bg-gradient-to-r hover:from-cyan-500/20 hover:to-purple-500/20">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
-                            <path d="M74.34,85.66A8,8,0,0,1,85.66,74.34L120,108.69V24a8,8,0,0,1,16,0v84.69l34.34-34.35a8,8,0,0,1,11.32,11.32l-48,48a8,8,0,0,1-11.32,0ZM240,136v64a16,16,0,0,1-16,16H32a16,16,0,0,1-16-16V136a16,16,0,0,1,16-16H84.4a4,4,0,0,1,2.83,1.17L111,145a24,24,0,0,0,34,0l23.8-23.8A4,4,0,0,1,171.6,120H224A16,16,0,0,1,240,136Zm-40,32a12,12,0,1,0-12,12A12,12,0,0,0,200,168Z"></path>
-                        </svg>
-                    </button>
-                    <button id="shareBtn-bottom" class="flex items-center justify-center w-12 h-12 rounded-full transition-all duration-300 text-gray-400 hover:text-white hover:bg-gradient-to-r hover:from-cyan-500/20 hover:to-purple-500/20">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
-                            <path d="M229.66,109.66l-48,48a8,8,0,0,1-11.32-11.32L204.69,112H165a88,88,0,0,0-85.23,66,8,8,0,0,1-15.5-4A103.94,103.94,0,0,1,165,96h39.71L170.34,61.66a8,8,0,0,1,11.32-11.32l48,48A8,8,0,0,1,229.66,109.66ZM192,208H40V88a8,8,0,0,0-16,0V208a16,16,0,0,0,16,16H192a8,8,0,0,0,0-16Z"></path>
-                        </svg>
-                    </button>
+        </main>
+    </div>
+
+    <!-- MODEL MODAL -->
+    <div id="modelModal" class="fixed inset-0 z-[100] hidden">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" id="modelModalBackdrop"></div>
+        <div class="absolute inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-lg sm:max-h-[80vh] bg-surface-1 border border-white/5 rounded-2xl overflow-hidden flex flex-col animate-slide-up">
+            <div class="p-3 border-b border-white/5 flex items-center justify-between shrink-0">
+                <div>
+                    <h2 class="text-sm font-bold text-white">Select Model</h2>
+                    <p class="text-[10px] text-zinc-500">Choose an AI model for image editing</p>
+                </div>
+                <button id="closeModelModal" class="w-7 h-7 rounded-lg bg-surface-3 flex items-center justify-center text-zinc-400 hover:text-white transition-colors">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div id="modelList" class="p-3 overflow-y-auto flex-1 space-y-1.5">
+                <div class="text-center py-6">
+                    <div class="w-6 h-6 mx-auto mb-2 rounded-full border-2 border-accent/30 border-t-accent animate-spin"></div>
+                    <p class="text-[10px] text-zinc-500">Loading models...</p>
                 </div>
             </div>
         </div>
     </div>
 
-
-
-    <!-- Error Modal -->
-    <div id="errorModal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center" style="display: none; z-index: 9999;">
-        <div class="bg-[#10231c] border border-[#214a3c] rounded-lg p-6 m-4 max-w-md w-full shadow-2xl">
-            <h3 class="text-white text-lg font-bold mb-4">Error</h3>
-            <p id="errorMessage" class="text-[#8ecdb7] mb-4"></p>
-            <button id="closeError" class="w-full bg-[#019863] text-white px-4 py-2 rounded-lg hover:bg-[#017a50]">OK</button>
+    <!-- HISTORY MODAL (mobile) -->
+    <div id="historyModal" class="fixed inset-0 z-[100] hidden">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" id="historyModalBackdrop"></div>
+        <div class="absolute inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-md sm:max-h-[70vh] bg-surface-1 border border-white/5 rounded-2xl overflow-hidden flex flex-col animate-slide-up">
+            <div class="p-3 border-b border-white/5 flex items-center justify-between shrink-0">
+                <h2 class="text-sm font-bold text-white">Transform History</h2>
+                <button id="closeHistoryModal" class="w-7 h-7 rounded-lg bg-surface-3 flex items-center justify-center text-zinc-400 hover:text-white">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div id="historyModalItems" class="p-3 overflow-y-auto flex-1 grid grid-cols-2 gap-2"></div>
         </div>
     </div>
 
+    <!-- ERROR MODAL -->
+    <div id="errorModal" class="fixed inset-0 z-[200] hidden">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm bg-surface-2 border border-red-500/20 rounded-2xl p-5 animate-slide-up">
+            <h3 class="text-sm font-bold text-white mb-1.5">Error</h3>
+            <p id="errorMessage" class="text-xs text-zinc-400 mb-3 leading-relaxed"></p>
+            <button id="closeError" class="w-full py-2 rounded-xl bg-surface-3 border border-white/5 text-xs font-semibold text-zinc-300 hover:text-white hover:bg-surface-4 transition-all">Dismiss</button>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT -->
     <script>
-        class VivMorph {
-            constructor() {
-                this.originalImage = null;
-                this.originalImageFile = null; // Store the original file
-                this.transformedImage = null;
-                this.currentView = 'original';
-                this.uploadMode = 'single'; // 'single' or 'merge'
-                this.leftImage = null;
-                this.rightImage = null;
-                this.leftImageFile = null;
-                this.rightImageFile = null;
-                console.log('vivMorph initialized for Netlify deployment');
-                this.init();
-            }
-
-            init() {
-                this.setupEventListeners();
-            }
-
-            setupEventListeners() {
-                // Upload mode toggle
-                document.querySelectorAll('input[name="uploadMode"]').forEach(radio => {
-                    radio.addEventListener('change', (e) => {
-                        this.switchUploadMode(e.target.value);
-                    });
-                });
-
-                // Single image upload
-                document.getElementById('uploadBtn').addEventListener('click', () => {
-                    document.getElementById('fileInput').click();
-                });
-
-                document.getElementById('fileInput').addEventListener('change', (e) => {
-                    this.handleFileUpload(e);
-                });
-
-                // Dual image upload
-                document.getElementById('leftUploadBtn').addEventListener('click', () => {
-                    document.getElementById('leftFileInput').click();
-                });
-
-                document.getElementById('leftFileInput').addEventListener('change', (e) => {
-                    this.handleLeftImageUpload(e);
-                });
-
-                document.getElementById('rightUploadBtn').addEventListener('click', () => {
-                    document.getElementById('rightFileInput').click();
-                });
-
-                document.getElementById('rightFileInput').addEventListener('change', (e) => {
-                    this.handleRightImageUpload(e);
-                });
-
-                // Generate collage button
-                document.getElementById('generateCollageBtn').addEventListener('click', () => {
-                    this.generateCollage();
-                });
-
-                // Navigation - bottom and header back buttons
-                document.getElementById('backBtn-bottom').addEventListener('click', () => {
-                    this.showUploadScreen();
-                });
-                
-                document.getElementById('backBtn-header').addEventListener('click', () => {
-                    this.showUploadScreen();
-                });
-                
-                document.getElementById('backBtn-desktop').addEventListener('click', () => {
-                    this.showUploadScreen();
-                });
-
-                // Image toggle
-                document.querySelectorAll('input[name="imageToggle"]').forEach(radio => {
-                    radio.addEventListener('change', (e) => {
-                        this.toggleImage(e.target.value);
-                    });
-                });
-
-                // Preset buttons
-                document.querySelectorAll('.preset-btn').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        const prompt = e.currentTarget.dataset.prompt;
-                        document.getElementById('promptInput').value = prompt;
-                    });
-                });
-
-                // Transform button
-                document.getElementById('submitBtn').addEventListener('click', () => {
-                    this.transformImage();
-                });
-
-                // Optimize prompt button
-                document.getElementById('optimizeBtn').addEventListener('click', () => {
-                    this.optimizePrompt();
-                });
-
-                // Download buttons - bottom, sidebar, and under image
-                document.getElementById('downloadBtn-bottom').addEventListener('click', () => {
-                    this.downloadImage();
-                });
-                
-                document.getElementById('downloadBtn').addEventListener('click', () => {
-                    this.downloadImage();
-                });
-                
-                document.getElementById('downloadBtn-under-image').addEventListener('click', () => {
-                    this.downloadImage();
-                });
-
-                // Error modal
-                document.getElementById('closeError').addEventListener('click', () => {
-                    this.hideErrorModal();
-                });
-
-                // Share button - bottom only
-                document.getElementById('shareBtn-bottom').addEventListener('click', () => {
-                    this.shareImage();
-                });
-
-                // Keyboard shortcuts
-                document.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter' && e.ctrlKey) {
-                        this.transformImage();
-                    }
-                });
-
-                // Upload new image button
-                document.getElementById('uploadNewBtn').addEventListener('click', () => {
-                    document.getElementById('fileInput').click();
-                });
-
-                // Edit mode toggle
-                document.getElementById('editModeToggle').addEventListener('change', (e) => {
-                    this.updateEditMode(e.target.checked);
-                });
-            }
-
-
-
-            showError(message) {
-                document.getElementById('errorMessage').textContent = message;
-                document.getElementById('errorModal').style.display = 'flex';
-            }
-
-            hideErrorModal() {
-                document.getElementById('errorModal').style.display = 'none';
-            }
-
-            switchUploadMode(mode) {
-                this.uploadMode = mode;
-                const singleUpload = document.getElementById('single-upload');
-                const mergeUpload = document.getElementById('merge-upload');
-                const mergeTips = document.getElementById('merge-tips');
-                
-                if (mode === 'single') {
-                    singleUpload.style.display = 'block';
-                    mergeUpload.style.display = 'none';
-                    mergeTips.classList.add('hidden');
-                } else {
-                    singleUpload.style.display = 'none';
-                    mergeUpload.style.display = 'block';
-                    mergeTips.classList.remove('hidden');
-                }
-                
-                // Reset state when switching modes
-                this.resetUploadState();
-            }
-
-            resetUploadState() {
-                this.originalImage = null;
-                this.originalImageFile = null;
-                this.transformedImage = null;
-                this.leftImage = null;
-                this.rightImage = null;
-                this.leftImageFile = null;
-                this.rightImageFile = null;
-                
-                // Reset UI
-                document.getElementById('generateCollageBtn').disabled = true;
-                document.getElementById('leftImagePreview').classList.add('hidden');
-                document.getElementById('rightImagePreview').classList.add('hidden');
-            }
-
-            async handleLeftImageUpload(event) {
-                const file = event.target.files[0];
-                if (!file) return;
-
-                if (!this.validateImageFile(file)) return;
-
-                try {
-                    this.leftImageFile = file;
-                    const base64 = await this.fileToBase64(file);
-                    this.leftImage = base64;
-                    
-                    // Show preview
-                    const preview = document.getElementById('leftImagePreview');
-                    const previewImg = document.getElementById('leftPreviewImg');
-                    previewImg.src = `data:image/jpeg;base64,${base64}`;
-                    preview.classList.remove('hidden');
-                    
-                    this.checkCollageReady();
-                    
-                } catch (error) {
-                    this.showError('Error processing left image: ' + error.message);
-                }
-            }
-
-            async handleRightImageUpload(event) {
-                const file = event.target.files[0];
-                if (!file) return;
-
-                if (!this.validateImageFile(file)) return;
-
-                try {
-                    this.rightImageFile = file;
-                    const base64 = await this.fileToBase64(file);
-                    this.rightImage = base64;
-                    
-                    // Show preview
-                    const preview = document.getElementById('rightImagePreview');
-                    const previewImg = document.getElementById('rightPreviewImg');
-                    previewImg.src = `data:image/jpeg;base64,${base64}`;
-                    preview.classList.remove('hidden');
-                    
-                    this.checkCollageReady();
-                    
-                } catch (error) {
-                    this.showError('Error processing right image: ' + error.message);
-                }
-            }
-
-            validateImageFile(file) {
-                // Validate file type
-                if (!file.type.startsWith('image/')) {
-                    this.showError('Please select a valid image file');
-                    return false;
-                }
-
-                // Check file size (10MB limit)
-                if (file.size > 10 * 1024 * 1024) {
-                    this.showError('Image file is too large. Please select a file smaller than 10MB');
-                    return false;
-                }
-
-                return true;
-            }
-
-            checkCollageReady() {
-                const generateBtn = document.getElementById('generateCollageBtn');
-                if (this.leftImage && this.rightImage) {
-                    generateBtn.disabled = false;
-                } else {
-                    generateBtn.disabled = true;
-                }
-            }
-
-            async generateCollage() {
-                if (!this.leftImage || !this.rightImage) {
-                    this.showError('Please upload both images first');
-                    return;
-                }
-
-                const generateBtn = document.getElementById('generateCollageBtn');
-                const originalText = generateBtn.innerHTML;
-                
-                try {
-                    generateBtn.disabled = true;
-                    generateBtn.innerHTML = '<span class="truncate">Generating...</span>';
-
-                    // Create a simple side-by-side collage
-                    const collage = await this.createCollage(this.leftImage, this.rightImage);
-                    
-                    // Use vision model to analyze the images and generate a merge prompt
-                    const mergePrompt = await this.generateMergePrompt(this.leftImage, this.rightImage);
-                    
-                    // Set the collage as the original image
-                    this.originalImage = collage;
-                    this.originalImageFile = await this.base64ToFile(collage, 'collage.png');
-                    this.transformedImage = null;
-                    
-                    // Switch to original view
-                    this.currentView = 'original';
-                    const originalRadio = document.querySelector('input[value="original"]');
-                    if (originalRadio) {
-                        originalRadio.checked = true;
-                    }
-                    
-                    // Show edit screen
-                    this.showEditScreen();
-                    this.displayImage();
-                    
-                    // Set the generated prompt
-                    document.getElementById('promptInput').value = mergePrompt;
-                    
-                    // Update bottom navigation visibility
-                    this.updateBottomNavVisibility();
-                    
-                } catch (error) {
-                    console.error('Error generating collage:', error);
-                    this.showError('Failed to generate collage: ' + error.message);
-                } finally {
-                    generateBtn.disabled = false;
-                    generateBtn.innerHTML = originalText;
-                }
-            }
-
-            async createCollage(leftImage, rightImage) {
-                return new Promise((resolve) => {
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    
-                    // Load both images
-                    const leftImg = new Image();
-                    const rightImg = new Image();
-                    
-                    let imagesLoaded = 0;
-                    const onImageLoad = () => {
-                        imagesLoaded++;
-                        if (imagesLoaded === 2) {
-                            // Calculate dimensions for side-by-side layout
-                            const maxHeight = 512;
-                            const leftAspectRatio = leftImg.width / leftImg.height;
-                            const rightAspectRatio = rightImg.width / rightImg.height;
-                            
-                            // Scale images to fit side by side
-                            const leftHeight = Math.min(maxHeight, leftImg.height);
-                            const leftWidth = leftHeight * leftAspectRatio;
-                            const rightHeight = Math.min(maxHeight, rightImg.height);
-                            const rightWidth = rightHeight * rightAspectRatio;
-                            
-                            // Set canvas size
-                            canvas.width = leftWidth + rightWidth + 20; // 20px gap
-                            canvas.height = Math.max(leftHeight, rightHeight);
-                            
-                            // Fill background
-                            ctx.fillStyle = '#1a1a1a';
-                            ctx.fillRect(0, 0, canvas.width, canvas.height);
-                            
-                            // Draw images side by side
-                            ctx.drawImage(leftImg, 0, (canvas.height - leftHeight) / 2, leftWidth, leftHeight);
-                            ctx.drawImage(rightImg, leftWidth + 20, (canvas.height - rightHeight) / 2, rightWidth, rightHeight);
-                            
-                            // Convert to base64
-                            const base64 = canvas.toDataURL('image/png').split(',')[1];
-                            resolve(base64);
-                        }
-                    };
-                    
-                    leftImg.onload = onImageLoad;
-                    rightImg.onload = onImageLoad;
-                    
-                    leftImg.src = `data:image/jpeg;base64,${leftImage}`;
-                    rightImg.src = `data:image/jpeg;base64,${rightImage}`;
-                });
-            }
-
-            /**
-             * Generates an AI-powered merge prompt that focuses on creating a unified scene
-             * where both subjects appear together naturally, rather than just a collage.
-             * The vision model analyzes both images and suggests how to position both people
-             * in the same environment, like they're on vacation or sharing an experience.
-             */
-            async generateMergePrompt(leftImage, rightImage) {
-                try {
-                    const response = await fetch('/.netlify/functions/chat-completions', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            model: 'mistral-32-24b',
-                            messages: [
-                                {
-                                    role: 'system',
-                                    content: 'You are an expert at analyzing two separate images and creating concise prompts for merging them into a single cohesive scene. Your task is to examine both images and generate a structured prompt that describes combining specific elements from each image. IMPORTANT: These are TWO COMPLETELY SEPARATE IMAGES. The first image contains one scene with existing subjects, and the second image contains a different scene with a different subject. You need to merge them by taking ONLY the subject from the second image and adding them into the scene/environment of the first image, while keeping ALL existing subjects from the first image exactly as they are. CRITICAL: Do not change, modify, or replace any existing subjects from the first image. Only add the new subject from the second image. The prompt should follow this structure: "Create a cohesive image by combining the following elements into a single scene: 1. [Keep ALL existing subjects from first image exactly as they are - same people, same faces, same clothing, same positions] 2. [Add ONLY the subject from second image with exact details - same person, same face, same clothing, same appearance] 3. [Use the background/environment from the first image] 4. [Position the new subject naturally among the existing subjects] 5. [Maintain consistent lighting and shadows throughout]" CRITICAL: Preserve exact facial features, clothing, and appearance of ALL existing subjects. Do not change any existing people. Keep the prompt concise and focused. Return ONLY the prompt text, no additional explanations.'
-                                },
-                                {
-                                    role: 'user',
-                                    content: [
-                                        {
-                                            type: 'text',
-                                            text: 'I have TWO COMPLETELY SEPARATE IMAGES. The first image shows one scene with existing subjects. The second image shows a different scene with a different subject. I want to merge them by taking ONLY the subject from the second image and adding them into the scene/environment of the first image, while keeping ALL existing subjects from the first image exactly as they are. CRITICAL: Do not change, modify, or replace any existing subjects from the first image. Only add the new subject from the second image. Analyze both images and create a structured prompt for merging them. Follow this format: "Create a cohesive image by combining the following elements into a single scene: 1. [Keep ALL existing subjects from first image exactly as they are - same people, same faces, same clothing, same positions] 2. [Add ONLY the subject from second image with exact details - same person, same face, same clothing, same appearance] 3. [Use the background/environment from the first image] 4. [Position the new subject naturally among the existing subjects] 5. [Maintain consistent lighting and shadows throughout]" Preserve exact facial features, clothing, and appearance of ALL subjects. Do not change any existing people. Keep the prompt concise and focused. Return ONLY the prompt text.'
-                                        },
-                                        {
-                                            type: 'image_url',
-                                            image_url: {
-                                                url: `data:image/jpeg;base64,${leftImage}`
-                                            }
-                                        },
-                                        {
-                                            type: 'image_url',
-                                            image_url: {
-                                                url: `data:image/jpeg;base64,${rightImage}`
-                                            }
-                                        }
-                                    ]
-                                }
-                            ],
-                            max_tokens: 800,
-                            temperature: 0.7
-                        })
-                    });
-
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-
-                    const data = await response.json();
-                    return data.choices[0].message.content.trim();
-                    
-                } catch (error) {
-                    console.error('Error generating merge prompt:', error);
-                    // Enhanced fallback prompt with structured format
-                    return 'Create a cohesive image by combining the following elements into a single scene: 1. [Keep ALL existing subjects from first image exactly as they are - same people, same faces, same clothing, same positions] 2. [Add ONLY the subject from second image with exact details - same person, same face, same clothing, same appearance] 3. [Use the background/environment from the first image] 4. [Position the new subject naturally among the existing subjects] 5. [Maintain consistent lighting and shadows throughout]. CRITICAL: Do not change, modify, or replace any existing subjects from the first image. Only add the new subject from the second image. Preserve exact appearance of ALL subjects.';
-                }
-            }
-
-            async base64ToFile(base64, filename) {
-                const blob = await this.base64ToBlob(base64, 'image/png');
-                return new File([blob], filename, { type: 'image/png' });
-            }
-
-            async handleFileUpload(event) {
-                const file = event.target.files[0];
-                if (!file) return;
-
-                if (!this.validateImageFile(file)) return;
-
-                try {
-                    // Store the original file for API calls
-                    this.originalImageFile = file;
-                    
-                    // Convert to base64 for display
-                    const base64 = await this.fileToBase64(file);
-                    this.originalImage = base64;
-                    this.transformedImage = null;
-                    
-                    // Reset to original view
-                    this.currentView = 'original';
-                    const originalRadio = document.querySelector('input[value="original"]');
-                    if (originalRadio) {
-                        originalRadio.checked = true;
-                    }
-                    
-                    console.log('Image uploaded:', file.name, file.size, 'bytes');
-                    
-                    // Show edit screen FIRST
-                    this.showEditScreen();
-                    this.displayImage();
-                    
-                    // Update bottom navigation visibility (should be hidden since no transformed image)
-                    this.updateBottomNavVisibility();
-                    
-
-                } catch (error) {
-                    this.showError('Error processing image: ' + error.message);
-                }
-            }
-
-            fileToBase64(file) {
-                return new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = () => {
-                        // Remove data URL prefix
-                        const base64 = reader.result.split(',')[1];
-                        resolve(base64);
-                    };
-                    reader.onerror = reject;
-                    reader.readAsDataURL(file);
-                });
-            }
-
-            showUploadScreen() {
-                document.getElementById('upload-screen').style.display = 'flex';
-                document.getElementById('edit-screen').style.display = 'none';
-                
-                // Clear all file inputs
-                document.getElementById('fileInput').value = '';
-                document.getElementById('leftFileInput').value = '';
-                document.getElementById('rightFileInput').value = '';
-                
-                // Reset upload state
-                this.resetUploadState();
-                
-                // Hide download button
-                const downloadBtn = document.getElementById('downloadBtn');
-                if (downloadBtn) downloadBtn.classList.add('hidden');
-                
-                // Hide download section under image
-                const downloadSection = document.getElementById('downloadSection');
-                if (downloadSection) downloadSection.classList.add('hidden');
-                 
-                 // Hide bottom navigation
-                 this.updateBottomNavVisibility();
-             }
- 
-             showEditScreen() {
-                document.getElementById('upload-screen').style.display = 'none';
-                document.getElementById('edit-screen').style.display = 'flex';
-            }
-
-            displayImage() {
-                const container = document.getElementById('imageContainer');
-                const imageToShow = this.currentView === 'original' ? this.originalImage : this.transformedImage;
-                const iterationIndicator = document.getElementById('iterationIndicator');
-                
-                // Clear container first
-                container.innerHTML = '';
-                
-                if (imageToShow) {
-                    // Handle both base64 strings and full data URLs
-                    const imageUrl = imageToShow.startsWith('data:') ? imageToShow : `data:image/jpeg;base64,${imageToShow}`;
-                    
-                    // Create img element
-                    const img = document.createElement('img');
-                    img.src = imageUrl;
-                    img.alt = this.currentView === 'original' ? 'Original Image' : 'Transformed Image';
-                    img.className = 'max-w-full max-h-full w-auto h-auto rounded-lg object-contain shadow-lg';
-                    img.style.maxHeight = '70vh'; // Prevent images from being too tall
-                    img.style.minHeight = '200px'; // Ensure minimum visibility
-                    
-                    // Add loading state
-                    img.addEventListener('load', () => {
-                        img.classList.add('opacity-100');
-                        img.classList.remove('opacity-0');
-                    });
-                    
-                    img.addEventListener('error', (e) => {
-                        console.error('Image failed to load:', e);
-                        container.innerHTML = '<p class="text-red-400">Failed to load image</p>';
-                    });
-                    
-                    // Start with fade-in effect
-                    img.classList.add('opacity-0', 'transition-opacity', 'duration-300');
-                    
-                    container.appendChild(img);
-                } else if (this.currentView === 'transformed') {
-                    container.innerHTML = '<p class="text-gray-400">No transformed image yet</p>';
-                } else {
-                    container.innerHTML = '<p class="text-gray-400">Upload an image to get started</p>';
-                }
-                
-                // Show iteration indicator if we're viewing transformed image and it exists
-                if (iterationIndicator) {
-                    if (this.currentView === 'transformed' && this.transformedImage) {
-                        iterationIndicator.classList.remove('hidden');
-                    } else {
-                        iterationIndicator.classList.add('hidden');
-                    }
-                }
-            }
-
-            toggleImage(view) {
-                this.currentView = view;
-                this.displayImage();
-            }
-
-            async transformImage() {
-                const prompt = document.getElementById('promptInput').value.trim();
-                if (!prompt) {
-                    this.showError('Please enter a transformation prompt');
-                    return;
-                }
-
-                if (!this.originalImageFile) {
-                    this.showError('Please upload an image first');
-                    return;
-                }
-
-                const submitBtn = document.getElementById('submitBtn');
-                const loadingSpinner = document.getElementById('loadingSpinner');
-                
-                try {
-                    // Show loading state
-                    submitBtn.disabled = true;
-                    submitBtn.innerHTML = '<span class="truncate">Transforming...</span>';
-                    if (loadingSpinner) {
-                        loadingSpinner.classList.remove('hidden');
-                    }
-                    
-                    // Start progress simulation
-                    this.simulateProgress();
-                    
-                    console.log('Starting transformation...');
-                    console.log('Prompt:', prompt);
-                    
-                    // Determine which image to use as the base based on edit mode toggle
-                    const editModeToggle = document.getElementById('editModeToggle');
-                    const useTransformed = editModeToggle.checked && this.transformedImage;
-                    const imageToUse = useTransformed ? this.transformedImage : this.originalImageFile;
-                    
-                    // Create form data
-                    const formData = new FormData();
-                    formData.append('prompt', prompt);
-                    
-                    if (imageToUse === this.originalImageFile) {
-                        // Use original file
-                        formData.append('image', this.originalImageFile);
-                        console.log('Using original image file:', this.originalImageFile.name, this.originalImageFile.size, 'bytes');
-                    } else {
-                        // Convert base64 to blob for API
-                        const base64 = this.transformedImage;
-                        const blob = await this.base64ToBlob(base64, 'image/png');
-                        formData.append('image', blob, 'transformed.png');
-                        console.log('Using transformed image as base');
-                    }
-                    
-                    console.log('Sending request to Venice AI...');
-                    
-                    // Convert image to base64 for the serverless function
-                    let imageBase64;
-                    if (imageToUse === this.originalImageFile) {
-                        // Convert original file to base64
-                        imageBase64 = await this.fileToBase64(this.originalImageFile);
-                    } else {
-                        // Use transformed image base64
-                        imageBase64 = this.transformedImage;
-                    }
-                    
-                    const response = await fetch('/.netlify/functions/image-edit', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            prompt: prompt,
-                            image: imageBase64
-                        })
-                    });
-                    
-                    console.log('Response status:', response.status);
-                    console.log('Response headers:', Object.fromEntries(response.headers));
-
-                    if (!response.ok) {
-                        let errorMessage = `HTTP error! status: ${response.status}`;
-                        try {
-                            const errorData = await response.json();
-                            errorMessage = errorData.message || errorData.error || errorMessage;
-                        } catch (e) {
-                            // If we can't parse JSON, try to get text
-                            try {
-                                const errorText = await response.text();
-                                if (errorText) {
-                                    errorMessage = errorText;
-                                }
-                            } catch (e2) {
-                                // Use default error message
-                            }
-                        }
-                        console.error('API Error:', errorMessage);
-                        throw new Error(errorMessage);
-                    }
-
-                    // Get the transformed image from the response
-                    // Serverless function returns JSON with base64 image
-                    const data = await response.json();
-                    if (data.image) {
-                        this.transformedImage = data.image;
-                    } else {
-                        throw new Error('No image data in response');
-                    }
-                    
-                    // Complete progress to 100%
-                    this.completeProgress();
-                    
-                    // Switch to transformed view FIRST (before saving)
-                    const transformedRadio = document.querySelector('input[value="transformed"]');
-                    if (transformedRadio) {
-                        transformedRadio.checked = true;
-                    }
-                    this.currentView = 'transformed';
-                    this.displayImage();
-                    
-                    // Unhide the main download button
-                    const downloadBtn = document.getElementById('downloadBtn');
-                    if (downloadBtn) downloadBtn.classList.remove('hidden');
-
-                     // Show bottom navigation now that we have a transformed image
-                     this.updateBottomNavVisibility();
-                     
- 
-                     
-                 } catch (error) {
-                    console.error('Transformation error:', error);
-                    this.showError('Failed to transform image: ' + error.message);
-                } finally {
-                    // Reset loading state
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = '<span class="truncate">Transform Image</span>';
-                    if (loadingSpinner) {
-                        loadingSpinner.classList.add('hidden');
-                    }
-                    
-                    // Reset progress
-                    this.resetProgress();
-                }
-            }
-
-            simulateProgress() {
-                const progressBar = document.getElementById('progressBar');
-                const progressText = document.getElementById('progressText');
-                const progressPercent = document.getElementById('progressPercent');
-                
-                if (!progressBar || !progressText || !progressPercent) return;
-                
-                const steps = [
-                    { progress: 15, text: 'Analyzing image...' },
-                    { progress: 30, text: 'Processing your prompt...' },
-                    { progress: 50, text: 'Generating transformation...' },
-                    { progress: 70, text: 'Applying AI magic...' },
-                    { progress: 85, text: 'Refining details...' },
-                    { progress: 95, text: 'Almost done...' }
-                ];
-                
-                let currentStep = 0;
-                
-                const updateProgress = () => {
-                    if (currentStep < steps.length) {
-                        const step = steps[currentStep];
-                        progressBar.style.width = step.progress + '%';
-                        progressPercent.textContent = step.progress + '%';
-                        progressText.textContent = step.text;
-                        currentStep++;
-                        
-                        // Random delay between 800ms and 1.5s for realistic feel
-                        const delay = Math.random() * 700 + 800;
-                        setTimeout(updateProgress, delay);
-                    }
-                };
-                
-                // Start progress simulation
-                updateProgress();
-            }
-
-            resetProgress() {
-                const progressBar = document.getElementById('progressBar');
-                const progressText = document.getElementById('progressText');
-                const progressPercent = document.getElementById('progressPercent');
-                
-                if (progressBar) {
-                    progressBar.style.width = '0%';
-                }
-                if (progressText) {
-                    progressText.textContent = 'Initializing...';
-                }
-                if (progressPercent) {
-                    progressPercent.textContent = '0%';
-                }
-            }
-
-            completeProgress() {
-                const progressBar = document.getElementById('progressBar');
-                const progressText = document.getElementById('progressText');
-                const progressPercent = document.getElementById('progressPercent');
-                
-                if (progressBar) {
-                    progressBar.style.width = '100%';
-                }
-                if (progressText) {
-                    progressText.textContent = 'Transformation complete!';
-                }
-                if (progressPercent) {
-                    progressPercent.textContent = '100%';
-                }
-            }
-
-            updateBottomNavVisibility() {
-                const bottomNav = document.getElementById('bottomNav');
-                const downloadSection = document.getElementById('downloadSection');
-                
-                if (bottomNav) {
-                    if (this.transformedImage) {
-                        bottomNav.classList.remove('hidden');
-                    } else {
-                        bottomNav.classList.add('hidden');
-                    }
-                }
-                
-                if (downloadSection) {
-                    if (this.transformedImage) {
-                        downloadSection.classList.remove('hidden');
-                    } else {
-                        downloadSection.classList.add('hidden');
-                    }
-                }
-            }
-
-            blobToBase64(blob) {
-                return new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = () => {
-                        const base64 = reader.result.split(',')[1];
-                        resolve(base64);
-                    };
-                    reader.onerror = reject;
-                    reader.readAsDataURL(blob);
-                });
-            }
-
-            base64ToBlob(base64, mimeType) {
-                const byteCharacters = atob(base64);
-                const byteNumbers = new Array(byteCharacters.length);
-                for (let i = 0; i < byteCharacters.length; i++) {
-                    byteNumbers[i] = byteCharacters.charCodeAt(i);
-                }
-                const byteArray = new Uint8Array(byteNumbers);
-                return new Blob([byteArray], { type: mimeType });
-            }
-
-            fileToBase64(file) {
-                return new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = () => {
-                        const base64 = reader.result.split(',')[1];
-                        resolve(base64);
-                    };
-                    reader.onerror = reject;
-                    reader.readAsDataURL(file);
-                });
-            }
-
-            updateImageMetadata(base64Image) {
-                try {
-                    // Create current timestamp in EXIF format
-                    const now = new Date();
-                    const exifDateTime = now.getFullYear() + ':' + 
-                                      String(now.getMonth() + 1).padStart(2, '0') + ':' + 
-                                      String(now.getDate()).padStart(2, '0') + ' ' + 
-                                      String(now.getHours()).padStart(2, '0') + ':' + 
-                                      String(now.getMinutes()).padStart(2, '0') + ':' + 
-                                      String(now.getSeconds()).padStart(2, '0');
-                    
-                    // Convert base64 to data URL
-                    const dataURL = 'data:image/jpeg;base64,' + base64Image;
-                    
-                    // Get existing EXIF data or create new
-                    let exifDict = {};
-                    try {
-                        const exifData = PIEXIF.load(dataURL);
-                        exifDict = exifData;
-                    } catch (e) {
-                        // If no EXIF data exists, create new structure
-                        exifDict = {
-                            "0th": {},
-                            "Exif": {},
-                            "GPS": {},
-                            "1st": {},
-                            "thumbnail": null
-                        };
-                    }
-                    
-                    // Update EXIF timestamps
-                    exifDict["0th"][PIEXIF.ImageIFD.DateTime] = exifDateTime;
-                    exifDict["Exif"][PIEXIF.ExifIFD.DateTimeOriginal] = exifDateTime;
-                    exifDict["Exif"][PIEXIF.ExifIFD.DateTimeDigitized] = exifDateTime;
-                    
-                    // Add software tag
-                    exifDict["0th"][PIEXIF.ImageIFD.Software] = "vivMorph AI Image Transformation";
-                    
-                    // Convert back to base64 with updated EXIF
-                    const exifBytes = PIEXIF.dump(exifDict);
-                    const newDataURL = PIEXIF.insert(exifBytes, dataURL);
-                    
-                    // Extract base64 from data URL
-                    return newDataURL.split(',')[1];
-                } catch (error) {
-                    console.warn('Failed to update EXIF metadata:', error);
-                    // Return original image if metadata update fails
-                    return base64Image;
-                }
-            }
-
-            async shareImage() {
-                const imageToShare = this.currentView === 'original' ? this.originalImage : this.transformedImage;
-                
-                if (!imageToShare) {
-                    this.showError('No image to share');
-                    return;
-                }
-
-                try {
-                    let finalImage = imageToShare;
-                    
-                    // Update metadata for transformed images
-                    if (this.currentView === 'transformed') {
-                        finalImage = this.updateImageMetadata(imageToShare);
-                    }
-                    
-                    // Create a download link
-                    const link = document.createElement('a');
-                    link.href = `data:image/jpeg;base64,${finalImage}`;
-                    link.download = `vivMorph-${this.currentView}-${Date.now()}.jpg`;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                } catch (error) {
-                    this.showError('Failed to download image: ' + error.message);
-                }
-            }
-
-            downloadImage() {
-                const imageToDownload = this.currentView === 'original' ? this.originalImage : this.transformedImage;
-                
-                if (!imageToDownload) {
-                    this.showError('No image to download');
-                    return;
-                }
-
-                try {
-                    let finalImage = imageToDownload;
-                    
-                    // Update metadata for transformed images
-                    if (this.currentView === 'transformed') {
-                        finalImage = this.updateImageMetadata(imageToDownload);
-                    }
-                    
-                    // Create a download link
-                    const link = document.createElement('a');
-                    link.href = `data:image/jpeg;base64,${finalImage}`;
-                    link.download = `vivMorph-${this.currentView}-${Date.now()}.jpg`;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                } catch (error) {
-                    this.showError('Failed to download image: ' + error.message);
-                }
-            }
-
-            async optimizePrompt() {
-                const promptInput = document.getElementById('promptInput');
-                const userPrompt = promptInput.value.trim();
-                
-                if (!userPrompt) {
-                    this.showError('Please enter a prompt first');
-                    return;
-                }
-
-                const optimizeBtn = document.getElementById('optimizeBtn');
-                const originalText = optimizeBtn.textContent;
-                
-                try {
-                    optimizeBtn.textContent = '⏳ Optimizing...';
-                    optimizeBtn.disabled = true;
-
-                    const response = await fetch('/.netlify/functions/chat-completions', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            model: 'llama-3.3-70b',
-                            messages: [
-                                {
-                                    role: 'system',
-                                    content: 'You are an expert AI prompt optimizer for image generation. Your task is to take a user\'s simple prompt and transform it into a detailed, specific prompt that will produce better image generation results. Focus on adding descriptive details about lighting, composition, style, and visual elements while keeping the core intent. Return only the optimized prompt, nothing else.'
-                                },
-                                {
-                                    role: 'user',
-                                    content: `Optimize this image generation prompt: "${userPrompt}"`
-                                }
-                            ],
-                            max_tokens: 150,
-                            temperature: 0.7
-                        })
-                    });
-
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-
-                    const data = await response.json();
-                    const optimizedPrompt = data.choices[0].message.content.trim();
-                    
-                    promptInput.value = optimizedPrompt;
-                    
-                    // Show success feedback
-                    optimizeBtn.textContent = '✅ Optimized';
-                    setTimeout(() => {
-                        optimizeBtn.textContent = originalText;
-                        optimizeBtn.disabled = false;
-                    }, 1500);
-                    
-                } catch (error) {
-                    console.error('Error optimizing prompt:', error);
-                    this.showError('Failed to optimize prompt: ' + error.message);
-                    
-                    // Reset button state
-                    optimizeBtn.textContent = originalText;
-                    optimizeBtn.disabled = false;
-                }
-            }
-
-
-
-            // Edit mode management
-            updateEditMode(enabled) {
-                const iterationIndicator = document.getElementById('iterationIndicator');
-                if (enabled && this.transformedImage) {
-                    this.currentView = 'transformed';
-                    const transformedRadio = document.querySelector('input[name="imageToggle"][value="transformed"]');
-                    if (transformedRadio) {
-                        transformedRadio.checked = true;
-                    }
-                    this.displayImage();
-                    if (iterationIndicator) {
-                        iterationIndicator.classList.remove('hidden');
-                    }
-                } else {
-                    this.currentView = 'original';
-                    const originalRadio = document.querySelector('input[name="imageToggle"][value="original"]');
-                    if (originalRadio) {
-                        originalRadio.checked = true;
-                    }
-                    this.displayImage();
-                    if (iterationIndicator) {
-                        iterationIndicator.classList.add('hidden');
-                    }
-                }
-            }
-
-
-
-
-
-
+    class VivMorph {
+        constructor() {
+            this.originalImage = null;
+            this.originalImageFile = null;
+            this.transformedImage = null;
+            this.currentView = 'original'; // original | transformed | compare
+            this.selectedModel = 'qwen-edit';
+            this.selectedAspectRatio = 'auto';
+            this.models = [];
+            // History
+            this.history = [];
+            this.maxHistory = 20;
+            // Mask
+            this.maskActive = false;
+            this.maskTool = 'brush'; // brush | eraser
+            this.maskBrushSize = 25;
+            this.maskDrawing = false;
+            this.maskCtx = null;
+            this.init();
         }
 
-        // Initialize the app when DOM is loaded
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('DOM loaded, initializing vivMorph...');
-            window.vivMorph = new VivMorph();
-        });
+        init() {
+            this.setupEventListeners();
+            this.fetchModels();
+            this.loadHistory();
+            this.registerServiceWorker();
+        }
+
+        // ==================== PWA ====================
+        registerServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/sw.js').catch(() => {});
+            }
+        }
+
+        // ==================== MODEL MANAGEMENT ====================
+        async fetchModels() {
+            try {
+                const r = await fetch('/.netlify/functions/list-models');
+                if (!r.ok) throw new Error();
+                const data = await r.json();
+                this.models = data.data || [];
+            } catch {
+                this.models = [
+                    { id:'qwen-edit', model_spec:{ name:'Qwen Edit 2511', pricing:{inpaint:{usd:0.04}}, constraints:{aspectRatios:['auto','1:1','3:2','16:9','21:9','9:16','2:3','4:5'], promptCharacterLimit:1500, combineImages:true}, privacy:'private', offline:false }},
+                    { id:'flux-2-max-edit', model_spec:{ name:'Flux 2 Max', pricing:{inpaint:{usd:0.09}}, constraints:{aspectRatios:['auto','1:1','3:2','16:9','21:9','9:16','2:3','4:5'], promptCharacterLimit:3000, combineImages:true}, privacy:'anonymized', offline:false }},
+                    { id:'gpt-image-1-5-edit', model_spec:{ name:'GPT Image 1.5', pricing:{inpaint:{usd:0.23}}, constraints:{aspectRatios:['auto','1:1','3:2','2:3'], promptCharacterLimit:32768, combineImages:true}, privacy:'anonymized', offline:false }},
+                    { id:'grok-imagine-edit', model_spec:{ name:'Grok Imagine', pricing:{inpaint:{usd:0.04}}, constraints:{aspectRatios:['auto','1:1','3:2','16:9','21:9','9:16','2:3','4:5'], promptCharacterLimit:1500, combineImages:false}, privacy:'anonymized', offline:false }},
+                    { id:'nano-banana-pro-edit', model_spec:{ name:'Nano Banana Pro', pricing:{inpaint:{usd:0.18}}, constraints:{aspectRatios:['auto','1:1','3:2','16:9','21:9','9:16','2:3','4:5'], promptCharacterLimit:32768, combineImages:true}, privacy:'anonymized', offline:false }},
+                    { id:'seedream-v4-edit', model_spec:{ name:'SeedreamV4.5', pricing:{inpaint:{usd:0.05}}, constraints:{aspectRatios:['auto','1:1','3:2','16:9','9:16','2:3','4:5'], promptCharacterLimit:10000, combineImages:true}, privacy:'anonymized', offline:false }},
+                ];
+            }
+            this.renderModelList();
+            this.updateModelInfo();
+        }
+
+        renderModelList() {
+            const c = document.getElementById('modelList');
+            if (!this.models.length) { c.innerHTML = '<p class="text-[10px] text-zinc-500 text-center py-4">No models</p>'; return; }
+            c.innerHTML = this.models.map(m => {
+                const s = m.model_spec, p = s.pricing?.inpaint?.usd||0, active = m.id===this.selectedModel, off = s.offline;
+                return `<button class="model-card w-full p-2.5 rounded-xl bg-surface-2 border ${active?'border-accent/40 bg-accent/5':'border-white/5 hover:border-white/10'} text-left transition-all ${off?'opacity-40 cursor-not-allowed':'cursor-pointer'}" data-model-id="${m.id}" ${off?'disabled':''}>
+                    <div class="flex items-center justify-between mb-0.5"><div class="flex items-center gap-1.5"><div class="w-1.5 h-1.5 rounded-full ${active?'bg-accent shadow-[0_0_6px_rgba(99,102,241,0.6)]':'bg-zinc-600'}"></div><span class="text-xs font-semibold ${active?'text-white':'text-zinc-300'}">${s.name}</span>${off?'<span class="text-[8px] px-1 rounded bg-red-500/10 text-red-400 font-mono">offline</span>':''}</div><span class="text-[10px] font-mono ${p<=0.05?'text-neon-green':p<=0.10?'text-amber-400':'text-orange-400'}">$${p.toFixed(2)}</span></div>
+                    <div class="flex items-center gap-1 mt-1"><span class="text-[8px] px-1 py-0.5 rounded bg-surface-3 text-zinc-500 font-mono">${s.privacy||'n/a'}</span><span class="text-[8px] px-1 py-0.5 rounded bg-surface-3 text-zinc-500 font-mono">${(s.constraints?.promptCharacterLimit||0).toLocaleString()} chars</span>${s.constraints?.combineImages?'<span class="text-[8px] px-1 py-0.5 rounded bg-surface-3 text-zinc-500 font-mono">combine</span>':''}</div>
+                </button>`;
+            }).join('');
+            c.querySelectorAll('.model-card:not([disabled])').forEach(card => {
+                card.addEventListener('click', () => { this.selectedModel = card.dataset.modelId; this.renderModelList(); this.updateModelInfo(); this.updateAspectRatioButtons(); this.closeModelModal(); });
+            });
+        }
+
+        updateModelInfo() {
+            const m = this.models.find(x => x.id === this.selectedModel); if (!m) return;
+            const s = m.model_spec;
+            document.getElementById('activeModelName').textContent = s.name;
+            document.getElementById('modelNameDisplay').textContent = s.name;
+            document.getElementById('modelPrice').textContent = '$' + (s.pricing?.inpaint?.usd||0).toFixed(2);
+            document.getElementById('modelPrivacy').textContent = s.privacy||'n/a';
+            document.getElementById('modelMaxPrompt').textContent = (s.constraints?.promptCharacterLimit||0).toLocaleString()+' chars';
+            const ce = document.getElementById('modelCombine');
+            s.constraints?.combineImages ? ce.classList.remove('hidden') : ce.classList.add('hidden');
+            this.updateAspectRatioButtons();
+        }
+
+        updateAspectRatioButtons() {
+            const m = this.models.find(x => x.id === this.selectedModel); if (!m) return;
+            const sr = m.model_spec.constraints?.aspectRatios || ['auto'];
+            document.querySelectorAll('.aspect-btn').forEach(b => {
+                sr.includes(b.dataset.ratio) ? b.classList.remove('opacity-30','pointer-events-none') : b.classList.add('opacity-30','pointer-events-none');
+            });
+            if (!sr.includes(this.selectedAspectRatio)) { this.selectedAspectRatio = 'auto'; this.updateAspectRatioUI(); }
+        }
+
+        updateAspectRatioUI() {
+            document.querySelectorAll('.aspect-btn').forEach(b => {
+                if (b.dataset.ratio === this.selectedAspectRatio) { b.classList.add('border-accent/30','text-accent-light'); b.classList.remove('border-white/5','text-zinc-500'); }
+                else { b.classList.remove('border-accent/30','text-accent-light'); b.classList.add('border-white/5','text-zinc-500'); }
+            });
+        }
+
+        openModelModal() { document.getElementById('modelModal').classList.remove('hidden'); }
+        closeModelModal() { document.getElementById('modelModal').classList.add('hidden'); }
+
+        // ==================== HISTORY ====================
+        loadHistory() {
+            try {
+                const stored = localStorage.getItem('vivmorph_history');
+                if (stored) this.history = JSON.parse(stored);
+            } catch {}
+            this.renderHistory();
+        }
+
+        saveHistory() {
+            try {
+                // Only keep thumbnails, not full images - store small base64 thumbs
+                localStorage.setItem('vivmorph_history', JSON.stringify(this.history.slice(0, this.maxHistory)));
+            } catch (e) {
+                // localStorage full, trim older items
+                if (this.history.length > 5) {
+                    this.history = this.history.slice(0, 5);
+                    try { localStorage.setItem('vivmorph_history', JSON.stringify(this.history)); } catch {}
+                }
+            }
+        }
+
+        addToHistory(prompt, model, imageBase64) {
+            // Create a small thumbnail (max 100px)
+            const thumb = this.createThumbnail(imageBase64, 100);
+            this.history.unshift({
+                id: Date.now(),
+                prompt: prompt.substring(0, 100),
+                model,
+                thumb,
+                fullImage: imageBase64,
+                timestamp: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})
+            });
+            if (this.history.length > this.maxHistory) this.history.pop();
+            this.saveHistory();
+            this.renderHistory();
+        }
+
+        createThumbnail(base64, maxDim) {
+            try {
+                const canvas = document.createElement('canvas');
+                const img = new Image();
+                img.src = base64.startsWith('data:') ? base64 : 'data:image/jpeg;base64,' + base64;
+                // We return the full base64 for now; real thumb would need async
+                return base64.substring(0, 2000); // Store truncated for localStorage thumb display
+            } catch { return ''; }
+        }
+
+        renderHistory() {
+            const strip = document.getElementById('historyStrip');
+            const items = document.getElementById('historyItems');
+            const btn = document.getElementById('historyToggleBtn');
+            const modalItems = document.getElementById('historyModalItems');
+
+            if (this.history.length === 0) {
+                strip.classList.add('hidden');
+                btn.classList.add('hidden');
+                return;
+            }
+
+            strip.classList.remove('hidden');
+            btn.classList.remove('hidden');
+
+            // Strip thumbnails
+            items.innerHTML = this.history.map((h, i) => `
+                <button class="history-thumb shrink-0 w-10 h-10 rounded-lg bg-surface-3 border border-white/5 hover:border-accent/30 overflow-hidden flex items-center justify-center transition-all relative group" data-idx="${i}" title="${h.prompt}">
+                    <div class="w-full h-full bg-gradient-to-br from-accent/10 to-neon-cyan/10 flex items-center justify-center">
+                        <span class="text-[8px] font-mono text-zinc-500">#${this.history.length - i}</span>
+                    </div>
+                    <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                    </div>
+                </button>
+            `).join('');
+
+            items.querySelectorAll('.history-thumb').forEach(el => {
+                el.addEventListener('click', () => {
+                    const idx = parseInt(el.dataset.idx);
+                    this.restoreFromHistory(idx);
+                });
+            });
+
+            // Modal items (detailed view)
+            modalItems.innerHTML = this.history.map((h, i) => `
+                <button class="rounded-xl bg-surface-2 border border-white/5 hover:border-accent/30 p-2 text-left transition-all" data-idx="${i}">
+                    <div class="w-full h-16 rounded-lg bg-gradient-to-br from-accent/5 to-neon-cyan/5 flex items-center justify-center mb-1.5">
+                        <span class="text-[10px] font-mono text-zinc-500">#${this.history.length - i}</span>
+                    </div>
+                    <p class="text-[9px] text-zinc-400 truncate">${h.prompt}</p>
+                    <div class="flex items-center justify-between mt-1">
+                        <span class="text-[8px] text-zinc-600">${h.model}</span>
+                        <span class="text-[8px] text-zinc-600">${h.timestamp}</span>
+                    </div>
+                </button>
+            `).join('');
+
+            modalItems.querySelectorAll('button').forEach(el => {
+                el.addEventListener('click', () => {
+                    const idx = parseInt(el.dataset.idx);
+                    this.restoreFromHistory(idx);
+                    document.getElementById('historyModal').classList.add('hidden');
+                });
+            });
+        }
+
+        restoreFromHistory(idx) {
+            const entry = this.history[idx];
+            if (!entry || !entry.fullImage) return;
+            this.transformedImage = entry.fullImage;
+            this.currentView = 'transformed';
+            this.updateViewToggleUI();
+            this.displayImage();
+            document.getElementById('downloadBtn').classList.remove('hidden');
+            document.getElementById('promptInput').value = entry.prompt;
+            this.setStatus('Restored from history');
+        }
+
+        clearHistory() {
+            this.history = [];
+            try { localStorage.removeItem('vivmorph_history'); } catch {}
+            this.renderHistory();
+        }
+
+        // ==================== COMPARE SLIDER ====================
+        initCompareSlider() {
+            if (!this.originalImage || !this.transformedImage) return;
+
+            const origImg = document.getElementById('compareOriginal');
+            const transImg = document.getElementById('compareTransformed');
+            const origSrc = this.originalImage.startsWith('data:') ? this.originalImage : 'data:image/jpeg;base64,' + this.originalImage;
+            const transSrc = this.transformedImage.startsWith('data:') ? this.transformedImage : 'data:image/jpeg;base64,' + this.transformedImage;
+
+            origImg.src = origSrc;
+            transImg.src = transSrc;
+
+            const wrap = document.getElementById('compareContainer');
+            const clip = document.getElementById('compareClip');
+            const handle = document.getElementById('compareHandle');
+
+            // Reset to 50%
+            handle.style.left = '50%';
+            clip.style.clipPath = 'inset(0 0 0 50%)';
+
+            const move = (clientX) => {
+                const rect = wrap.getBoundingClientRect();
+                let pct = ((clientX - rect.left) / rect.width) * 100;
+                pct = Math.max(0, Math.min(100, pct));
+                handle.style.left = pct + '%';
+                clip.style.clipPath = `inset(0 0 0 ${pct}%)`;
+            };
+
+            // Remove old listeners by cloning
+            const newWrap = wrap.cloneNode(false);
+            newWrap.innerHTML = wrap.innerHTML;
+            wrap.parentNode.replaceChild(newWrap, wrap);
+            newWrap.id = 'compareContainer';
+            newWrap.className = wrap.className;
+
+            // Re-grab elements after clone
+            const nHandle = newWrap.querySelector('#compareHandle');
+            const nClip = newWrap.querySelector('#compareClip');
+            const nOrig = newWrap.querySelector('#compareOriginal');
+            const nTrans = newWrap.querySelector('#compareTransformed');
+            nOrig.src = origSrc;
+            nTrans.src = transSrc;
+            nHandle.style.left = '50%';
+            nClip.style.clipPath = 'inset(0 0 0 50%)';
+
+            let dragging = false;
+
+            newWrap.addEventListener('pointerdown', (e) => { dragging = true; newWrap.setPointerCapture(e.pointerId); move(e.clientX); });
+            newWrap.addEventListener('pointermove', (e) => { if (dragging) move(e.clientX); });
+            newWrap.addEventListener('pointerup', () => { dragging = false; });
+        }
+
+        // ==================== MASK PAINTING ====================
+        initMask() {
+            const canvas = document.getElementById('maskCanvas');
+            const container = document.getElementById('imageDisplay');
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            this.maskCtx = canvas.getContext('2d');
+            this.maskCtx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        toggleMask() {
+            this.maskActive = !this.maskActive;
+            const canvas = document.getElementById('maskCanvas');
+            const tools = document.getElementById('maskTools');
+            const btn = document.getElementById('maskToggleBtn');
+
+            if (this.maskActive) {
+                canvas.classList.remove('hidden');
+                tools.classList.remove('hidden');
+                btn.classList.add('text-pink-400', 'border-pink-500/30');
+                btn.classList.remove('text-zinc-400');
+                this.initMask();
+                this.setMaskTool('brush');
+            } else {
+                canvas.classList.add('hidden');
+                tools.classList.add('hidden');
+                btn.classList.remove('text-pink-400', 'border-pink-500/30');
+                btn.classList.add('text-zinc-400');
+            }
+        }
+
+        setMaskTool(tool) {
+            this.maskTool = tool;
+            const canvas = document.getElementById('maskCanvas');
+            const brushBtn = document.getElementById('maskBrushBtn');
+            const eraserBtn = document.getElementById('maskEraserBtn');
+
+            if (tool === 'brush') {
+                canvas.classList.remove('eraser');
+                brushBtn.className = 'px-2 py-1 rounded text-[10px] font-medium bg-pink-500/20 text-pink-400 border border-pink-500/30';
+                eraserBtn.className = 'px-2 py-1 rounded text-[10px] font-medium text-zinc-500 hover:text-zinc-300';
+            } else {
+                canvas.classList.add('eraser');
+                eraserBtn.className = 'px-2 py-1 rounded text-[10px] font-medium bg-pink-500/20 text-pink-400 border border-pink-500/30';
+                brushBtn.className = 'px-2 py-1 rounded text-[10px] font-medium text-zinc-500 hover:text-zinc-300';
+            }
+        }
+
+        clearMask() {
+            if (this.maskCtx) {
+                const canvas = document.getElementById('maskCanvas');
+                this.maskCtx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+
+        maskDraw(x, y) {
+            if (!this.maskCtx) return;
+            const ctx = this.maskCtx;
+            ctx.globalCompositeOperation = this.maskTool === 'eraser' ? 'destination-out' : 'source-over';
+            ctx.beginPath();
+            ctx.arc(x, y, this.maskBrushSize / 2, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(244, 114, 182, 0.4)';
+            ctx.fill();
+        }
+
+        getMaskBase64() {
+            const canvas = document.getElementById('maskCanvas');
+            if (!canvas || !this.maskActive) return null;
+
+            // Check if mask has any content
+            const ctx = canvas.getContext('2d');
+            const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+            let hasContent = false;
+            for (let i = 3; i < data.length; i += 4) {
+                if (data[i] > 0) { hasContent = true; break; }
+            }
+            if (!hasContent) return null;
+
+            // Create a black and white mask: white where painted, black elsewhere
+            const maskCanvas = document.createElement('canvas');
+            maskCanvas.width = canvas.width;
+            maskCanvas.height = canvas.height;
+            const maskCtx = maskCanvas.getContext('2d');
+            maskCtx.fillStyle = 'black';
+            maskCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
+
+            // Draw white where the mask was painted
+            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const maskData = maskCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height);
+            for (let i = 0; i < imgData.data.length; i += 4) {
+                if (imgData.data[i + 3] > 10) {
+                    maskData.data[i] = 255;
+                    maskData.data[i + 1] = 255;
+                    maskData.data[i + 2] = 255;
+                    maskData.data[i + 3] = 255;
+                }
+            }
+            maskCtx.putImageData(maskData, 0, 0);
+            return maskCanvas.toDataURL('image/png').split(',')[1];
+        }
+
+        // ==================== EVENT LISTENERS ====================
+        setupEventListeners() {
+            // File upload
+            document.getElementById('uploadBtn').addEventListener('click', (e) => { e.stopPropagation(); document.getElementById('fileInput').click(); });
+            document.getElementById('fileInput').addEventListener('change', (e) => this.handleFileUpload(e));
+
+            // Drop zone
+            const dz = document.getElementById('dropZone');
+            dz.addEventListener('click', () => document.getElementById('fileInput').click());
+            dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('drag-over'); });
+            dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+            dz.addEventListener('drop', (e) => { e.preventDefault(); dz.classList.remove('drag-over'); if (e.dataTransfer.files.length) { document.getElementById('fileInput').files = e.dataTransfer.files; this.handleFileUpload({target:{files:e.dataTransfer.files}}); } });
+
+            // Upload new
+            document.getElementById('uploadNewBtn').addEventListener('click', () => document.getElementById('fileInput').click());
+
+            // View toggle
+            document.getElementById('viewOriginalBtn').addEventListener('click', () => this.toggleView('original'));
+            document.getElementById('viewTransformedBtn').addEventListener('click', () => this.toggleView('transformed'));
+            document.getElementById('viewCompareBtn').addEventListener('click', () => this.toggleView('compare'));
+
+            // Presets
+            document.querySelectorAll('.preset-pill').forEach(b => { b.addEventListener('click', () => { document.getElementById('promptInput').value = b.dataset.prompt; }); });
+
+            // Aspect ratio
+            document.querySelectorAll('.aspect-btn').forEach(b => { b.addEventListener('click', () => { if (b.classList.contains('pointer-events-none')) return; this.selectedAspectRatio = b.dataset.ratio; this.updateAspectRatioUI(); }); });
+
+            // Transform / Optimize / Download
+            document.getElementById('submitBtn').addEventListener('click', () => this.transformImage());
+            document.getElementById('optimizeBtn').addEventListener('click', () => this.optimizePrompt());
+            document.getElementById('downloadBtn').addEventListener('click', () => this.downloadImage());
+
+            // Model modal
+            document.getElementById('modelSelectorBtn').addEventListener('click', () => this.openModelModal());
+            document.getElementById('closeModelModal').addEventListener('click', () => this.closeModelModal());
+            document.getElementById('modelModalBackdrop').addEventListener('click', () => this.closeModelModal());
+
+            // History
+            document.getElementById('historyToggleBtn').addEventListener('click', () => { document.getElementById('historyModal').classList.remove('hidden'); });
+            document.getElementById('closeHistoryModal').addEventListener('click', () => { document.getElementById('historyModal').classList.add('hidden'); });
+            document.getElementById('historyModalBackdrop').addEventListener('click', () => { document.getElementById('historyModal').classList.add('hidden'); });
+            document.getElementById('clearHistoryBtn').addEventListener('click', () => this.clearHistory());
+
+            // Error modal
+            document.getElementById('closeError').addEventListener('click', () => this.hideErrorModal());
+
+            // Edit mode
+            document.getElementById('editModeToggle').addEventListener('change', (e) => this.updateEditMode(e.target.checked));
+
+            // Mask controls
+            document.getElementById('maskToggleBtn').addEventListener('click', () => this.toggleMask());
+            document.getElementById('maskBrushBtn').addEventListener('click', () => this.setMaskTool('brush'));
+            document.getElementById('maskEraserBtn').addEventListener('click', () => this.setMaskTool('eraser'));
+            document.getElementById('maskClearBtn').addEventListener('click', () => this.clearMask());
+            document.getElementById('maskSizeSlider').addEventListener('input', (e) => {
+                this.maskBrushSize = parseInt(e.target.value);
+                document.getElementById('maskSizeLabel').textContent = this.maskBrushSize;
+            });
+
+            // Mask canvas drawing
+            const mc = document.getElementById('maskCanvas');
+            mc.addEventListener('pointerdown', (e) => { if (!this.maskActive) return; this.maskDrawing = true; mc.setPointerCapture(e.pointerId); const r = mc.getBoundingClientRect(); this.maskDraw(e.clientX - r.left, e.clientY - r.top); });
+            mc.addEventListener('pointermove', (e) => { if (!this.maskDrawing) return; const r = mc.getBoundingClientRect(); this.maskDraw(e.clientX - r.left, e.clientY - r.top); });
+            mc.addEventListener('pointerup', () => { this.maskDrawing = false; });
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) this.transformImage();
+                if (e.key === 'Escape') { this.closeModelModal(); this.hideErrorModal(); document.getElementById('historyModal').classList.add('hidden'); }
+            });
+
+            // Paste
+            document.addEventListener('paste', (e) => {
+                const items = e.clipboardData?.items; if (!items) return;
+                for (const item of items) { if (item.type.startsWith('image/')) { const f = item.getAsFile(); if (f) this.handleFileUpload({target:{files:[f]}}); break; } }
+            });
+
+            // Resize mask canvas when window resizes
+            window.addEventListener('resize', () => { if (this.maskActive) this.initMask(); });
+        }
+
+        // ==================== IMAGE HANDLING ====================
+        validateImageFile(file) {
+            if (!file.type.startsWith('image/')) { this.showError('Please select a valid image file'); return false; }
+            if (file.size > 25*1024*1024) { this.showError('Image must be less than 25MB'); return false; }
+            return true;
+        }
+
+        async handleFileUpload(event) {
+            const file = event.target.files[0]; if (!file) return;
+            if (!this.validateImageFile(file)) return;
+            try {
+                this.originalImageFile = file;
+                this.originalImage = await this.fileToBase64(file);
+                this.transformedImage = null;
+                this.currentView = 'original';
+                document.getElementById('dropZone').classList.add('hidden');
+                document.getElementById('imageDisplay').classList.remove('hidden');
+                document.getElementById('imageControls').classList.remove('hidden');
+                this.updateViewToggleUI();
+                this.displayImage();
+                document.getElementById('downloadBtn').classList.add('hidden');
+                // Reset mask
+                if (this.maskActive) this.toggleMask();
+            } catch (error) { this.showError('Error processing image: ' + error.message); }
+        }
+
+        displayImage() {
+            const container = document.getElementById('imageContainer');
+            const compareContainer = document.getElementById('compareContainer');
+
+            if (this.currentView === 'compare' && this.originalImage && this.transformedImage) {
+                container.classList.add('hidden');
+                compareContainer.classList.remove('hidden');
+                this.initCompareSlider();
+                return;
+            }
+
+            container.classList.remove('hidden');
+            compareContainer.classList.add('hidden');
+
+            const src = this.currentView === 'original' ? this.originalImage : this.transformedImage;
+            container.innerHTML = '';
+            if (src) {
+                const url = src.startsWith('data:') ? src : 'data:image/jpeg;base64,' + src;
+                const img = document.createElement('img');
+                img.src = url;
+                img.alt = this.currentView;
+                img.className = 'max-w-full max-h-full w-auto h-auto object-contain animate-fade-in';
+                img.style.maxHeight = '75vh';
+                container.appendChild(img);
+            } else if (this.currentView === 'transformed') {
+                container.innerHTML = '<p class="text-xs text-zinc-600">No transformation yet</p>';
+            }
+        }
+
+        toggleView(view) {
+            if (view === 'compare' && (!this.originalImage || !this.transformedImage)) return;
+            this.currentView = view;
+            this.updateViewToggleUI();
+            this.displayImage();
+            // Hide mask when in compare mode
+            if (view === 'compare' && this.maskActive) {
+                document.getElementById('maskCanvas').classList.add('hidden');
+            } else if (this.maskActive) {
+                document.getElementById('maskCanvas').classList.remove('hidden');
+            }
+        }
+
+        updateViewToggleUI() {
+            const o = document.getElementById('viewOriginalBtn');
+            const t = document.getElementById('viewTransformedBtn');
+            const c = document.getElementById('viewCompareBtn');
+            const active = 'px-2 py-1 rounded text-[10px] font-medium bg-accent/20 text-accent-light border border-accent/30';
+            const inactive = 'px-2 py-1 rounded text-[10px] font-medium text-zinc-500 hover:text-zinc-300';
+            o.className = this.currentView === 'original' ? active : inactive;
+            t.className = this.currentView === 'transformed' ? active : inactive;
+            c.className = this.currentView === 'compare' ? active : inactive;
+        }
+
+        // ==================== TRANSFORMATION ====================
+        async transformImage() {
+            const prompt = document.getElementById('promptInput').value.trim();
+            if (!prompt) { this.showError('Please enter a transformation prompt'); return; }
+            if (!this.originalImageFile && !this.originalImage) { this.showError('Please upload an image first'); return; }
+
+            const model = this.models.find(m => m.id === this.selectedModel);
+            const charLimit = model?.model_spec?.constraints?.promptCharacterLimit || 32768;
+            if (prompt.length > charLimit) { this.showError(`Prompt exceeds ${charLimit.toLocaleString()} char limit for ${model?.model_spec?.name}. Shorten it.`); return; }
+
+            const submitBtn = document.getElementById('submitBtn');
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            try {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<svg class="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg><span>Transforming...</span>';
+                loadingOverlay.classList.remove('hidden');
+                this.simulateProgress();
+
+                const editModeToggle = document.getElementById('editModeToggle');
+                const useTransformed = editModeToggle.checked && this.transformedImage;
+                let imageBase64;
+                if (useTransformed) { imageBase64 = this.transformedImage; }
+                else if (this.originalImage) { imageBase64 = this.originalImage.startsWith('data:') ? this.originalImage.split(',')[1] : this.originalImage; }
+                else { imageBase64 = await this.fileToBase64(this.originalImageFile); }
+
+                const requestBody = { prompt, image: imageBase64, modelId: this.selectedModel };
+                if (this.selectedAspectRatio !== 'auto') requestBody.aspect_ratio = this.selectedAspectRatio;
+
+                // Include mask if present
+                const maskData = this.getMaskBase64();
+                if (maskData) requestBody.mask = maskData;
+
+                const response = await fetch('/.netlify/functions/image-edit', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(requestBody) });
+                if (!response.ok) {
+                    let msg = `HTTP ${response.status}`;
+                    try { const d = await response.json(); msg = d.message || d.error || msg; } catch {}
+                    throw new Error(msg);
+                }
+                const data = await response.json();
+                if (data.image) { this.transformedImage = data.image; } else { throw new Error('No image data'); }
+
+                this.completeProgress();
+                this.currentView = 'transformed';
+                this.updateViewToggleUI();
+                this.displayImage();
+                document.getElementById('downloadBtn').classList.remove('hidden');
+                this.setStatus('Transform complete');
+
+                // Add to history
+                this.addToHistory(prompt, this.selectedModel, data.image);
+
+            } catch (error) {
+                console.error('Transform error:', error);
+                this.showError('Transform failed: ' + error.message);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><span>Transform</span>';
+                loadingOverlay.classList.add('hidden');
+                this.resetProgress();
+            }
+        }
+
+        simulateProgress() {
+            const bar = document.getElementById('progressBar'), text = document.getElementById('progressText'), pct = document.getElementById('progressPercent');
+            if (!bar) return;
+            const steps = [{p:15,t:'Analyzing image...'},{p:35,t:'Processing prompt...'},{p:55,t:'Generating...'},{p:75,t:'Applying edits...'},{p:90,t:'Refining...'},{p:96,t:'Almost done...'}];
+            let i = 0;
+            const tick = () => { if (i < steps.length) { bar.style.width = steps[i].p+'%'; text.textContent = steps[i].t; pct.textContent = steps[i].p+'%'; i++; setTimeout(tick, 800+Math.random()*700); } };
+            tick();
+        }
+        completeProgress() { const b=document.getElementById('progressBar'),t=document.getElementById('progressText'),p=document.getElementById('progressPercent'); if(b)b.style.width='100%'; if(t)t.textContent='Complete!'; if(p)p.textContent='100%'; }
+        resetProgress() { const b=document.getElementById('progressBar'),t=document.getElementById('progressText'),p=document.getElementById('progressPercent'); if(b)b.style.width='0%'; if(t)t.textContent='Transforming...'; if(p)p.textContent='0%'; }
+
+        // ==================== PROMPT OPTIMIZATION ====================
+        async optimizePrompt() {
+            const pi = document.getElementById('promptInput'), up = pi.value.trim();
+            if (!up) { this.showError('Enter a prompt first'); return; }
+            const btn = document.getElementById('optimizeBtn'), orig = btn.innerHTML;
+            try {
+                btn.innerHTML = '<svg class="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>'; btn.disabled = true;
+                const r = await fetch('/.netlify/functions/chat-completions', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ model:'llama-3.3-70b', messages:[{role:'system',content:'You are an expert AI prompt optimizer for image editing. Return only the optimized prompt.'},{role:'user',content:`Optimize this image editing prompt: "${up}"`}], max_tokens:300, temperature:0.7 }) });
+                if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                const d = await r.json(); pi.value = d.choices[0].message.content.trim();
+                btn.innerHTML = '<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" class="text-neon-green"><polyline points="20 6 9 17 4 12"/></svg>Done';
+                setTimeout(() => { btn.innerHTML = orig; btn.disabled = false; }, 1500);
+            } catch (e) { this.showError('Optimize failed: '+e.message); btn.innerHTML = orig; btn.disabled = false; }
+        }
+
+        // ==================== DOWNLOAD ====================
+        downloadImage() {
+            const img = this.currentView === 'original' ? this.originalImage : this.transformedImage;
+            if (!img) { this.showError('No image to download'); return; }
+            try {
+                let final = img;
+                if (this.currentView === 'transformed') final = this.updateImageMetadata(img);
+                const link = document.createElement('a');
+                link.href = 'data:image/jpeg;base64,' + final;
+                link.download = `vivMorph-${this.currentView}-${Date.now()}.jpg`;
+                document.body.appendChild(link); link.click(); document.body.removeChild(link);
+            } catch (e) { this.showError('Download failed: ' + e.message); }
+        }
+
+        updateImageMetadata(b64) {
+            try {
+                const now = new Date();
+                const dt = [now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),String(now.getDate()).padStart(2,'0')].join(':')+' '+[String(now.getHours()).padStart(2,'0'),String(now.getMinutes()).padStart(2,'0'),String(now.getSeconds()).padStart(2,'0')].join(':');
+                const du = 'data:image/jpeg;base64,' + b64;
+                let ex; try { ex = piexif.load(du); } catch { ex = {"0th":{},"Exif":{},"GPS":{},"1st":{},thumbnail:null}; }
+                ex["0th"][piexif.ImageIFD.DateTime] = dt;
+                ex["Exif"][piexif.ExifIFD.DateTimeOriginal] = dt;
+                ex["Exif"][piexif.ExifIFD.DateTimeDigitized] = dt;
+                ex["0th"][piexif.ImageIFD.Software] = "vivMorph AI Image Editor";
+                return piexif.insert(piexif.dump(ex), du).split(',')[1];
+            } catch { return b64; }
+        }
+
+        // ==================== MISC ====================
+        updateEditMode(enabled) { if (enabled && this.transformedImage) { this.currentView = 'transformed'; this.updateViewToggleUI(); this.displayImage(); } }
+        setStatus(text) { const d=document.getElementById('statusDot'),l=document.getElementById('statusText'); d.classList.remove('hidden'); l.classList.remove('hidden'); l.textContent=text; setTimeout(()=>{d.classList.add('hidden');l.classList.add('hidden');},4000); }
+        showError(msg) { document.getElementById('errorMessage').textContent=msg; document.getElementById('errorModal').classList.remove('hidden'); }
+        hideErrorModal() { document.getElementById('errorModal').classList.add('hidden'); }
+        fileToBase64(file) { return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result.split(',')[1]); r.onerror=rej; r.readAsDataURL(file); }); }
+        base64ToBlob(b64, mime) { const bc=atob(b64),bn=new Array(bc.length); for(let i=0;i<bc.length;i++)bn[i]=bc.charCodeAt(i); return new Blob([new Uint8Array(bn)],{type:mime}); }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => { window.vivMorph = new VivMorph(); });
     </script>
 </body>
 </html>
