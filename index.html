@@ -447,7 +447,7 @@
                         <div class="text-center">
                             <p class="text-sm font-semibold" style="color: var(--c-text);">Drop multiple images here</p>
                             <p class="text-[11px] mt-1" style="color: var(--c-dim);">or click to browse &middot; combine & edit multiple images</p>
-                            <p class="text-[10px] mt-2 font-mono" style="color: #3d3a50;">Up to 5 images &middot; JPEG, PNG, WebP up to 25MB each</p>
+                            <p class="text-[10px] mt-2 font-mono" style="color: #3d3a50;">Up to 3 images &middot; JPEG, PNG, WebP up to 25MB each</p>
                         </div>
                         <!-- Multi-image thumbnails -->
                         <div id="multiThumbs" class="flex gap-2 flex-wrap justify-center max-w-sm"></div>
@@ -680,7 +680,7 @@
             // Multi-image mode
             this.multiMode = false;
             this.multiImages = []; // array of { file, base64 }
-            this.maxMultiImages = 5;
+            this.maxMultiImages = 3;
             this.init();
         }
 
@@ -1256,6 +1256,11 @@
             const imageControls = document.getElementById('imageControls');
 
             if (this.multiMode) {
+                // Clear single-mode state to prevent cross-contamination
+                this.originalImage = null;
+                this.originalImageFile = null;
+                this.transformedImage = null;
+                this.currentView = 'original';
                 // Switch to multi mode
                 singleDZ.classList.add('hidden');
                 imageDisplay.classList.add('hidden');
@@ -1264,6 +1269,9 @@
                 multiDZ.style.display = 'flex';
                 if (this.maskActive) this.toggleMask();
             } else {
+                // Clear multi-mode state to prevent cross-contamination
+                this.multiImages = [];
+                this.renderMultiThumbs();
                 // Switch to single mode
                 multiDZ.classList.add('hidden');
                 multiDZ.style.display = '';
@@ -1305,10 +1313,18 @@
 
         renderMultiThumbs() {
             const container = document.getElementById('multiThumbs');
+            const addBtn = document.getElementById('multiUploadBtn');
             if (!this.multiImages.length) {
                 container.innerHTML = '';
+                addBtn.disabled = false;
+                addBtn.textContent = 'Add Images';
                 return;
             }
+            // Update add button state
+            const atMax = this.multiImages.length >= this.maxMultiImages;
+            addBtn.disabled = atMax;
+            addBtn.textContent = atMax ? `${this.maxMultiImages}/${this.maxMultiImages} Images` : `Add Images (${this.multiImages.length}/${this.maxMultiImages})`;
+
             container.innerHTML = this.multiImages.map((img, i) => `
                 <div class="multi-thumb" data-idx="${i}">
                     <img src="data:image/jpeg;base64,${img.base64}" alt="Image ${i+1}" />
@@ -1366,7 +1382,7 @@
                 const response = await fetch('/.netlify/functions/image-edit', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(requestBody) });
                 if (!response.ok) {
                     let msg = `HTTP ${response.status}`;
-                    try { const d = await response.json(); msg = d.message || d.error || msg; } catch {}
+                    try { const d = await response.json(); msg = d.message || d.error || d.detail || (d.errors ? JSON.stringify(d.errors) : null) || msg; } catch {}
                     throw new Error(msg);
                 }
                 const data = await response.json();
@@ -1411,8 +1427,8 @@
 
         // ==================== MULTI-IMAGE TRANSFORM ====================
         async transformMultiImages(prompt) {
-            if (!this.multiImages.length) { this.showError('Please upload at least one image'); return; }
-            if (this.multiImages.length < 2) { this.showError('Multi-edit requires at least 2 images. Use Single mode for one image.'); return; }
+            if (this.multiImages.length < 2) { this.showError('Multi-edit requires 2-3 images. Use Single mode for one image.'); return; }
+            if (this.multiImages.length > this.maxMultiImages) { this.showError(`Multi-edit supports up to ${this.maxMultiImages} images. Please remove some.`); return; }
 
             const submitBtn = document.getElementById('submitBtn');
             // Show image display area with loading overlay
@@ -1441,7 +1457,7 @@
 
                 if (!response.ok) {
                     let msg = `HTTP ${response.status}`;
-                    try { const d = await response.json(); msg = d.message || d.error || msg; } catch {}
+                    try { const d = await response.json(); msg = d.message || d.error || d.detail || (d.errors ? JSON.stringify(d.errors) : null) || msg; } catch {}
                     throw new Error(msg);
                 }
 
