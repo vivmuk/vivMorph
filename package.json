@@ -6,7 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "echo \"No build step required - static HTML app\"",
-    "start": "echo \"Open index.html in a browser\""
+    "start": "node server.js",
+    "dev": "node server.js"
   },
   "repository": {
     "type": "git",

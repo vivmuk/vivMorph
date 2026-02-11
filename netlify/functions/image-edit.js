@@ -25,7 +25,7 @@ exports.handler = async (event, context) => {
 
   // Get API key from environment variable
   const apiKey = process.env.VENICE_AI_API_KEY;
-  
+
   if (!apiKey) {
     return {
       statusCode: 500,
@@ -33,13 +33,29 @@ exports.handler = async (event, context) => {
         'Access-Control-Allow-Origin': '*',
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ error: 'API key not configured. Please set VENICE_AI_API_KEY environment variable in Netlify.' })
+      body: JSON.stringify({ error: 'API key not configured. Please set VENICE_AI_API_KEY environment variable.' })
     };
   }
 
   try {
     // Parse the request body
     const requestBody = JSON.parse(event.body);
+
+    // Build the Venice AI request payload
+    const venicePayload = {
+      prompt: requestBody.prompt,
+      image: requestBody.image,
+    };
+
+    // Pass through modelId if provided
+    if (requestBody.modelId) {
+      venicePayload.modelId = requestBody.modelId;
+    }
+
+    // Pass through aspect_ratio if provided
+    if (requestBody.aspect_ratio) {
+      venicePayload.aspect_ratio = requestBody.aspect_ratio;
+    }
 
     // Forward the request to Venice AI API
     const response = await fetch('https://api.venice.ai/api/v1/image/edit', {
@@ -48,12 +64,12 @@ exports.handler = async (event, context) => {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(requestBody)
+      body: JSON.stringify(venicePayload)
     });
 
     // Get the response - could be JSON or binary image
     const contentType = response.headers.get('content-type');
-    
+
     if (contentType && contentType.includes('application/json')) {
       // JSON response
       const data = await response.json();
@@ -69,7 +85,7 @@ exports.handler = async (event, context) => {
       // Binary image response
       const imageBuffer = await response.arrayBuffer();
       const base64Image = Buffer.from(imageBuffer).toString('base64');
-      
+
       return {
         statusCode: response.status,
         headers: {
@@ -91,4 +107,3 @@ exports.handler = async (event, context) => {
     };
   }
 };
-
