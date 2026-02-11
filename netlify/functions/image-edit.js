@@ -57,6 +57,11 @@ exports.handler = async (event, context) => {
       venicePayload.aspect_ratio = requestBody.aspect_ratio;
     }
 
+    // Pass through mask if provided (for region-based inpainting)
+    if (requestBody.mask) {
+      venicePayload.mask = requestBody.mask;
+    }
+
     // Forward the request to Venice AI API
     const response = await fetch('https://api.venice.ai/api/v1/image/edit', {
       method: 'POST',

@@ -71,6 +71,7 @@ async function handleImageEdit(req, res) {
     };
     if (body.modelId) venicePayload.modelId = body.modelId;
     if (body.aspect_ratio) venicePayload.aspect_ratio = body.aspect_ratio;
+    if (body.mask) venicePayload.mask = body.mask;
 
     const response = await fetch('https://api.venice.ai/api/v1/image/edit', {
       method: 'POST',
