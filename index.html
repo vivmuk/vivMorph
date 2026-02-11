@@ -40,6 +40,20 @@
         }
         * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
         body { background: var(--c-bg); margin: 0; overflow: hidden; }
+
+        /* Mobile-optimized scrolling */
+        @supports (-webkit-touch-callout: none) {
+            /* iOS safe area support */
+            .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+        }
+        @media (max-width: 1023px) {
+            main { -webkit-overflow-scrolling: touch; scroll-behavior: smooth; overscroll-behavior-y: contain; }
+            /* Larger image on mobile */
+            #imageDisplay, #dropZone, #multiDropZone { max-height: 65vh !important; min-height: 50vh; }
+            /* Compact control panel on mobile */
+            #controlPanel .mb-5 { margin-bottom: 0.75rem !important; }
+            #controlPanel h3 { margin-bottom: 0.375rem !important; }
+        }
         ::-webkit-scrollbar { width: 3px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: var(--c-surface3); border-radius: 8px; }
@@ -371,6 +385,38 @@
             transition: all 0.3s ease;
         }
         .toggle-track.on .toggle-knob { transform: translateX(14px); background: white; box-shadow: 0 0 8px rgba(124,91,245,0.5); }
+
+        /* Fullscreen image viewer for mobile */
+        .fs-viewer {
+            position: fixed; inset: 0; z-index: 200;
+            background: rgba(6,6,11,0.97);
+            backdrop-filter: blur(20px);
+            display: flex; flex-direction: column;
+            touch-action: pan-x pan-y pinch-zoom;
+            animation: fadeIn 0.2s ease-out;
+        }
+        .fs-viewer-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 16px;
+            background: rgba(6,6,11,0.8);
+            flex-shrink: 0;
+        }
+        .fs-viewer-body {
+            flex: 1; overflow: hidden;
+            display: flex; align-items: center; justify-content: center;
+            touch-action: pinch-zoom pan-x pan-y;
+        }
+        .fs-viewer-body img {
+            max-width: 100%; max-height: 100%;
+            object-fit: contain;
+            touch-action: pinch-zoom pan-x pan-y;
+        }
+        .fs-close-btn {
+            width: 36px; height: 36px; border-radius: 50%;
+            background: var(--c-surface3); border: 1px solid var(--c-border);
+            color: var(--c-text); display: flex; align-items: center; justify-content: center;
+            cursor: pointer; font-size: 18px;
+        }
     </style>
 </head>
 <body class="font-sans text-[--c-text] h-screen w-screen overflow-hidden noise select-none">
@@ -414,10 +460,10 @@
         </header>
 
         <!-- MAIN CONTENT -->
-        <main class="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden min-h-0">
+        <main class="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden min-h-0" style="-webkit-overflow-scrolling: touch; overscroll-behavior-y: contain;">
             <!-- LEFT: Canvas Area -->
             <div class="lg:flex-1 flex flex-col min-h-0 min-w-0">
-                <div class="flex items-center justify-center p-3 sm:p-4 lg:p-6 min-h-0 relative lg:flex-1">
+                <div class="flex items-center justify-center p-1.5 sm:p-4 lg:p-6 min-h-0 relative lg:flex-1">
                     <!-- Drop Zone (Single) -->
                     <div id="dropZone" class="dropzone w-full h-full max-w-3xl max-h-[40vh] lg:max-h-[72vh] mx-auto flex flex-col items-center justify-center gap-4">
                         <div class="dz-icon">
@@ -456,7 +502,7 @@
                     </div>
 
                     <!-- Image Display -->
-                    <div id="imageDisplay" class="hidden w-full h-full max-w-4xl max-h-[40vh] lg:max-h-[75vh] mx-auto relative rounded-2xl overflow-hidden" style="background: var(--c-surface); border: 1px solid var(--c-border);">
+                    <div id="imageDisplay" class="hidden w-full h-full max-w-4xl max-h-[65vh] lg:max-h-[75vh] mx-auto relative rounded-2xl overflow-hidden" style="background: var(--c-surface); border: 1px solid var(--c-border);">
                         <div id="imageContainer" class="w-full h-full flex items-center justify-center"></div>
                         <div id="compareContainer" class="hidden compare-wrap w-full h-full">
                             <img id="compareOriginal" class="w-full h-full" alt="Original" />
@@ -531,8 +577,8 @@
             </div>
 
             <!-- RIGHT: Control Panel -->
-            <div class="lg:w-[380px] xl:w-[420px] shrink-0 flex flex-col lg:max-h-none overflow-visible lg:overflow-hidden" style="border-top: 1px solid var(--c-border); border-left: none; background: rgba(10,10,16,0.6); backdrop-filter: blur(16px);" id="controlPanel">
-                <div class="p-4 flex-1 overflow-y-auto min-h-0">
+            <div class="lg:w-[380px] xl:w-[420px] shrink-0 flex flex-col lg:max-h-none overflow-visible lg:overflow-hidden safe-bottom" style="border-top: 1px solid var(--c-border); border-left: none; background: rgba(10,10,16,0.6); backdrop-filter: blur(16px);" id="controlPanel">
+                <div class="p-3 sm:p-4 flex-1 overflow-y-auto min-h-0" style="-webkit-overflow-scrolling: touch;">
                     <!-- Quick Presets -->
                     <div class="mb-5">
                         <h3 class="text-[10px] font-bold uppercase tracking-widest mb-2.5" style="color: #3d3a50;">Quick Styles</h3>
@@ -1218,10 +1264,41 @@
                 img.src = url;
                 img.alt = this.currentView;
                 img.className = 'max-w-full max-h-full w-auto h-auto object-contain anim-fade';
+                // Tap to open fullscreen on mobile
+                img.addEventListener('click', () => this.openFullscreen(url));
+                img.style.cursor = 'zoom-in';
                 container.appendChild(img);
             } else if (this.currentView === 'transformed') {
                 container.innerHTML = '<p class="text-xs" style="color:#3d3a50">No transformation yet</p>';
             }
+        }
+
+        openFullscreen(src) {
+            if (document.querySelector('.fs-viewer')) return;
+            const viewer = document.createElement('div');
+            viewer.className = 'fs-viewer';
+            const label = this.currentView === 'original' ? 'Original' : 'Result';
+            viewer.innerHTML = `
+                <div class="fs-viewer-header">
+                    <span class="text-xs font-semibold" style="color: var(--c-text);">${label}</span>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] font-mono" style="color: var(--c-dim);">Pinch to zoom</span>
+                        <button class="fs-close-btn" id="fsCloseBtn">&times;</button>
+                    </div>
+                </div>
+                <div class="fs-viewer-body" id="fsBody">
+                    <img src="${src}" alt="${label}" />
+                </div>
+            `;
+            document.body.appendChild(viewer);
+            document.getElementById('fsCloseBtn').addEventListener('click', () => viewer.remove());
+            // Close on background tap (not on the image)
+            document.getElementById('fsBody').addEventListener('click', (e) => {
+                if (e.target === document.getElementById('fsBody')) viewer.remove();
+            });
+            // Close on escape key
+            const escHandler = (e) => { if (e.key === 'Escape') { viewer.remove(); document.removeEventListener('keydown', escHandler); } };
+            document.addEventListener('keydown', escHandler);
         }
 
         toggleView(view) {
@@ -1379,10 +1456,17 @@
                 const maskData = this.getMaskBase64(maskW, maskH);
                 if (maskData) requestBody.mask = maskData;
 
-                const response = await fetch('/.netlify/functions/image-edit', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(requestBody) });
+                const fetchBody = JSON.stringify(requestBody);
+                let response;
+                for (let attempt = 0; attempt < 2; attempt++) {
+                    response = await fetch('/.netlify/functions/image-edit', { method:'POST', headers:{'Content-Type':'application/json'}, body: fetchBody });
+                    if (response.ok || (response.status < 500 && response.status !== 429)) break;
+                    if (attempt === 0) { document.getElementById('progressText').textContent = 'Retrying...'; await new Promise(r => setTimeout(r, 2000)); }
+                }
                 if (!response.ok) {
                     let msg = `HTTP ${response.status}`;
                     try { const d = await response.json(); msg = d.message || d.error || d.detail || (d.errors ? JSON.stringify(d.errors) : null) || msg; } catch {}
+                    if (response.status >= 500) msg = 'Server error — the AI service may be busy. Please try again. (' + msg + ')';
                     throw new Error(msg);
                 }
                 const data = await response.json();
@@ -1449,15 +1533,17 @@
                 const images = this.multiImages.map(img => img.base64);
                 const requestBody = { prompt, images, modelId: this.selectedModel };
 
-                const response = await fetch('/.netlify/functions/image-multi-edit', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(requestBody)
-                });
-
+                const fetchBody = JSON.stringify(requestBody);
+                let response;
+                for (let attempt = 0; attempt < 2; attempt++) {
+                    response = await fetch('/.netlify/functions/image-multi-edit', { method:'POST', headers:{'Content-Type':'application/json'}, body: fetchBody });
+                    if (response.ok || (response.status < 500 && response.status !== 429)) break;
+                    if (attempt === 0) { document.getElementById('progressText').textContent = 'Retrying...'; await new Promise(r => setTimeout(r, 2000)); }
+                }
                 if (!response.ok) {
                     let msg = `HTTP ${response.status}`;
                     try { const d = await response.json(); msg = d.message || d.error || d.detail || (d.errors ? JSON.stringify(d.errors) : null) || msg; } catch {}
+                    if (response.status >= 500) msg = 'Server error — the AI service may be busy. Please try again. (' + msg + ')';
                     throw new Error(msg);
                 }
 

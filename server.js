@@ -4,6 +4,7 @@ const path = require('path');
 
 const PORT = process.env.PORT || 3000;
 const API_KEY = process.env.VENICE_AI_API_KEY || process.env.VENICE_API_KEY;
+const MAX_BODY_SIZE = 50 * 1024 * 1024; // 50MB max request body
 
 const MIME_TYPES = {
   '.html': 'text/html',
@@ -33,7 +34,12 @@ function jsonResponse(res, status, data) {
 function readBody(req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
-    req.on('data', chunk => chunks.push(chunk));
+    let size = 0;
+    req.on('data', chunk => {
+      size += chunk.length;
+      if (size > MAX_BODY_SIZE) { req.destroy(); reject(new Error('Request body too large')); return; }
+      chunks.push(chunk);
+    });
     req.on('end', () => resolve(Buffer.concat(chunks).toString()));
     req.on('error', reject);
   });
@@ -59,6 +65,51 @@ async function handleListModels(req, res) {
   }
 }
 
+async function fetchWithRetry(url, options, maxRetries = 2) {
+  let response, lastError;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      response = await fetch(url, options);
+      if (response.ok || (response.status < 500 && response.status !== 429)) return response;
+      lastError = `Venice API returned ${response.status}`;
+      if (attempt < maxRetries) await new Promise(r => setTimeout(r, (attempt + 1) * 1500));
+    } catch (err) {
+      lastError = err.message;
+      response = null;
+      if (attempt < maxRetries) await new Promise(r => setTimeout(r, (attempt + 1) * 1500));
+    }
+  }
+  return response; // return last response even if error, caller will handle
+}
+
+async function handleVeniceResponse(response, res) {
+  if (!response) {
+    return jsonResponse(res, 502, { error: 'Venice API unreachable after retries' });
+  }
+  if (!response.ok) {
+    let errorMsg = `Venice API returned ${response.status}`;
+    try {
+      const text = await response.text();
+      try {
+        const data = JSON.parse(text);
+        errorMsg = data.message || data.error || data.detail || (data.errors ? JSON.stringify(data.errors) : null) || errorMsg;
+      } catch {
+        if (text && text.length < 500) errorMsg = text;
+      }
+    } catch {}
+    return jsonResponse(res, response.status, { error: errorMsg });
+  }
+  const contentType = response.headers.get('content-type');
+  if (contentType && contentType.includes('application/json')) {
+    const data = await response.json();
+    jsonResponse(res, 200, data);
+  } else {
+    const imageBuffer = await response.arrayBuffer();
+    const base64Image = Buffer.from(imageBuffer).toString('base64');
+    jsonResponse(res, 200, { image: base64Image });
+  }
+}
+
 async function handleImageEdit(req, res) {
   if (!API_KEY) return jsonResponse(res, 500, { error: 'API key not configured.' });
 
@@ -73,7 +124,7 @@ async function handleImageEdit(req, res) {
     if (body.aspect_ratio) venicePayload.aspect_ratio = body.aspect_ratio;
     if (body.mask) venicePayload.mask = body.mask;
 
-    const response = await fetch('https://api.venice.ai/api/v1/image/edit', {
+    const response = await fetchWithRetry('https://api.venice.ai/api/v1/image/edit', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${API_KEY}`,
@@ -82,16 +133,7 @@ async function handleImageEdit(req, res) {
       body: JSON.stringify(venicePayload)
     });
 
-    const contentType = response.headers.get('content-type');
-
-    if (contentType && contentType.includes('application/json')) {
-      const data = await response.json();
-      jsonResponse(res, response.status, data);
-    } else {
-      const imageBuffer = await response.arrayBuffer();
-      const base64Image = Buffer.from(imageBuffer).toString('base64');
-      jsonResponse(res, response.status, { image: base64Image });
-    }
+    await handleVeniceResponse(response, res);
   } catch (error) {
     jsonResponse(res, 500, { error: 'Internal server error', message: error.message });
   }
@@ -109,7 +151,7 @@ async function handleImageMultiEdit(req, res) {
     };
     if (body.modelId) venicePayload.modelId = body.modelId;
 
-    const response = await fetch('https://api.venice.ai/api/v1/image/multi-edit', {
+    const response = await fetchWithRetry('https://api.venice.ai/api/v1/image/multi-edit', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${API_KEY}`,
@@ -118,16 +160,7 @@ async function handleImageMultiEdit(req, res) {
       body: JSON.stringify(venicePayload)
     });
 
-    const contentType = response.headers.get('content-type');
-
-    if (contentType && contentType.includes('application/json')) {
-      const data = await response.json();
-      jsonResponse(res, response.status, data);
-    } else {
-      const imageBuffer = await response.arrayBuffer();
-      const base64Image = Buffer.from(imageBuffer).toString('base64');
-      jsonResponse(res, response.status, { image: base64Image });
-    }
+    await handleVeniceResponse(response, res);
   } catch (error) {
     jsonResponse(res, 500, { error: 'Internal server error', message: error.message });
   }
@@ -215,6 +248,11 @@ const server = http.createServer(async (req, res) => {
   // Static files
   serveStatic(req, res);
 });
+
+// Allow long-running requests (image generation can take 30+ seconds)
+server.timeout = 120000; // 2 minutes
+server.keepAliveTimeout = 65000;
+server.headersTimeout = 66000;
 
 server.listen(PORT, () => {
   console.log(`vivMorph server running on port ${PORT}`);

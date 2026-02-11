@@ -62,15 +62,37 @@ exports.handler = async (event, context) => {
       venicePayload.mask = requestBody.mask;
     }
 
-    // Forward the request to Venice AI API
-    const response = await fetch('https://api.venice.ai/api/v1/image/edit', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(venicePayload)
-    });
+    // Forward the request to Venice AI API with retry for transient errors
+    const maxRetries = 2;
+    let response;
+    let lastError;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        response = await fetch('https://api.venice.ai/api/v1/image/edit', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(venicePayload)
+        });
+        // Only retry on 500, 502, 503, 504 (transient server errors)
+        if (response.ok || (response.status < 500 && response.status !== 429)) break;
+        lastError = `Venice API returned ${response.status}`;
+        if (attempt < maxRetries) await new Promise(r => setTimeout(r, (attempt + 1) * 1500));
+      } catch (fetchErr) {
+        lastError = fetchErr.message;
+        if (attempt < maxRetries) await new Promise(r => setTimeout(r, (attempt + 1) * 1500));
+      }
+    }
+
+    if (!response) {
+      return {
+        statusCode: 502,
+        headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: `Venice API unreachable after ${maxRetries + 1} attempts: ${lastError}` })
+      };
+    }
 
     // Handle error responses first — read body as text so we can surface the message
     if (!response.ok) {
