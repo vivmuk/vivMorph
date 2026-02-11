@@ -562,6 +562,15 @@
                         <textarea id="promptInput" placeholder="Describe how you want to transform the image..." class="prompt-area w-full h-24 lg:h-32 p-3"></textarea>
                     </div>
 
+                    <!-- Transform Button (right after prompt) -->
+                    <div class="mb-5">
+                        <button id="submitBtn" class="glow-btn w-full h-11 flex items-center justify-center gap-2 text-sm">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                            <span>Transform</span>
+                        </button>
+                        <p class="text-[9px] text-center mt-2 font-mono" style="color: #2d2a3a;">Ctrl+Enter to transform</p>
+                    </div>
+
                     <!-- Aspect Ratio -->
                     <div class="mb-5">
                         <h3 class="text-[10px] font-bold uppercase tracking-widest mb-2" style="color: #3d3a50;">Aspect Ratio</h3>
@@ -588,15 +597,6 @@
                             <span id="modelCombine" class="hidden text-[9px] px-2 py-0.5 rounded-md font-mono" style="background: var(--c-surface3); color: var(--c-dim);">combine</span>
                         </div>
                     </div>
-                </div>
-
-                <!-- Transform Button -->
-                <div class="p-4 pt-0 shrink-0">
-                    <button id="submitBtn" class="glow-btn w-full h-11 flex items-center justify-center gap-2 text-sm">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                        <span>Transform</span>
-                    </button>
-                    <p class="text-[9px] text-center mt-2 font-mono" style="color: #2d2a3a;">Ctrl+Enter to transform</p>
                 </div>
             </div>
         </main>
