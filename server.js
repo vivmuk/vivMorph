@@ -97,6 +97,42 @@ async function handleImageEdit(req, res) {
   }
 }
 
+async function handleImageMultiEdit(req, res) {
+  if (!API_KEY) return jsonResponse(res, 500, { error: 'API key not configured.' });
+
+  try {
+    const body = JSON.parse(await readBody(req));
+
+    const venicePayload = {
+      prompt: body.prompt,
+      images: body.images,
+    };
+    if (body.modelId) venicePayload.modelId = body.modelId;
+
+    const response = await fetch('https://api.venice.ai/api/v1/image/multi-edit', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(venicePayload)
+    });
+
+    const contentType = response.headers.get('content-type');
+
+    if (contentType && contentType.includes('application/json')) {
+      const data = await response.json();
+      jsonResponse(res, response.status, data);
+    } else {
+      const imageBuffer = await response.arrayBuffer();
+      const base64Image = Buffer.from(imageBuffer).toString('base64');
+      jsonResponse(res, response.status, { image: base64Image });
+    }
+  } catch (error) {
+    jsonResponse(res, 500, { error: 'Internal server error', message: error.message });
+  }
+}
+
 async function handleChatCompletions(req, res) {
   if (!API_KEY) return jsonResponse(res, 500, { error: 'API key not configured.' });
 
@@ -168,6 +204,9 @@ const server = http.createServer(async (req, res) => {
   }
   if (req.url === '/.netlify/functions/image-edit' && req.method === 'POST') {
     return handleImageEdit(req, res);
+  }
+  if (req.url === '/.netlify/functions/image-multi-edit' && req.method === 'POST') {
+    return handleImageMultiEdit(req, res);
   }
   if (req.url === '/.netlify/functions/chat-completions' && req.method === 'POST') {
     return handleChatCompletions(req, res);
