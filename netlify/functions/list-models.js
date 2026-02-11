@@ -20,7 +20,7 @@ exports.handler = async (event, context) => {
     };
   }
 
-  const apiKey = process.env.VENICE_AI_API_KEY;
+  const apiKey = process.env.VENICE_AI_API_KEY || process.env.VENICE_API_KEY;
 
   if (!apiKey) {
     return {

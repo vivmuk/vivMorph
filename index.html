@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>vivMorph - AI Image Editor</title>
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#6366f1">
+    <meta name="theme-color" content="#0a0a0f">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="vivMorph">
     <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?display=swap&family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?display=swap&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600" />
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script src="https://cdn.jsdelivr.net/npm/piexifjs@1.0.6/piexif.min.js"></script>
     <script>
@@ -18,117 +18,371 @@
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        sans: ['Space Grotesk', 'system-ui', 'sans-serif'],
                         mono: ['JetBrains Mono', 'monospace'],
                     },
-                    colors: {
-                        surface: { 0: '#09090b', 1: '#111113', 2: '#18181b', 3: '#1f1f23', 4: '#27272a' },
-                        accent: { DEFAULT: '#6366f1', light: '#818cf8', dim: '#4f46e5' },
-                        neon: { cyan: '#22d3ee', purple: '#a78bfa', pink: '#f472b6', green: '#34d399' }
-                    },
-                    animation: {
-                        'float': 'float 6s ease-in-out infinite',
-                        'slide-up': 'slideUp 0.4s ease-out',
-                        'fade-in': 'fadeIn 0.3s ease-out',
-                    },
-                    keyframes: {
-                        float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-8px)' } },
-                        slideUp: { '0%': { transform: 'translateY(20px)', opacity: '0' }, '100%': { transform: 'translateY(0)', opacity: '1' } },
-                        fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
-                    }
                 }
             }
         }
     </script>
     <style>
-        * { -webkit-tap-highlight-color: transparent; }
-        body { background: #09090b; overflow: hidden; }
-        ::-webkit-scrollbar { width: 4px; }
+        :root {
+            --c-bg: #06060b;
+            --c-surface: #0d0d14;
+            --c-surface2: #13131d;
+            --c-surface3: #1a1a28;
+            --c-border: rgba(255,255,255,0.04);
+            --c-glow: #7c5bf5;
+            --c-glow2: #00e5a0;
+            --c-glow3: #f72585;
+            --c-text: #e8e6f0;
+            --c-dim: #6b6880;
+        }
+        * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+        body { background: var(--c-bg); margin: 0; overflow: hidden; }
+        ::-webkit-scrollbar { width: 3px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 4px; }
-        .glass-heavy { background: rgba(17,17,19,0.85); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); }
-        .drop-zone { transition: all 0.3s ease; }
-        .drop-zone.drag-over { border-color: #6366f1 !important; background: rgba(99,102,241,0.08) !important; }
-        textarea:focus { box-shadow: 0 0 0 2px rgba(99,102,241,0.25); }
-        .grid-bg {
-            background-image: linear-gradient(rgba(99,102,241,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(99,102,241,0.03) 1px, transparent 1px);
-            background-size: 32px 32px;
+        ::-webkit-scrollbar-thumb { background: var(--c-surface3); border-radius: 8px; }
+
+        /* Aurora background */
+        .aurora {
+            position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
         }
-        .noise::after {
-            content:''; position:fixed; inset:0; opacity:0.015; pointer-events:none; z-index:9999;
-            background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+        .aurora-orb {
+            position: absolute; border-radius: 50%; filter: blur(120px); opacity: 0.12;
+            animation: orbFloat 20s ease-in-out infinite;
         }
-        .pulse-dot { width:6px; height:6px; border-radius:50%; background:#34d399; animation: pulseDot 2s ease-in-out infinite; }
-        @keyframes pulseDot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.5)} }
-        .preset-pill { transition: all 0.2s ease; }
-        .preset-pill:hover { transform: translateY(-1px); }
-        .preset-pill:active { transform: translateY(0); }
+        .aurora-orb:nth-child(1) { width: 600px; height: 600px; background: var(--c-glow); top: -20%; left: -10%; animation-delay: 0s; animation-duration: 22s; }
+        .aurora-orb:nth-child(2) { width: 500px; height: 500px; background: var(--c-glow2); bottom: -15%; right: -5%; animation-delay: -7s; animation-duration: 18s; }
+        .aurora-orb:nth-child(3) { width: 400px; height: 400px; background: var(--c-glow3); top: 40%; left: 50%; animation-delay: -14s; animation-duration: 25s; }
+        @keyframes orbFloat {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(60px, -40px) scale(1.1); }
+            50% { transform: translate(-30px, 50px) scale(0.95); }
+            75% { transform: translate(40px, 20px) scale(1.05); }
+        }
+
+        /* Noise texture */
+        .noise::before {
+            content:''; position:fixed; inset:0; opacity:0.025; pointer-events:none; z-index:1;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+        }
+
+        /* Glow border card */
+        .glow-card {
+            position: relative;
+            background: var(--c-surface);
+            border: 1px solid var(--c-border);
+            border-radius: 16px;
+        }
+        .glow-card::before {
+            content: '';
+            position: absolute; inset: -1px;
+            border-radius: 17px;
+            background: linear-gradient(135deg, rgba(124,91,245,0.15), transparent 40%, transparent 60%, rgba(0,229,160,0.1));
+            z-index: -1;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+        .glow-card:hover::before { opacity: 1; }
+
+        /* Animated gradient border for active elements */
+        .rainbow-border {
+            position: relative;
+        }
+        .rainbow-border::before {
+            content: '';
+            position: absolute; inset: -2px;
+            border-radius: inherit;
+            background: conic-gradient(from var(--angle, 0deg), var(--c-glow), var(--c-glow2), var(--c-glow3), var(--c-glow));
+            z-index: -1;
+            opacity: 0.6;
+            animation: rotateBorder 4s linear infinite;
+        }
+        @keyframes rotateBorder { to { --angle: 360deg; } }
+        @property --angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+
+        /* Glow button */
+        .glow-btn {
+            position: relative;
+            background: linear-gradient(135deg, var(--c-glow), #5b3fe0);
+            border: none;
+            border-radius: 14px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+        .glow-btn::after {
+            content: '';
+            position: absolute; inset: 0;
+            background: linear-gradient(135deg, transparent, rgba(255,255,255,0.1), transparent);
+            transform: translateX(-100%);
+            transition: transform 0.5s ease;
+        }
+        .glow-btn:hover::after { transform: translateX(100%); }
+        .glow-btn:hover { box-shadow: 0 0 30px rgba(124,91,245,0.4), 0 0 60px rgba(124,91,245,0.15); transform: translateY(-1px); }
+        .glow-btn:active { transform: translateY(0); }
+        .glow-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        /* Tag pills */
+        .tag {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 11px; font-weight: 500;
+            background: var(--c-surface2);
+            border: 1px solid var(--c-border);
+            color: var(--c-dim);
+            cursor: pointer;
+            transition: all 0.25s ease;
+            white-space: nowrap;
+        }
+        .tag:hover { border-color: rgba(124,91,245,0.3); color: var(--c-text); background: rgba(124,91,245,0.06); transform: translateY(-1px); }
+        .tag:active { transform: translateY(0); }
+        .tag.active { border-color: rgba(124,91,245,0.4); color: #c4b5fd; background: rgba(124,91,245,0.1); }
+
+        /* Drop zone */
+        .dropzone {
+            border: 2px dashed rgba(124,91,245,0.15);
+            border-radius: 24px;
+            transition: all 0.35s ease;
+            cursor: pointer;
+        }
+        .dropzone:hover { border-color: rgba(124,91,245,0.35); background: rgba(124,91,245,0.02); }
+        .dropzone.drag-over { border-color: var(--c-glow); background: rgba(124,91,245,0.05); }
+        .dropzone.drag-over .dz-icon { transform: scale(1.1); }
+
+        .dz-icon {
+            width: 80px; height: 80px;
+            border-radius: 24px;
+            background: linear-gradient(135deg, rgba(124,91,245,0.08), rgba(0,229,160,0.05));
+            border: 1px solid rgba(124,91,245,0.12);
+            display: flex; align-items: center; justify-content: center;
+            transition: transform 0.35s ease;
+            animation: breathe 4s ease-in-out infinite;
+        }
+        @keyframes breathe {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.04); }
+        }
+
+        /* Prompt textarea */
+        .prompt-area {
+            background: var(--c-surface2);
+            border: 1px solid var(--c-border);
+            border-radius: 14px;
+            color: var(--c-text);
+            font-size: 13px;
+            line-height: 1.6;
+            resize: none;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+        .prompt-area:focus {
+            border-color: rgba(124,91,245,0.3);
+            box-shadow: 0 0 0 3px rgba(124,91,245,0.08), 0 0 20px rgba(124,91,245,0.05);
+        }
+        .prompt-area::placeholder { color: #3d3a50; }
 
         /* Compare slider */
         .compare-wrap { position:relative; overflow:hidden; cursor:col-resize; touch-action:none; }
         .compare-wrap img { display:block; width:100%; height:100%; object-fit:contain; pointer-events:none; user-select:none; }
         .compare-clip { position:absolute; inset:0; overflow:hidden; }
-        .compare-handle { position:absolute; top:0; bottom:0; width:3px; background:#6366f1; z-index:10; transform:translateX(-50%); }
-        .compare-handle::after { content:''; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:28px; height:28px; border-radius:50%; background:#6366f1; border:2px solid white; box-shadow:0 0 12px rgba(99,102,241,0.6); }
+        .compare-handle {
+            position:absolute; top:0; bottom:0; width:2px;
+            background: linear-gradient(180deg, var(--c-glow), var(--c-glow2));
+            z-index:10; transform:translateX(-50%);
+            box-shadow: 0 0 12px rgba(124,91,245,0.4);
+        }
+        .compare-handle::after {
+            content:''; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+            width:32px; height:32px; border-radius:50%;
+            background: linear-gradient(135deg, var(--c-glow), var(--c-glow2));
+            border:2px solid white;
+            box-shadow: 0 0 20px rgba(124,91,245,0.5), inset 0 0 8px rgba(255,255,255,0.2);
+        }
 
         /* Mask canvas */
         .mask-canvas { position:absolute; inset:0; z-index:5; cursor:crosshair; }
-        .mask-canvas.eraser { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Ccircle cx='12' cy='12' r='10' fill='none' stroke='white' stroke-width='2'/%3E%3Cline x1='6' y1='12' x2='18' y2='12' stroke='white' stroke-width='2'/%3E%3C/svg%3E") 12 12, crosshair; }
+        .mask-canvas.eraser { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Ccircle cx='12' cy='12' r='10' fill='none' stroke='%23f72585' stroke-width='2'/%3E%3Cline x1='6' y1='12' x2='18' y2='12' stroke='%23f72585' stroke-width='2'/%3E%3C/svg%3E") 12 12, crosshair; }
 
-        /* History thumbnails */
-        .history-thumb { transition: all 0.2s ease; }
-        .history-thumb:hover { transform: scale(1.05); }
-        .history-thumb.active { ring: 2px solid #6366f1; }
+        /* Status pulse */
+        .pulse-dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: var(--c-glow2);
+            box-shadow: 0 0 8px rgba(0,229,160,0.6);
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.4)} }
+
+        /* Model card */
+        .model-card {
+            padding: 12px 14px;
+            border-radius: 14px;
+            background: var(--c-surface2);
+            border: 1px solid var(--c-border);
+            cursor: pointer;
+            transition: all 0.25s ease;
+            text-align: left;
+            width: 100%;
+        }
+        .model-card:hover { border-color: rgba(124,91,245,0.2); background: rgba(124,91,245,0.04); }
+        .model-card.selected { border-color: rgba(124,91,245,0.4); background: rgba(124,91,245,0.06); }
+
+        /* Slide up animation */
+        @keyframes slideUp {
+            from { transform: translateY(24px) scale(0.97); opacity: 0; }
+            to { transform: translateY(0) scale(1); opacity: 1; }
+        }
+        .anim-slide-up { animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
+
+        /* Fade in */
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .anim-fade { animation: fadeIn 0.3s ease-out; }
+
+        /* History thumb */
+        .history-thumb {
+            flex-shrink: 0; width: 44px; height: 44px;
+            border-radius: 10px;
+            background: var(--c-surface2);
+            border: 1px solid var(--c-border);
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            display: flex; align-items: center; justify-content: center;
+            position: relative;
+        }
+        .history-thumb:hover { border-color: rgba(124,91,245,0.3); transform: scale(1.08); }
+
+        /* Spinner */
+        .spinner { animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Scrollbar for history strip */
+        .history-scroll::-webkit-scrollbar { height: 2px; }
+        .history-scroll::-webkit-scrollbar-thumb { background: var(--c-surface3); border-radius: 4px; }
+
+        /* Bottom toolbar pills */
+        .toolbar-pill {
+            display: flex; align-items: center; gap: 4px;
+            padding: 5px 10px;
+            border-radius: 8px;
+            font-size: 10px; font-weight: 600;
+            letter-spacing: 0.02em;
+            background: var(--c-surface2);
+            border: 1px solid var(--c-border);
+            color: var(--c-dim);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .toolbar-pill:hover { color: var(--c-text); border-color: rgba(124,91,245,0.2); }
+        .toolbar-pill.active { color: #c4b5fd; background: rgba(124,91,245,0.1); border-color: rgba(124,91,245,0.3); }
+        .toolbar-pill.active-pink { color: #f472b6; background: rgba(247,37,133,0.08); border-color: rgba(247,37,133,0.25); }
+
+        .icon-btn {
+            width: 32px; height: 32px;
+            border-radius: 10px;
+            background: var(--c-surface2);
+            border: 1px solid var(--c-border);
+            display: flex; align-items: center; justify-content: center;
+            color: var(--c-dim);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .icon-btn:hover { color: var(--c-text); border-color: rgba(124,91,245,0.25); }
+
+        /* Loading bar animation */
+        .loading-shimmer {
+            background: linear-gradient(90deg, rgba(124,91,245,0.2), rgba(0,229,160,0.3), rgba(124,91,245,0.2));
+            background-size: 200% 100%;
+            animation: shimmer 1.8s ease-in-out infinite;
+        }
+        @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+        /* Toggle switch */
+        .toggle-track {
+            width: 32px; height: 18px;
+            border-radius: 999px;
+            background: var(--c-surface3);
+            position: relative;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        .toggle-track.on { background: rgba(124,91,245,0.5); }
+        .toggle-knob {
+            position: absolute; top: 2px; left: 2px;
+            width: 14px; height: 14px;
+            border-radius: 50%;
+            background: #6b6880;
+            transition: all 0.3s ease;
+        }
+        .toggle-track.on .toggle-knob { transform: translateX(14px); background: white; box-shadow: 0 0 8px rgba(124,91,245,0.5); }
     </style>
 </head>
-<body class="font-sans text-white h-screen w-screen overflow-hidden noise grid-bg select-none">
-    <div id="app" class="h-screen w-screen flex flex-col">
+<body class="font-sans text-[--c-text] h-screen w-screen overflow-hidden noise select-none">
+    <!-- Aurora Background -->
+    <div class="aurora">
+        <div class="aurora-orb"></div>
+        <div class="aurora-orb"></div>
+        <div class="aurora-orb"></div>
+    </div>
+
+    <div id="app" class="h-screen w-screen flex flex-col relative z-10">
 
         <!-- TOP BAR -->
-        <header class="glass-heavy border-b border-white/5 px-3 py-2 flex items-center justify-between z-50 shrink-0">
-            <div class="flex items-center gap-2.5">
-                <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-accent to-neon-cyan flex items-center justify-center">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        <header class="shrink-0 px-4 py-2.5 flex items-center justify-between" style="background: rgba(6,6,11,0.7); backdrop-filter: blur(20px); border-bottom: 1px solid var(--c-border);">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background: linear-gradient(135deg, var(--c-glow), var(--c-glow2)); box-shadow: 0 0 16px rgba(124,91,245,0.3);">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
                 </div>
-                <h1 class="text-sm font-bold tracking-tight">
-                    <span class="bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent">viv</span><span class="bg-gradient-to-r from-accent-light to-neon-cyan bg-clip-text text-transparent">Morph</span>
-                </h1>
+                <div>
+                    <h1 class="text-sm font-bold tracking-tight leading-none">
+                        <span style="color: #e8e6f0;">viv</span><span style="background: linear-gradient(135deg, #7c5bf5, #00e5a0); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Morph</span>
+                    </h1>
+                    <p class="text-[9px] font-mono" style="color: var(--c-dim);">AI Image Editor</p>
+                </div>
             </div>
             <div class="flex items-center gap-2">
                 <div class="pulse-dot hidden" id="statusDot"></div>
-                <span class="text-[10px] font-mono text-zinc-500 hidden sm:inline" id="statusText"></span>
-                <button id="historyToggleBtn" class="p-1.5 rounded-lg bg-surface-3 border border-white/5 hover:border-accent/30 transition-all text-zinc-400 hover:text-white hidden" title="History">
+                <span class="text-[10px] font-mono hidden sm:inline" style="color: var(--c-dim);" id="statusText"></span>
+                <button id="historyToggleBtn" class="icon-btn hidden" title="History">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                 </button>
-                <button id="modelSelectorBtn" class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface-3 border border-white/5 hover:border-accent/30 transition-all text-[11px] font-medium text-zinc-300 hover:text-white">
-                    <span id="activeModelName" class="truncate max-w-[100px] sm:max-w-[160px]">Qwen Edit 2511</span>
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                <button id="modelSelectorBtn" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-semibold transition-all" style="background: var(--c-surface2); border: 1px solid var(--c-border); color: var(--c-dim);" onmouseover="this.style.borderColor='rgba(124,91,245,0.3)';this.style.color='var(--c-text)'" onmouseout="this.style.borderColor='var(--c-border)';this.style.color='var(--c-dim)'">
+                    <span id="activeModelName" class="truncate max-w-[120px] sm:max-w-[180px]">Qwen Edit 2511</span>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
                 </button>
             </div>
         </header>
 
         <!-- MAIN CONTENT -->
         <main class="flex-1 flex flex-col lg:flex-row overflow-hidden min-h-0">
-            <!-- LEFT: Canvas -->
+            <!-- LEFT: Canvas Area -->
             <div class="flex-1 flex flex-col min-h-0 min-w-0">
-                <div class="flex-1 flex items-center justify-center p-2 sm:p-3 lg:p-4 min-h-0 relative">
+                <div class="flex-1 flex items-center justify-center p-3 sm:p-4 lg:p-6 min-h-0 relative">
                     <!-- Drop Zone -->
-                    <div id="dropZone" class="drop-zone w-full h-full max-w-3xl max-h-[70vh] mx-auto rounded-2xl border-2 border-dashed border-zinc-700 flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-accent/40 transition-all group">
-                        <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-accent/10 to-neon-cyan/10 border border-accent/20 flex items-center justify-center animate-float">
-                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-accent-light"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                    <div id="dropZone" class="dropzone w-full h-full max-w-3xl max-h-[72vh] mx-auto flex flex-col items-center justify-center gap-4">
+                        <div class="dz-icon">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color: var(--c-glow);">
+                                <rect x="3" y="3" width="18" height="18" rx="3"/>
+                                <circle cx="9" cy="9" r="2"/>
+                                <path d="M21 15l-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+                            </svg>
                         </div>
-                        <p class="text-xs font-semibold text-zinc-300">Drop image here or click to upload</p>
-                        <p class="text-[10px] text-zinc-600">JPEG, PNG, WebP up to 25MB &middot; or Ctrl+V to paste</p>
-                        <button id="uploadBtn" class="mt-1 px-4 py-1.5 rounded-lg bg-accent hover:bg-accent-light text-white text-xs font-semibold transition-all">Choose File</button>
+                        <div class="text-center">
+                            <p class="text-sm font-semibold" style="color: var(--c-text);">Drop your image here</p>
+                            <p class="text-[11px] mt-1" style="color: var(--c-dim);">or click to browse &middot; paste with Ctrl+V</p>
+                            <p class="text-[10px] mt-2 font-mono" style="color: #3d3a50;">JPEG, PNG, WebP up to 25MB</p>
+                        </div>
+                        <button id="uploadBtn" class="glow-btn px-6 py-2 text-xs font-semibold mt-1">Choose File</button>
                         <input type="file" id="fileInput" accept="image/*" class="hidden" />
                     </div>
 
                     <!-- Image Display -->
-                    <div id="imageDisplay" class="hidden w-full h-full max-w-4xl max-h-[75vh] mx-auto relative rounded-2xl overflow-hidden border border-white/5 bg-surface-1">
-                        <!-- Normal single image view -->
+                    <div id="imageDisplay" class="hidden w-full h-full max-w-4xl max-h-[75vh] mx-auto relative rounded-2xl overflow-hidden" style="background: var(--c-surface); border: 1px solid var(--c-border);">
                         <div id="imageContainer" class="w-full h-full flex items-center justify-center"></div>
-
-                        <!-- Compare slider view (hidden by default) -->
                         <div id="compareContainer" class="hidden compare-wrap w-full h-full">
                             <img id="compareOriginal" class="w-full h-full" alt="Original" />
                             <div id="compareClip" class="compare-clip">
@@ -136,138 +390,137 @@
                             </div>
                             <div id="compareHandle" class="compare-handle" style="left:50%"></div>
                         </div>
-
-                        <!-- Mask painting canvas overlay -->
                         <canvas id="maskCanvas" class="mask-canvas hidden"></canvas>
-
                         <!-- Loading overlay -->
-                        <div id="loadingOverlay" class="hidden absolute inset-0 bg-surface-0/80 backdrop-blur-sm flex flex-col items-center justify-center z-20">
-                            <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-accent/20 to-neon-cyan/20 border border-accent/30 flex items-center justify-center mb-3">
-                                <svg class="animate-spin h-6 w-6 text-accent-light" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>
+                        <div id="loadingOverlay" class="hidden absolute inset-0 flex flex-col items-center justify-center z-20" style="background: rgba(6,6,11,0.85); backdrop-filter: blur(12px);">
+                            <div class="w-16 h-16 rounded-2xl flex items-center justify-center mb-4" style="background: linear-gradient(135deg, rgba(124,91,245,0.12), rgba(0,229,160,0.08)); border: 1px solid rgba(124,91,245,0.15);">
+                                <svg class="spinner h-7 w-7" style="color: var(--c-glow);" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"/>
+                                    <path class="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                                </svg>
                             </div>
-                            <p id="progressText" class="text-xs font-medium text-zinc-300 mb-2">Transforming...</p>
-                            <div class="w-40 h-1 bg-surface-4 rounded-full overflow-hidden">
-                                <div id="progressBar" class="h-full bg-gradient-to-r from-accent to-neon-cyan rounded-full transition-all duration-500" style="width:0%"></div>
+                            <p id="progressText" class="text-xs font-medium mb-3" style="color: var(--c-text);">Transforming...</p>
+                            <div class="w-48 h-1.5 rounded-full overflow-hidden" style="background: var(--c-surface3);">
+                                <div id="progressBar" class="h-full rounded-full transition-all duration-500" style="width:0%; background: linear-gradient(90deg, var(--c-glow), var(--c-glow2));"></div>
                             </div>
-                            <p id="progressPercent" class="text-[10px] font-mono text-zinc-500 mt-1.5">0%</p>
+                            <p id="progressPercent" class="text-[10px] font-mono mt-2" style="color: var(--c-dim);">0%</p>
                         </div>
                     </div>
                 </div>
 
-                <!-- Bottom Controls Bar -->
-                <div id="imageControls" class="hidden shrink-0 px-3 pb-2 flex items-center justify-between gap-2 flex-wrap">
+                <!-- Bottom Toolbar -->
+                <div id="imageControls" class="hidden shrink-0 px-4 pb-3 flex items-center justify-between gap-2 flex-wrap">
                     <div class="flex items-center gap-1.5">
-                        <div class="flex rounded-md bg-surface-2 border border-white/5 p-0.5">
-                            <button id="viewOriginalBtn" class="px-2 py-1 rounded text-[10px] font-medium bg-accent/20 text-accent-light border border-accent/30">Original</button>
-                            <button id="viewTransformedBtn" class="px-2 py-1 rounded text-[10px] font-medium text-zinc-500 hover:text-zinc-300">Transformed</button>
-                            <button id="viewCompareBtn" class="px-2 py-1 rounded text-[10px] font-medium text-zinc-500 hover:text-zinc-300" title="Side-by-side compare">Compare</button>
+                        <div class="flex rounded-lg overflow-hidden" style="background: var(--c-surface); border: 1px solid var(--c-border);">
+                            <button id="viewOriginalBtn" class="toolbar-pill active" style="border: none; border-radius: 7px;">Original</button>
+                            <button id="viewTransformedBtn" class="toolbar-pill" style="border: none; border-radius: 7px;">Result</button>
+                            <button id="viewCompareBtn" class="toolbar-pill" style="border: none; border-radius: 7px;" title="Side-by-side">Compare</button>
                         </div>
                         <!-- Mask tools -->
-                        <div id="maskTools" class="hidden flex items-center gap-1 ml-1">
-                            <button id="maskBrushBtn" class="px-2 py-1 rounded text-[10px] font-medium bg-pink-500/20 text-pink-400 border border-pink-500/30" title="Paint mask">Brush</button>
-                            <button id="maskEraserBtn" class="px-2 py-1 rounded text-[10px] font-medium text-zinc-500 hover:text-zinc-300" title="Erase mask">Eraser</button>
-                            <button id="maskClearBtn" class="px-2 py-1 rounded text-[10px] font-medium text-zinc-500 hover:text-red-400" title="Clear mask">Clear</button>
-                            <input id="maskSizeSlider" type="range" min="5" max="80" value="25" class="w-16 h-4" title="Brush size" />
-                            <span id="maskSizeLabel" class="text-[9px] font-mono text-zinc-500 w-5">25</span>
+                        <div id="maskTools" class="hidden flex items-center gap-1 ml-1.5">
+                            <button id="maskBrushBtn" class="toolbar-pill active-pink" style="border-radius: 7px;">Brush</button>
+                            <button id="maskEraserBtn" class="toolbar-pill" style="border-radius: 7px;">Eraser</button>
+                            <button id="maskClearBtn" class="toolbar-pill" style="border-radius: 7px; color: #f87171;">Clear</button>
+                            <input id="maskSizeSlider" type="range" min="5" max="80" value="25" class="w-16 h-4 accent-pink-500" title="Brush size" />
+                            <span id="maskSizeLabel" class="text-[9px] font-mono w-5" style="color: var(--c-dim);">25</span>
                         </div>
                     </div>
                     <div class="flex items-center gap-1.5">
-                        <button id="maskToggleBtn" class="p-1.5 rounded-lg bg-surface-2 border border-white/5 hover:border-pink-500/30 transition-all text-zinc-400 hover:text-pink-400" title="Toggle mask painting">
+                        <button id="maskToggleBtn" class="icon-btn" title="Paint mask for selective edits">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
                         </button>
-                        <button id="uploadNewBtn" class="p-1.5 rounded-lg bg-surface-2 border border-white/5 hover:border-accent/30 transition-all text-zinc-400 hover:text-white" title="Upload new">
+                        <button id="uploadNewBtn" class="icon-btn" title="Upload new image">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                         </button>
-                        <button id="downloadBtn" class="hidden p-1.5 rounded-lg bg-surface-2 border border-white/5 hover:border-neon-green/30 transition-all text-zinc-400 hover:text-neon-green" title="Download">
+                        <button id="downloadBtn" class="hidden icon-btn" title="Download" style="color: var(--c-glow2);">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                         </button>
-                        <label class="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-surface-2 border border-white/5 cursor-pointer" title="Iterate on transformed">
-                            <span class="text-[10px] text-zinc-500 hidden sm:inline">Iterate</span>
-                            <div class="relative">
-                                <input type="checkbox" id="editModeToggle" class="sr-only peer">
-                                <div class="w-7 h-3.5 bg-surface-4 rounded-full peer-checked:bg-accent/60 transition-all"></div>
-                                <div class="absolute top-0.5 left-0.5 w-2.5 h-2.5 bg-zinc-400 rounded-full peer-checked:translate-x-3.5 peer-checked:bg-white transition-all"></div>
+                        <div class="flex items-center gap-1.5 px-2 py-1 rounded-lg cursor-pointer" style="background: var(--c-surface2); border: 1px solid var(--c-border);" title="Iterate on result">
+                            <span class="text-[10px] hidden sm:inline" style="color: var(--c-dim);">Iterate</span>
+                            <input type="checkbox" id="editModeToggle" class="sr-only peer">
+                            <div id="iterateToggle" class="toggle-track" onclick="this.classList.toggle('on'); document.getElementById('editModeToggle').checked = this.classList.contains('on'); window.vivMorph.updateEditMode(this.classList.contains('on'));">
+                                <div class="toggle-knob"></div>
                             </div>
-                        </label>
+                        </div>
                     </div>
                 </div>
 
                 <!-- History Strip -->
-                <div id="historyStrip" class="hidden shrink-0 border-t border-white/5 bg-surface-1/50">
-                    <div class="flex items-center gap-2 px-3 py-2 overflow-x-auto">
-                        <span class="text-[9px] font-semibold text-zinc-500 uppercase tracking-wider shrink-0">History</span>
+                <div id="historyStrip" class="hidden shrink-0" style="border-top: 1px solid var(--c-border); background: rgba(6,6,11,0.5);">
+                    <div class="flex items-center gap-2.5 px-4 py-2 overflow-x-auto history-scroll">
+                        <span class="text-[9px] font-bold uppercase tracking-widest shrink-0" style="color: #3d3a50;">History</span>
                         <div id="historyItems" class="flex gap-1.5 items-center"></div>
-                        <button id="clearHistoryBtn" class="shrink-0 text-[9px] text-zinc-600 hover:text-red-400 transition-colors px-1.5 py-0.5 rounded" title="Clear history">Clear</button>
+                        <button id="clearHistoryBtn" class="shrink-0 text-[9px] px-2 py-0.5 rounded-md transition-colors" style="color: #3d3a50;" onmouseover="this.style.color='#f87171'" onmouseout="this.style.color='#3d3a50'" title="Clear history">Clear</button>
                     </div>
                 </div>
             </div>
 
             <!-- RIGHT: Control Panel -->
-            <div class="lg:w-[360px] xl:w-[400px] shrink-0 border-t lg:border-t-0 lg:border-l border-white/5 flex flex-col bg-surface-1/50 max-h-[40vh] lg:max-h-none overflow-hidden">
-                <div class="p-3 flex-1 overflow-y-auto min-h-0">
+            <div class="lg:w-[380px] xl:w-[420px] shrink-0 flex flex-col max-h-[40vh] lg:max-h-none overflow-hidden" style="border-top: 1px solid var(--c-border); border-left: none; background: rgba(10,10,16,0.6); backdrop-filter: blur(16px);" id="controlPanel">
+                <div class="p-4 flex-1 overflow-y-auto min-h-0">
                     <!-- Quick Presets -->
-                    <div class="mb-3">
-                        <h3 class="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-2">Quick Styles</h3>
-                        <div class="flex flex-wrap gap-1">
-                            <button class="preset-pill px-2 py-0.5 rounded-full bg-surface-3 border border-white/5 text-[10px] font-medium text-zinc-400 hover:text-white hover:border-green-500/30 hover:bg-green-500/10 transition-all" data-prompt="Transform into Studio Ghibli art style while maintaining the same composition and subjects">Ghibli</button>
-                            <button class="preset-pill px-2 py-0.5 rounded-full bg-surface-3 border border-white/5 text-[10px] font-medium text-zinc-400 hover:text-white hover:border-cyan-500/30 hover:bg-cyan-500/10 transition-all" data-prompt="Replace the background with a tropical beach with white sand, clear blue water, and palm trees while maintaining the same facial features, expressions, body positions, and clothing of all people.">Vacation</button>
-                            <button class="preset-pill px-2 py-0.5 rounded-full bg-surface-3 border border-white/5 text-[10px] font-medium text-zinc-400 hover:text-white hover:border-yellow-500/30 hover:bg-yellow-500/10 transition-all" data-prompt="Add beer bottles or wine glasses naturally in the hands of each person while maintaining the same facial features, expressions, hair, and body positions.">Drinks</button>
-                            <button class="preset-pill px-2 py-0.5 rounded-full bg-surface-3 border border-white/5 text-[10px] font-medium text-zinc-400 hover:text-white hover:border-orange-500/30 hover:bg-orange-500/10 transition-all" data-prompt="Change clothing to authentic ancient Middle Eastern robes, tunics, and sandals while maintaining the same facial features. Replace background with ancient Jerusalem stone buildings.">Biblical</button>
-                            <button class="preset-pill px-2 py-0.5 rounded-full bg-surface-3 border border-white/5 text-[10px] font-medium text-zinc-400 hover:text-white hover:border-pink-500/30 hover:bg-pink-500/10 transition-all" data-prompt="Randomly swap and exchange the faces of all people in the picture with each other, ensuring natural blending and maintaining the same body positions, clothing, and composition.">Face Swap</button>
-                            <button class="preset-pill px-2 py-0.5 rounded-full bg-surface-3 border border-white/5 text-[10px] font-medium text-zinc-400 hover:text-white hover:border-purple-500/30 hover:bg-purple-500/10 transition-all" data-prompt="Change clothing to medieval fantasy Westeros-style leather armor. Replace background with stone castle throne room.">GOT</button>
-                            <button class="preset-pill px-2 py-0.5 rounded-full bg-surface-3 border border-white/5 text-[10px] font-medium text-zinc-400 hover:text-white hover:border-amber-500/30 hover:bg-amber-500/10 transition-all" data-prompt="Add well-groomed full beards to each person while maintaining the same facial features, expressions, eye color, hair color, and body positions.">Beards</button>
-                            <button class="preset-pill px-2 py-0.5 rounded-full bg-surface-3 border border-white/5 text-[10px] font-medium text-zinc-400 hover:text-white hover:border-red-500/30 hover:bg-red-500/10 transition-all" data-prompt="Add Donald Trump seamlessly participating in the same activity as the original subjects, maintaining natural lighting and composition.">Trump</button>
-                            <button class="preset-pill px-2 py-0.5 rounded-full bg-surface-3 border border-white/5 text-[10px] font-medium text-zinc-400 hover:text-white hover:border-indigo-500/30 hover:bg-indigo-500/10 transition-all" data-prompt="Colorize this image with vibrant, natural colors while preserving all details, textures, and composition exactly as shown.">Colorize</button>
+                    <div class="mb-5">
+                        <h3 class="text-[10px] font-bold uppercase tracking-widest mb-2.5" style="color: #3d3a50;">Quick Styles</h3>
+                        <div class="flex flex-wrap gap-1.5">
+                            <button class="tag" data-prompt="Transform into Studio Ghibli art style while maintaining the same composition and subjects"><span style="font-size:13px">&#127912;</span> Ghibli</button>
+                            <button class="tag" data-prompt="Replace the background with a tropical beach with white sand, clear blue water, and palm trees while maintaining the same facial features, expressions, body positions, and clothing of all people."><span style="font-size:13px">&#127796;</span> Vacation</button>
+                            <button class="tag" data-prompt="Add beer bottles or wine glasses naturally in the hands of each person while maintaining the same facial features, expressions, hair, and body positions."><span style="font-size:13px">&#127867;</span> Drinks</button>
+                            <button class="tag" data-prompt="Change clothing to authentic ancient Middle Eastern robes, tunics, and sandals while maintaining the same facial features. Replace background with ancient Jerusalem stone buildings."><span style="font-size:13px">&#128220;</span> Biblical</button>
+                            <button class="tag" data-prompt="Randomly swap and exchange the faces of all people in the picture with each other, ensuring natural blending and maintaining the same body positions, clothing, and composition."><span style="font-size:13px">&#128260;</span> Face Swap</button>
+                            <button class="tag" data-prompt="Change clothing to medieval fantasy Westeros-style leather armor. Replace background with stone castle throne room."><span style="font-size:13px">&#9876;</span> GOT</button>
+                            <button class="tag" data-prompt="Add well-groomed full beards to each person while maintaining the same facial features, expressions, eye color, hair color, and body positions."><span style="font-size:13px">&#129492;</span> Beards</button>
+                            <button class="tag" data-prompt="Add Donald Trump seamlessly participating in the same activity as the original subjects, maintaining natural lighting and composition."><span style="font-size:13px">&#127482;&#127480;</span> Trump</button>
+                            <button class="tag" data-prompt="Colorize this image with vibrant, natural colors while preserving all details, textures, and composition exactly as shown."><span style="font-size:13px">&#127752;</span> Colorize</button>
                         </div>
                     </div>
 
                     <!-- Prompt -->
-                    <div class="mb-3">
-                        <div class="flex items-center justify-between mb-1.5">
-                            <h3 class="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Prompt</h3>
-                            <button id="optimizeBtn" class="flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-[9px] font-semibold text-amber-400 hover:bg-amber-500/20 transition-all">
-                                <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L9.19 8.63L2 9.24l5.46 4.73L5.82 21L12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61z"/></svg>
+                    <div class="mb-5">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-[10px] font-bold uppercase tracking-widest" style="color: #3d3a50;">Prompt</h3>
+                            <button id="optimizeBtn" class="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold transition-all" style="background: rgba(255,183,77,0.06); border: 1px solid rgba(255,183,77,0.15); color: #ffb74d;" onmouseover="this.style.background='rgba(255,183,77,0.12)'" onmouseout="this.style.background='rgba(255,183,77,0.06)'">
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L9.19 8.63L2 9.24l5.46 4.73L5.82 21L12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61z"/></svg>
                                 AI Optimize
                             </button>
                         </div>
-                        <textarea id="promptInput" placeholder="Describe your edit..." class="w-full h-20 lg:h-28 resize-none rounded-xl bg-surface-2 border border-white/5 focus:border-accent/40 focus:outline-none text-xs text-zinc-200 placeholder:text-zinc-600 p-2.5 leading-relaxed transition-all"></textarea>
+                        <textarea id="promptInput" placeholder="Describe how you want to transform the image..." class="prompt-area w-full h-24 lg:h-32 p-3"></textarea>
                     </div>
 
                     <!-- Aspect Ratio -->
-                    <div class="mb-3">
-                        <h3 class="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Aspect Ratio</h3>
-                        <div class="flex flex-wrap gap-1">
-                            <button class="aspect-btn px-2 py-0.5 rounded-md bg-surface-3 border border-accent/30 text-[10px] font-medium text-accent-light" data-ratio="auto">Auto</button>
-                            <button class="aspect-btn px-2 py-0.5 rounded-md bg-surface-3 border border-white/5 text-[10px] font-medium text-zinc-500 hover:text-zinc-300 transition-all" data-ratio="1:1">1:1</button>
-                            <button class="aspect-btn px-2 py-0.5 rounded-md bg-surface-3 border border-white/5 text-[10px] font-medium text-zinc-500 hover:text-zinc-300 transition-all" data-ratio="3:2">3:2</button>
-                            <button class="aspect-btn px-2 py-0.5 rounded-md bg-surface-3 border border-white/5 text-[10px] font-medium text-zinc-500 hover:text-zinc-300 transition-all" data-ratio="16:9">16:9</button>
-                            <button class="aspect-btn px-2 py-0.5 rounded-md bg-surface-3 border border-white/5 text-[10px] font-medium text-zinc-500 hover:text-zinc-300 transition-all" data-ratio="9:16">9:16</button>
-                            <button class="aspect-btn px-2 py-0.5 rounded-md bg-surface-3 border border-white/5 text-[10px] font-medium text-zinc-500 hover:text-zinc-300 transition-all" data-ratio="4:5">4:5</button>
+                    <div class="mb-5">
+                        <h3 class="text-[10px] font-bold uppercase tracking-widest mb-2" style="color: #3d3a50;">Aspect Ratio</h3>
+                        <div class="flex flex-wrap gap-1.5">
+                            <button class="aspect-btn tag active" data-ratio="auto">Auto</button>
+                            <button class="aspect-btn tag" data-ratio="1:1">1:1</button>
+                            <button class="aspect-btn tag" data-ratio="3:2">3:2</button>
+                            <button class="aspect-btn tag" data-ratio="16:9">16:9</button>
+                            <button class="aspect-btn tag" data-ratio="9:16">9:16</button>
+                            <button class="aspect-btn tag" data-ratio="4:5">4:5</button>
                         </div>
                     </div>
 
-                    <!-- Model Info -->
-                    <div class="rounded-xl bg-surface-2 border border-white/5 p-2.5 mb-3">
-                        <div class="flex items-center justify-between mb-0.5">
-                            <span class="text-[10px] font-semibold text-zinc-400">Active Model</span>
-                            <span id="modelPrice" class="text-[9px] font-mono text-neon-green">$0.04</span>
+                    <!-- Model Info Card -->
+                    <div class="glow-card p-3.5 mb-4">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-[10px] font-bold uppercase tracking-widest" style="color: #3d3a50;">Active Model</span>
+                            <span id="modelPrice" class="text-[10px] font-mono font-semibold" style="color: var(--c-glow2);">$0.04</span>
                         </div>
-                        <p id="modelNameDisplay" class="text-xs font-semibold text-white mb-1">Qwen Edit 2511</p>
+                        <p id="modelNameDisplay" class="text-sm font-bold mb-2" style="color: var(--c-text);">Qwen Edit 2511</p>
                         <div class="flex items-center gap-1.5 flex-wrap">
-                            <span id="modelPrivacy" class="text-[9px] px-1 py-0.5 rounded bg-surface-3 text-zinc-500 font-mono">private</span>
-                            <span id="modelMaxPrompt" class="text-[9px] px-1 py-0.5 rounded bg-surface-3 text-zinc-500 font-mono">1500 chars</span>
-                            <span id="modelCombine" class="text-[9px] px-1 py-0.5 rounded bg-surface-3 text-zinc-500 font-mono hidden">combine</span>
+                            <span id="modelPrivacy" class="text-[9px] px-2 py-0.5 rounded-md font-mono" style="background: var(--c-surface3); color: var(--c-dim);">private</span>
+                            <span id="modelMaxPrompt" class="text-[9px] px-2 py-0.5 rounded-md font-mono" style="background: var(--c-surface3); color: var(--c-dim);">1,500 chars</span>
+                            <span id="modelCombine" class="hidden text-[9px] px-2 py-0.5 rounded-md font-mono" style="background: var(--c-surface3); color: var(--c-dim);">combine</span>
                         </div>
                     </div>
                 </div>
 
                 <!-- Transform Button -->
-                <div class="p-3 pt-0 shrink-0">
-                    <button id="submitBtn" class="w-full h-10 rounded-xl bg-gradient-to-r from-accent to-accent-dim hover:from-accent-light hover:to-accent text-white text-xs font-bold transition-all hover:shadow-lg hover:shadow-accent/20 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                <div class="p-4 pt-0 shrink-0">
+                    <button id="submitBtn" class="glow-btn w-full h-11 flex items-center justify-center gap-2 text-sm">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
                         <span>Transform</span>
                     </button>
-                    <p class="text-[9px] text-zinc-600 text-center mt-1.5">Ctrl+Enter to transform</p>
+                    <p class="text-[9px] text-center mt-2 font-mono" style="color: #2d2a3a;">Ctrl+Enter to transform</p>
                 </div>
             </div>
         </main>
@@ -275,47 +528,52 @@
 
     <!-- MODEL MODAL -->
     <div id="modelModal" class="fixed inset-0 z-[100] hidden">
-        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" id="modelModalBackdrop"></div>
-        <div class="absolute inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-lg sm:max-h-[80vh] bg-surface-1 border border-white/5 rounded-2xl overflow-hidden flex flex-col animate-slide-up">
-            <div class="p-3 border-b border-white/5 flex items-center justify-between shrink-0">
+        <div class="absolute inset-0" style="background: rgba(6,6,11,0.7); backdrop-filter: blur(8px);" id="modelModalBackdrop"></div>
+        <div class="absolute inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-lg sm:max-h-[80vh] rounded-2xl overflow-hidden flex flex-col anim-slide-up" style="background: var(--c-surface); border: 1px solid var(--c-border);">
+            <div class="p-4 flex items-center justify-between shrink-0" style="border-bottom: 1px solid var(--c-border);">
                 <div>
-                    <h2 class="text-sm font-bold text-white">Select Model</h2>
-                    <p class="text-[10px] text-zinc-500">Choose an AI model for image editing</p>
+                    <h2 class="text-sm font-bold">Select Model</h2>
+                    <p class="text-[10px] mt-0.5" style="color: var(--c-dim);">Choose an AI engine for editing</p>
                 </div>
-                <button id="closeModelModal" class="w-7 h-7 rounded-lg bg-surface-3 flex items-center justify-center text-zinc-400 hover:text-white transition-colors">
+                <button id="closeModelModal" class="icon-btn">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
             </div>
-            <div id="modelList" class="p-3 overflow-y-auto flex-1 space-y-1.5">
-                <div class="text-center py-6">
-                    <div class="w-6 h-6 mx-auto mb-2 rounded-full border-2 border-accent/30 border-t-accent animate-spin"></div>
-                    <p class="text-[10px] text-zinc-500">Loading models...</p>
+            <div id="modelList" class="p-4 overflow-y-auto flex-1 space-y-2">
+                <div class="text-center py-8">
+                    <div class="w-7 h-7 mx-auto mb-2 rounded-full spinner" style="border: 2px solid var(--c-surface3); border-top-color: var(--c-glow);"></div>
+                    <p class="text-[10px]" style="color: var(--c-dim);">Loading models...</p>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- HISTORY MODAL (mobile) -->
+    <!-- HISTORY MODAL -->
     <div id="historyModal" class="fixed inset-0 z-[100] hidden">
-        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" id="historyModalBackdrop"></div>
-        <div class="absolute inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-md sm:max-h-[70vh] bg-surface-1 border border-white/5 rounded-2xl overflow-hidden flex flex-col animate-slide-up">
-            <div class="p-3 border-b border-white/5 flex items-center justify-between shrink-0">
-                <h2 class="text-sm font-bold text-white">Transform History</h2>
-                <button id="closeHistoryModal" class="w-7 h-7 rounded-lg bg-surface-3 flex items-center justify-center text-zinc-400 hover:text-white">
+        <div class="absolute inset-0" style="background: rgba(6,6,11,0.7); backdrop-filter: blur(8px);" id="historyModalBackdrop"></div>
+        <div class="absolute inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-md sm:max-h-[70vh] rounded-2xl overflow-hidden flex flex-col anim-slide-up" style="background: var(--c-surface); border: 1px solid var(--c-border);">
+            <div class="p-4 flex items-center justify-between shrink-0" style="border-bottom: 1px solid var(--c-border);">
+                <h2 class="text-sm font-bold">Transform History</h2>
+                <button id="closeHistoryModal" class="icon-btn">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
             </div>
-            <div id="historyModalItems" class="p-3 overflow-y-auto flex-1 grid grid-cols-2 gap-2"></div>
+            <div id="historyModalItems" class="p-4 overflow-y-auto flex-1 grid grid-cols-2 gap-2.5"></div>
         </div>
     </div>
 
     <!-- ERROR MODAL -->
     <div id="errorModal" class="fixed inset-0 z-[200] hidden">
-        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
-        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm bg-surface-2 border border-red-500/20 rounded-2xl p-5 animate-slide-up">
-            <h3 class="text-sm font-bold text-white mb-1.5">Error</h3>
-            <p id="errorMessage" class="text-xs text-zinc-400 mb-3 leading-relaxed"></p>
-            <button id="closeError" class="w-full py-2 rounded-xl bg-surface-3 border border-white/5 text-xs font-semibold text-zinc-300 hover:text-white hover:bg-surface-4 transition-all">Dismiss</button>
+        <div class="absolute inset-0" style="background: rgba(6,6,11,0.7); backdrop-filter: blur(8px);"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm p-5 rounded-2xl anim-slide-up" style="background: var(--c-surface); border: 1px solid rgba(248,113,113,0.15);">
+            <div class="flex items-center gap-2 mb-2">
+                <div class="w-6 h-6 rounded-lg flex items-center justify-center" style="background: rgba(248,113,113,0.1);">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                </div>
+                <h3 class="text-sm font-bold">Something went wrong</h3>
+            </div>
+            <p id="errorMessage" class="text-xs leading-relaxed mb-4" style="color: var(--c-dim);"></p>
+            <button id="closeError" class="w-full py-2.5 rounded-xl text-xs font-semibold transition-all" style="background: var(--c-surface2); border: 1px solid var(--c-border); color: var(--c-dim);" onmouseover="this.style.color='var(--c-text)'" onmouseout="this.style.color='var(--c-dim)'">Dismiss</button>
         </div>
     </div>
 
@@ -326,16 +584,14 @@
             this.originalImage = null;
             this.originalImageFile = null;
             this.transformedImage = null;
-            this.currentView = 'original'; // original | transformed | compare
+            this.currentView = 'original';
             this.selectedModel = 'qwen-edit';
             this.selectedAspectRatio = 'auto';
             this.models = [];
-            // History
             this.history = [];
             this.maxHistory = 20;
-            // Mask
             this.maskActive = false;
-            this.maskTool = 'brush'; // brush | eraser
+            this.maskTool = 'brush';
             this.maskBrushSize = 25;
             this.maskDrawing = false;
             this.maskCtx = null;
@@ -347,16 +603,33 @@
             this.fetchModels();
             this.loadHistory();
             this.registerServiceWorker();
+            this.setupResponsivePanel();
         }
 
-        // ==================== PWA ====================
+        setupResponsivePanel() {
+            const panel = document.getElementById('controlPanel');
+            if (window.innerWidth >= 1024) {
+                panel.style.borderLeft = '1px solid var(--c-border)';
+                panel.style.borderTop = 'none';
+            }
+            window.addEventListener('resize', () => {
+                if (window.innerWidth >= 1024) {
+                    panel.style.borderLeft = '1px solid var(--c-border)';
+                    panel.style.borderTop = 'none';
+                } else {
+                    panel.style.borderLeft = 'none';
+                    panel.style.borderTop = '1px solid var(--c-border)';
+                }
+            });
+        }
+
         registerServiceWorker() {
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.register('/sw.js').catch(() => {});
             }
         }
 
-        // ==================== MODEL MANAGEMENT ====================
+        // ==================== MODELS ====================
         async fetchModels() {
             try {
                 const r = await fetch('/.netlify/functions/list-models');
@@ -379,12 +652,24 @@
 
         renderModelList() {
             const c = document.getElementById('modelList');
-            if (!this.models.length) { c.innerHTML = '<p class="text-[10px] text-zinc-500 text-center py-4">No models</p>'; return; }
+            if (!this.models.length) { c.innerHTML = '<p class="text-[10px] text-center py-4" style="color:var(--c-dim)">No models found</p>'; return; }
             c.innerHTML = this.models.map(m => {
                 const s = m.model_spec, p = s.pricing?.inpaint?.usd||0, active = m.id===this.selectedModel, off = s.offline;
-                return `<button class="model-card w-full p-2.5 rounded-xl bg-surface-2 border ${active?'border-accent/40 bg-accent/5':'border-white/5 hover:border-white/10'} text-left transition-all ${off?'opacity-40 cursor-not-allowed':'cursor-pointer'}" data-model-id="${m.id}" ${off?'disabled':''}>
-                    <div class="flex items-center justify-between mb-0.5"><div class="flex items-center gap-1.5"><div class="w-1.5 h-1.5 rounded-full ${active?'bg-accent shadow-[0_0_6px_rgba(99,102,241,0.6)]':'bg-zinc-600'}"></div><span class="text-xs font-semibold ${active?'text-white':'text-zinc-300'}">${s.name}</span>${off?'<span class="text-[8px] px-1 rounded bg-red-500/10 text-red-400 font-mono">offline</span>':''}</div><span class="text-[10px] font-mono ${p<=0.05?'text-neon-green':p<=0.10?'text-amber-400':'text-orange-400'}">$${p.toFixed(2)}</span></div>
-                    <div class="flex items-center gap-1 mt-1"><span class="text-[8px] px-1 py-0.5 rounded bg-surface-3 text-zinc-500 font-mono">${s.privacy||'n/a'}</span><span class="text-[8px] px-1 py-0.5 rounded bg-surface-3 text-zinc-500 font-mono">${(s.constraints?.promptCharacterLimit||0).toLocaleString()} chars</span>${s.constraints?.combineImages?'<span class="text-[8px] px-1 py-0.5 rounded bg-surface-3 text-zinc-500 font-mono">combine</span>':''}</div>
+                const priceColor = p <= 0.05 ? 'var(--c-glow2)' : p <= 0.10 ? '#ffb74d' : '#ff7043';
+                return `<button class="model-card ${active?'selected':''}" data-model-id="${m.id}" ${off?'disabled style="opacity:0.35;cursor:not-allowed"':''}>
+                    <div class="flex items-center justify-between mb-1">
+                        <div class="flex items-center gap-2">
+                            <div class="w-2 h-2 rounded-full" style="background:${active?'var(--c-glow)':'var(--c-surface3)'}; ${active?'box-shadow:0 0 8px rgba(124,91,245,0.5)':''}"></div>
+                            <span class="text-xs font-semibold" style="color:${active?'var(--c-text)':'var(--c-dim)'}">${s.name}</span>
+                            ${off?'<span class="text-[8px] px-1.5 rounded font-mono" style="background:rgba(248,113,113,0.08);color:#f87171">offline</span>':''}
+                        </div>
+                        <span class="text-[10px] font-mono font-semibold" style="color:${priceColor}">$${p.toFixed(2)}</span>
+                    </div>
+                    <div class="flex items-center gap-1.5 mt-1.5">
+                        <span class="text-[8px] px-1.5 py-0.5 rounded font-mono" style="background:var(--c-surface3);color:var(--c-dim)">${s.privacy||'n/a'}</span>
+                        <span class="text-[8px] px-1.5 py-0.5 rounded font-mono" style="background:var(--c-surface3);color:var(--c-dim)">${(s.constraints?.promptCharacterLimit||0).toLocaleString()} chars</span>
+                        ${s.constraints?.combineImages?'<span class="text-[8px] px-1.5 py-0.5 rounded font-mono" style="background:var(--c-surface3);color:var(--c-dim)">combine</span>':''}
+                    </div>
                 </button>`;
             }).join('');
             c.querySelectorAll('.model-card:not([disabled])').forEach(card => {
@@ -416,8 +701,8 @@
 
         updateAspectRatioUI() {
             document.querySelectorAll('.aspect-btn').forEach(b => {
-                if (b.dataset.ratio === this.selectedAspectRatio) { b.classList.add('border-accent/30','text-accent-light'); b.classList.remove('border-white/5','text-zinc-500'); }
-                else { b.classList.remove('border-accent/30','text-accent-light'); b.classList.add('border-white/5','text-zinc-500'); }
+                if (b.dataset.ratio === this.selectedAspectRatio) { b.classList.add('active'); }
+                else { b.classList.remove('active'); }
             });
         }
 
@@ -435,10 +720,8 @@
 
         saveHistory() {
             try {
-                // Only keep thumbnails, not full images - store small base64 thumbs
                 localStorage.setItem('vivmorph_history', JSON.stringify(this.history.slice(0, this.maxHistory)));
             } catch (e) {
-                // localStorage full, trim older items
                 if (this.history.length > 5) {
                     this.history = this.history.slice(0, 5);
                     try { localStorage.setItem('vivmorph_history', JSON.stringify(this.history)); } catch {}
@@ -447,29 +730,16 @@
         }
 
         addToHistory(prompt, model, imageBase64) {
-            // Create a small thumbnail (max 100px)
-            const thumb = this.createThumbnail(imageBase64, 100);
             this.history.unshift({
                 id: Date.now(),
                 prompt: prompt.substring(0, 100),
                 model,
-                thumb,
                 fullImage: imageBase64,
                 timestamp: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})
             });
             if (this.history.length > this.maxHistory) this.history.pop();
             this.saveHistory();
             this.renderHistory();
-        }
-
-        createThumbnail(base64, maxDim) {
-            try {
-                const canvas = document.createElement('canvas');
-                const img = new Image();
-                img.src = base64.startsWith('data:') ? base64 : 'data:image/jpeg;base64,' + base64;
-                // We return the full base64 for now; real thumb would need async
-                return base64.substring(0, 2000); // Store truncated for localStorage thumb display
-            } catch { return ''; }
         }
 
         renderHistory() {
@@ -487,43 +757,35 @@
             strip.classList.remove('hidden');
             btn.classList.remove('hidden');
 
-            // Strip thumbnails
             items.innerHTML = this.history.map((h, i) => `
-                <button class="history-thumb shrink-0 w-10 h-10 rounded-lg bg-surface-3 border border-white/5 hover:border-accent/30 overflow-hidden flex items-center justify-center transition-all relative group" data-idx="${i}" title="${h.prompt}">
-                    <div class="w-full h-full bg-gradient-to-br from-accent/10 to-neon-cyan/10 flex items-center justify-center">
-                        <span class="text-[8px] font-mono text-zinc-500">#${this.history.length - i}</span>
-                    </div>
-                    <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                <button class="history-thumb" data-idx="${i}" title="${h.prompt}">
+                    <span class="text-[8px] font-mono" style="color:#3d3a50">#${this.history.length - i}</span>
+                    <div class="absolute inset-0 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center" style="background:rgba(6,6,11,0.7)">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
                     </div>
                 </button>
             `).join('');
 
             items.querySelectorAll('.history-thumb').forEach(el => {
-                el.addEventListener('click', () => {
-                    const idx = parseInt(el.dataset.idx);
-                    this.restoreFromHistory(idx);
-                });
+                el.addEventListener('click', () => this.restoreFromHistory(parseInt(el.dataset.idx)));
             });
 
-            // Modal items (detailed view)
             modalItems.innerHTML = this.history.map((h, i) => `
-                <button class="rounded-xl bg-surface-2 border border-white/5 hover:border-accent/30 p-2 text-left transition-all" data-idx="${i}">
-                    <div class="w-full h-16 rounded-lg bg-gradient-to-br from-accent/5 to-neon-cyan/5 flex items-center justify-center mb-1.5">
-                        <span class="text-[10px] font-mono text-zinc-500">#${this.history.length - i}</span>
+                <button class="rounded-xl p-2.5 text-left transition-all" style="background:var(--c-surface2);border:1px solid var(--c-border)" onmouseover="this.style.borderColor='rgba(124,91,245,0.25)'" onmouseout="this.style.borderColor='var(--c-border)'" data-idx="${i}">
+                    <div class="w-full h-16 rounded-lg flex items-center justify-center mb-2" style="background: linear-gradient(135deg, rgba(124,91,245,0.04), rgba(0,229,160,0.03));">
+                        <span class="text-[10px] font-mono" style="color:#3d3a50">#${this.history.length - i}</span>
                     </div>
-                    <p class="text-[9px] text-zinc-400 truncate">${h.prompt}</p>
-                    <div class="flex items-center justify-between mt-1">
-                        <span class="text-[8px] text-zinc-600">${h.model}</span>
-                        <span class="text-[8px] text-zinc-600">${h.timestamp}</span>
+                    <p class="text-[9px] truncate" style="color:var(--c-dim)">${h.prompt}</p>
+                    <div class="flex items-center justify-between mt-1.5">
+                        <span class="text-[8px]" style="color:#3d3a50">${h.model}</span>
+                        <span class="text-[8px]" style="color:#3d3a50">${h.timestamp}</span>
                     </div>
                 </button>
             `).join('');
 
             modalItems.querySelectorAll('button').forEach(el => {
                 el.addEventListener('click', () => {
-                    const idx = parseInt(el.dataset.idx);
-                    this.restoreFromHistory(idx);
+                    this.restoreFromHistory(parseInt(el.dataset.idx));
                     document.getElementById('historyModal').classList.add('hidden');
                 });
             });
@@ -550,50 +812,34 @@
         // ==================== COMPARE SLIDER ====================
         initCompareSlider() {
             if (!this.originalImage || !this.transformedImage) return;
-
-            const origImg = document.getElementById('compareOriginal');
-            const transImg = document.getElementById('compareTransformed');
             const origSrc = this.originalImage.startsWith('data:') ? this.originalImage : 'data:image/jpeg;base64,' + this.originalImage;
             const transSrc = this.transformedImage.startsWith('data:') ? this.transformedImage : 'data:image/jpeg;base64,' + this.transformedImage;
 
-            origImg.src = origSrc;
-            transImg.src = transSrc;
-
             const wrap = document.getElementById('compareContainer');
-            const clip = document.getElementById('compareClip');
-            const handle = document.getElementById('compareHandle');
-
-            // Reset to 50%
-            handle.style.left = '50%';
-            clip.style.clipPath = 'inset(0 0 0 50%)';
-
-            const move = (clientX) => {
-                const rect = wrap.getBoundingClientRect();
-                let pct = ((clientX - rect.left) / rect.width) * 100;
-                pct = Math.max(0, Math.min(100, pct));
-                handle.style.left = pct + '%';
-                clip.style.clipPath = `inset(0 0 0 ${pct}%)`;
-            };
-
-            // Remove old listeners by cloning
             const newWrap = wrap.cloneNode(false);
             newWrap.innerHTML = wrap.innerHTML;
             wrap.parentNode.replaceChild(newWrap, wrap);
             newWrap.id = 'compareContainer';
             newWrap.className = wrap.className;
 
-            // Re-grab elements after clone
-            const nHandle = newWrap.querySelector('#compareHandle');
-            const nClip = newWrap.querySelector('#compareClip');
             const nOrig = newWrap.querySelector('#compareOriginal');
             const nTrans = newWrap.querySelector('#compareTransformed');
+            const nHandle = newWrap.querySelector('#compareHandle');
+            const nClip = newWrap.querySelector('#compareClip');
             nOrig.src = origSrc;
             nTrans.src = transSrc;
             nHandle.style.left = '50%';
             nClip.style.clipPath = 'inset(0 0 0 50%)';
 
-            let dragging = false;
+            const move = (clientX) => {
+                const rect = newWrap.getBoundingClientRect();
+                let pct = ((clientX - rect.left) / rect.width) * 100;
+                pct = Math.max(0, Math.min(100, pct));
+                nHandle.style.left = pct + '%';
+                nClip.style.clipPath = `inset(0 0 0 ${pct}%)`;
+            };
 
+            let dragging = false;
             newWrap.addEventListener('pointerdown', (e) => { dragging = true; newWrap.setPointerCapture(e.pointerId); move(e.clientX); });
             newWrap.addEventListener('pointermove', (e) => { if (dragging) move(e.clientX); });
             newWrap.addEventListener('pointerup', () => { dragging = false; });
@@ -618,15 +864,15 @@
             if (this.maskActive) {
                 canvas.classList.remove('hidden');
                 tools.classList.remove('hidden');
-                btn.classList.add('text-pink-400', 'border-pink-500/30');
-                btn.classList.remove('text-zinc-400');
+                btn.style.color = 'var(--c-glow3)';
+                btn.style.borderColor = 'rgba(247,37,133,0.3)';
                 this.initMask();
                 this.setMaskTool('brush');
             } else {
                 canvas.classList.add('hidden');
                 tools.classList.add('hidden');
-                btn.classList.remove('text-pink-400', 'border-pink-500/30');
-                btn.classList.add('text-zinc-400');
+                btn.style.color = 'var(--c-dim)';
+                btn.style.borderColor = 'var(--c-border)';
             }
         }
 
@@ -635,15 +881,14 @@
             const canvas = document.getElementById('maskCanvas');
             const brushBtn = document.getElementById('maskBrushBtn');
             const eraserBtn = document.getElementById('maskEraserBtn');
-
             if (tool === 'brush') {
                 canvas.classList.remove('eraser');
-                brushBtn.className = 'px-2 py-1 rounded text-[10px] font-medium bg-pink-500/20 text-pink-400 border border-pink-500/30';
-                eraserBtn.className = 'px-2 py-1 rounded text-[10px] font-medium text-zinc-500 hover:text-zinc-300';
+                brushBtn.className = 'toolbar-pill active-pink';
+                eraserBtn.className = 'toolbar-pill';
             } else {
                 canvas.classList.add('eraser');
-                eraserBtn.className = 'px-2 py-1 rounded text-[10px] font-medium bg-pink-500/20 text-pink-400 border border-pink-500/30';
-                brushBtn.className = 'px-2 py-1 rounded text-[10px] font-medium text-zinc-500 hover:text-zinc-300';
+                eraserBtn.className = 'toolbar-pill active-pink';
+                brushBtn.className = 'toolbar-pill';
             }
         }
 
@@ -660,96 +905,67 @@
             ctx.globalCompositeOperation = this.maskTool === 'eraser' ? 'destination-out' : 'source-over';
             ctx.beginPath();
             ctx.arc(x, y, this.maskBrushSize / 2, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(244, 114, 182, 0.4)';
+            ctx.fillStyle = 'rgba(247, 37, 133, 0.35)';
             ctx.fill();
         }
 
         getMaskBase64() {
             const canvas = document.getElementById('maskCanvas');
             if (!canvas || !this.maskActive) return null;
-
-            // Check if mask has any content
             const ctx = canvas.getContext('2d');
             const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
             let hasContent = false;
-            for (let i = 3; i < data.length; i += 4) {
-                if (data[i] > 0) { hasContent = true; break; }
-            }
+            for (let i = 3; i < data.length; i += 4) { if (data[i] > 0) { hasContent = true; break; } }
             if (!hasContent) return null;
-
-            // Create a black and white mask: white where painted, black elsewhere
             const maskCanvas = document.createElement('canvas');
             maskCanvas.width = canvas.width;
             maskCanvas.height = canvas.height;
             const maskCtx = maskCanvas.getContext('2d');
             maskCtx.fillStyle = 'black';
             maskCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
-
-            // Draw white where the mask was painted
             const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const maskData = maskCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height);
             for (let i = 0; i < imgData.data.length; i += 4) {
-                if (imgData.data[i + 3] > 10) {
-                    maskData.data[i] = 255;
-                    maskData.data[i + 1] = 255;
-                    maskData.data[i + 2] = 255;
-                    maskData.data[i + 3] = 255;
-                }
+                if (imgData.data[i + 3] > 10) { maskData.data[i]=255; maskData.data[i+1]=255; maskData.data[i+2]=255; maskData.data[i+3]=255; }
             }
             maskCtx.putImageData(maskData, 0, 0);
             return maskCanvas.toDataURL('image/png').split(',')[1];
         }
 
-        // ==================== EVENT LISTENERS ====================
+        // ==================== EVENTS ====================
         setupEventListeners() {
-            // File upload
             document.getElementById('uploadBtn').addEventListener('click', (e) => { e.stopPropagation(); document.getElementById('fileInput').click(); });
             document.getElementById('fileInput').addEventListener('change', (e) => this.handleFileUpload(e));
 
-            // Drop zone
             const dz = document.getElementById('dropZone');
             dz.addEventListener('click', () => document.getElementById('fileInput').click());
             dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('drag-over'); });
             dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
             dz.addEventListener('drop', (e) => { e.preventDefault(); dz.classList.remove('drag-over'); if (e.dataTransfer.files.length) { document.getElementById('fileInput').files = e.dataTransfer.files; this.handleFileUpload({target:{files:e.dataTransfer.files}}); } });
 
-            // Upload new
             document.getElementById('uploadNewBtn').addEventListener('click', () => document.getElementById('fileInput').click());
-
-            // View toggle
             document.getElementById('viewOriginalBtn').addEventListener('click', () => this.toggleView('original'));
             document.getElementById('viewTransformedBtn').addEventListener('click', () => this.toggleView('transformed'));
             document.getElementById('viewCompareBtn').addEventListener('click', () => this.toggleView('compare'));
 
-            // Presets
-            document.querySelectorAll('.preset-pill').forEach(b => { b.addEventListener('click', () => { document.getElementById('promptInput').value = b.dataset.prompt; }); });
-
-            // Aspect ratio
+            document.querySelectorAll('.tag[data-prompt]').forEach(b => { b.addEventListener('click', () => { document.getElementById('promptInput').value = b.dataset.prompt; }); });
             document.querySelectorAll('.aspect-btn').forEach(b => { b.addEventListener('click', () => { if (b.classList.contains('pointer-events-none')) return; this.selectedAspectRatio = b.dataset.ratio; this.updateAspectRatioUI(); }); });
 
-            // Transform / Optimize / Download
             document.getElementById('submitBtn').addEventListener('click', () => this.transformImage());
             document.getElementById('optimizeBtn').addEventListener('click', () => this.optimizePrompt());
             document.getElementById('downloadBtn').addEventListener('click', () => this.downloadImage());
 
-            // Model modal
             document.getElementById('modelSelectorBtn').addEventListener('click', () => this.openModelModal());
             document.getElementById('closeModelModal').addEventListener('click', () => this.closeModelModal());
             document.getElementById('modelModalBackdrop').addEventListener('click', () => this.closeModelModal());
 
-            // History
-            document.getElementById('historyToggleBtn').addEventListener('click', () => { document.getElementById('historyModal').classList.remove('hidden'); });
-            document.getElementById('closeHistoryModal').addEventListener('click', () => { document.getElementById('historyModal').classList.add('hidden'); });
-            document.getElementById('historyModalBackdrop').addEventListener('click', () => { document.getElementById('historyModal').classList.add('hidden'); });
+            document.getElementById('historyToggleBtn').addEventListener('click', () => document.getElementById('historyModal').classList.remove('hidden'));
+            document.getElementById('closeHistoryModal').addEventListener('click', () => document.getElementById('historyModal').classList.add('hidden'));
+            document.getElementById('historyModalBackdrop').addEventListener('click', () => document.getElementById('historyModal').classList.add('hidden'));
             document.getElementById('clearHistoryBtn').addEventListener('click', () => this.clearHistory());
 
-            // Error modal
             document.getElementById('closeError').addEventListener('click', () => this.hideErrorModal());
 
-            // Edit mode
-            document.getElementById('editModeToggle').addEventListener('change', (e) => this.updateEditMode(e.target.checked));
-
-            // Mask controls
             document.getElementById('maskToggleBtn').addEventListener('click', () => this.toggleMask());
             document.getElementById('maskBrushBtn').addEventListener('click', () => this.setMaskTool('brush'));
             document.getElementById('maskEraserBtn').addEventListener('click', () => this.setMaskTool('eraser'));
@@ -759,25 +975,21 @@
                 document.getElementById('maskSizeLabel').textContent = this.maskBrushSize;
             });
 
-            // Mask canvas drawing
             const mc = document.getElementById('maskCanvas');
             mc.addEventListener('pointerdown', (e) => { if (!this.maskActive) return; this.maskDrawing = true; mc.setPointerCapture(e.pointerId); const r = mc.getBoundingClientRect(); this.maskDraw(e.clientX - r.left, e.clientY - r.top); });
             mc.addEventListener('pointermove', (e) => { if (!this.maskDrawing) return; const r = mc.getBoundingClientRect(); this.maskDraw(e.clientX - r.left, e.clientY - r.top); });
             mc.addEventListener('pointerup', () => { this.maskDrawing = false; });
 
-            // Keyboard shortcuts
             document.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) this.transformImage();
                 if (e.key === 'Escape') { this.closeModelModal(); this.hideErrorModal(); document.getElementById('historyModal').classList.add('hidden'); }
             });
 
-            // Paste
             document.addEventListener('paste', (e) => {
                 const items = e.clipboardData?.items; if (!items) return;
                 for (const item of items) { if (item.type.startsWith('image/')) { const f = item.getAsFile(); if (f) this.handleFileUpload({target:{files:[f]}}); break; } }
             });
 
-            // Resize mask canvas when window resizes
             window.addEventListener('resize', () => { if (this.maskActive) this.initMask(); });
         }
 
@@ -802,7 +1014,6 @@
                 this.updateViewToggleUI();
                 this.displayImage();
                 document.getElementById('downloadBtn').classList.add('hidden');
-                // Reset mask
                 if (this.maskActive) this.toggleMask();
             } catch (error) { this.showError('Error processing image: ' + error.message); }
         }
@@ -828,11 +1039,11 @@
                 const img = document.createElement('img');
                 img.src = url;
                 img.alt = this.currentView;
-                img.className = 'max-w-full max-h-full w-auto h-auto object-contain animate-fade-in';
+                img.className = 'max-w-full max-h-full w-auto h-auto object-contain anim-fade';
                 img.style.maxHeight = '75vh';
                 container.appendChild(img);
             } else if (this.currentView === 'transformed') {
-                container.innerHTML = '<p class="text-xs text-zinc-600">No transformation yet</p>';
+                container.innerHTML = '<p class="text-xs" style="color:#3d3a50">No transformation yet</p>';
             }
         }
 
@@ -841,26 +1052,22 @@
             this.currentView = view;
             this.updateViewToggleUI();
             this.displayImage();
-            // Hide mask when in compare mode
-            if (view === 'compare' && this.maskActive) {
-                document.getElementById('maskCanvas').classList.add('hidden');
-            } else if (this.maskActive) {
-                document.getElementById('maskCanvas').classList.remove('hidden');
-            }
+            if (view === 'compare' && this.maskActive) document.getElementById('maskCanvas').classList.add('hidden');
+            else if (this.maskActive) document.getElementById('maskCanvas').classList.remove('hidden');
         }
 
         updateViewToggleUI() {
-            const o = document.getElementById('viewOriginalBtn');
-            const t = document.getElementById('viewTransformedBtn');
-            const c = document.getElementById('viewCompareBtn');
-            const active = 'px-2 py-1 rounded text-[10px] font-medium bg-accent/20 text-accent-light border border-accent/30';
-            const inactive = 'px-2 py-1 rounded text-[10px] font-medium text-zinc-500 hover:text-zinc-300';
-            o.className = this.currentView === 'original' ? active : inactive;
-            t.className = this.currentView === 'transformed' ? active : inactive;
-            c.className = this.currentView === 'compare' ? active : inactive;
+            ['viewOriginalBtn','viewTransformedBtn','viewCompareBtn'].forEach(id => {
+                const btn = document.getElementById(id);
+                const isActive = (id === 'viewOriginalBtn' && this.currentView === 'original') ||
+                                 (id === 'viewTransformedBtn' && this.currentView === 'transformed') ||
+                                 (id === 'viewCompareBtn' && this.currentView === 'compare');
+                if (isActive) btn.classList.add('active');
+                else btn.classList.remove('active');
+            });
         }
 
-        // ==================== TRANSFORMATION ====================
+        // ==================== TRANSFORM ====================
         async transformImage() {
             const prompt = document.getElementById('promptInput').value.trim();
             if (!prompt) { this.showError('Please enter a transformation prompt'); return; }
@@ -868,27 +1075,24 @@
 
             const model = this.models.find(m => m.id === this.selectedModel);
             const charLimit = model?.model_spec?.constraints?.promptCharacterLimit || 32768;
-            if (prompt.length > charLimit) { this.showError(`Prompt exceeds ${charLimit.toLocaleString()} char limit for ${model?.model_spec?.name}. Shorten it.`); return; }
+            if (prompt.length > charLimit) { this.showError(`Prompt exceeds ${charLimit.toLocaleString()} char limit for ${model?.model_spec?.name}.`); return; }
 
             const submitBtn = document.getElementById('submitBtn');
             const loadingOverlay = document.getElementById('loadingOverlay');
             try {
                 submitBtn.disabled = true;
-                submitBtn.innerHTML = '<svg class="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg><span>Transforming...</span>';
+                submitBtn.innerHTML = '<svg class="spinner h-4 w-4" viewBox="0 0 24 24" fill="none"><circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"/><path class="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg><span>Transforming...</span>';
                 loadingOverlay.classList.remove('hidden');
                 this.simulateProgress();
 
-                const editModeToggle = document.getElementById('editModeToggle');
-                const useTransformed = editModeToggle.checked && this.transformedImage;
+                const useTransformed = document.getElementById('editModeToggle').checked && this.transformedImage;
                 let imageBase64;
-                if (useTransformed) { imageBase64 = this.transformedImage; }
-                else if (this.originalImage) { imageBase64 = this.originalImage.startsWith('data:') ? this.originalImage.split(',')[1] : this.originalImage; }
-                else { imageBase64 = await this.fileToBase64(this.originalImageFile); }
+                if (useTransformed) imageBase64 = this.transformedImage;
+                else if (this.originalImage) imageBase64 = this.originalImage.startsWith('data:') ? this.originalImage.split(',')[1] : this.originalImage;
+                else imageBase64 = await this.fileToBase64(this.originalImageFile);
 
                 const requestBody = { prompt, image: imageBase64, modelId: this.selectedModel };
                 if (this.selectedAspectRatio !== 'auto') requestBody.aspect_ratio = this.selectedAspectRatio;
-
-                // Include mask if present
                 const maskData = this.getMaskBase64();
                 if (maskData) requestBody.mask = maskData;
 
@@ -899,7 +1103,8 @@
                     throw new Error(msg);
                 }
                 const data = await response.json();
-                if (data.image) { this.transformedImage = data.image; } else { throw new Error('No image data'); }
+                if (data.image) this.transformedImage = data.image;
+                else throw new Error('No image data returned');
 
                 this.completeProgress();
                 this.currentView = 'transformed';
@@ -907,16 +1112,13 @@
                 this.displayImage();
                 document.getElementById('downloadBtn').classList.remove('hidden');
                 this.setStatus('Transform complete');
-
-                // Add to history
                 this.addToHistory(prompt, this.selectedModel, data.image);
-
             } catch (error) {
                 console.error('Transform error:', error);
                 this.showError('Transform failed: ' + error.message);
             } finally {
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><span>Transform</span>';
+                submitBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><span>Transform</span>';
                 loadingOverlay.classList.add('hidden');
                 this.resetProgress();
             }
@@ -933,17 +1135,19 @@
         completeProgress() { const b=document.getElementById('progressBar'),t=document.getElementById('progressText'),p=document.getElementById('progressPercent'); if(b)b.style.width='100%'; if(t)t.textContent='Complete!'; if(p)p.textContent='100%'; }
         resetProgress() { const b=document.getElementById('progressBar'),t=document.getElementById('progressText'),p=document.getElementById('progressPercent'); if(b)b.style.width='0%'; if(t)t.textContent='Transforming...'; if(p)p.textContent='0%'; }
 
-        // ==================== PROMPT OPTIMIZATION ====================
+        // ==================== PROMPT OPTIMIZE ====================
         async optimizePrompt() {
             const pi = document.getElementById('promptInput'), up = pi.value.trim();
             if (!up) { this.showError('Enter a prompt first'); return; }
             const btn = document.getElementById('optimizeBtn'), orig = btn.innerHTML;
             try {
-                btn.innerHTML = '<svg class="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>'; btn.disabled = true;
+                btn.innerHTML = '<svg class="spinner h-3 w-3" viewBox="0 0 24 24" fill="none"><circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"/><path class="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>';
+                btn.disabled = true;
                 const r = await fetch('/.netlify/functions/chat-completions', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ model:'llama-3.3-70b', messages:[{role:'system',content:'You are an expert AI prompt optimizer for image editing. Return only the optimized prompt.'},{role:'user',content:`Optimize this image editing prompt: "${up}"`}], max_tokens:300, temperature:0.7 }) });
                 if (!r.ok) throw new Error(`HTTP ${r.status}`);
-                const d = await r.json(); pi.value = d.choices[0].message.content.trim();
-                btn.innerHTML = '<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" class="text-neon-green"><polyline points="20 6 9 17 4 12"/></svg>Done';
+                const d = await r.json();
+                pi.value = d.choices[0].message.content.trim();
+                btn.innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--c-glow2)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';
                 setTimeout(() => { btn.innerHTML = orig; btn.disabled = false; }, 1500);
             } catch (e) { this.showError('Optimize failed: '+e.message); btn.innerHTML = orig; btn.disabled = false; }
         }
@@ -982,7 +1186,6 @@
         showError(msg) { document.getElementById('errorMessage').textContent=msg; document.getElementById('errorModal').classList.remove('hidden'); }
         hideErrorModal() { document.getElementById('errorModal').classList.add('hidden'); }
         fileToBase64(file) { return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result.split(',')[1]); r.onerror=rej; r.readAsDataURL(file); }); }
-        base64ToBlob(b64, mime) { const bc=atob(b64),bn=new Array(bc.length); for(let i=0;i<bc.length;i++)bn[i]=bc.charCodeAt(i); return new Blob([new Uint8Array(bn)],{type:mime}); }
     }
 
     document.addEventListener('DOMContentLoaded', () => { window.vivMorph = new VivMorph(); });
