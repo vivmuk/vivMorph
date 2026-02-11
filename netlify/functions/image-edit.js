@@ -72,14 +72,35 @@ exports.handler = async (event, context) => {
       body: JSON.stringify(venicePayload)
     });
 
-    // Get the response - could be JSON or binary image
+    // Handle error responses first — read body as text so we can surface the message
+    if (!response.ok) {
+      let errorMsg = `Venice API returned ${response.status}`;
+      try {
+        const text = await response.text();
+        try {
+          const data = JSON.parse(text);
+          errorMsg = data.message || data.error || data.detail || (data.errors ? JSON.stringify(data.errors) : null) || errorMsg;
+        } catch {
+          if (text && text.length < 500) errorMsg = text;
+        }
+      } catch {}
+      return {
+        statusCode: response.status,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ error: errorMsg })
+      };
+    }
+
+    // Success — could be JSON or binary image
     const contentType = response.headers.get('content-type');
 
     if (contentType && contentType.includes('application/json')) {
-      // JSON response
       const data = await response.json();
       return {
-        statusCode: response.status,
+        statusCode: 200,
         headers: {
           'Access-Control-Allow-Origin': '*',
           'Content-Type': 'application/json'
@@ -92,7 +113,7 @@ exports.handler = async (event, context) => {
       const base64Image = Buffer.from(imageBuffer).toString('base64');
 
       return {
-        statusCode: response.status,
+        statusCode: 200,
         headers: {
           'Access-Control-Allow-Origin': '*',
           'Content-Type': 'application/json'
