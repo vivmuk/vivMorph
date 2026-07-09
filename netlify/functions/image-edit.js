@@ -41,6 +41,37 @@ exports.handler = async (event, context) => {
     // Parse the request body
     const requestBody = JSON.parse(event.body);
 
+    // Validate before spending an API call — mirrors the client-side checks, which can be bypassed.
+    if (typeof requestBody.prompt !== 'string' || !requestBody.prompt.trim()) {
+      return {
+        statusCode: 400,
+        headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: 'A prompt is required.' })
+      };
+    }
+    if (requestBody.prompt.length > 40000) {
+      return {
+        statusCode: 400,
+        headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: 'Prompt is too long.' })
+      };
+    }
+    // ~34MB base64 covers the client's 25MB raw file limit plus base64 overhead.
+    if (typeof requestBody.image !== 'string' || !requestBody.image.trim()) {
+      return {
+        statusCode: 400,
+        headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: 'An image is required.' })
+      };
+    }
+    if (requestBody.image.length > 34 * 1024 * 1024) {
+      return {
+        statusCode: 400,
+        headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: 'Image is too large.' })
+      };
+    }
+
     // Build the Venice AI request payload
     const venicePayload = {
       prompt: requestBody.prompt,

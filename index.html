@@ -708,7 +708,8 @@
             this.originalImageFile = null;
             this.transformedImage = null;
             this.currentView = 'original';
-            this.selectedModel = 'grok-imagine-edit';
+            this.defaultModel = 'grok-imagine-edit';
+            this.selectedModel = localStorage.getItem('vivmorph_selected_model') || this.defaultModel;
             this.selectedAspectRatio = 'auto';
             this.models = [];
             this.history = [];
@@ -779,11 +780,16 @@
                     { id:'seedream-v4-edit', model_spec:{ name:'SeedreamV4.5', pricing:{inpaint:{usd:0.05}}, constraints:{aspectRatios:['auto','1:1','3:2','16:9','9:16','2:3','4:5'], promptCharacterLimit:10000, combineImages:true}, privacy:'anonymized', offline:false }},
                 ];
             }
-            // Always surface Grok Imagine first regardless of API ordering.
-            const defaultIdx = this.models.findIndex(m => m.id === this.selectedModel);
+            // Always surface Grok Imagine first regardless of API ordering, independent of what's selected.
+            const defaultIdx = this.models.findIndex(m => m.id === this.defaultModel);
             if (defaultIdx > 0) {
                 const [defaultModel] = this.models.splice(defaultIdx, 1);
                 this.models.unshift(defaultModel);
+            }
+            // A previously persisted model choice may no longer exist (removed/renamed upstream).
+            if (!this.models.some(m => m.id === this.selectedModel)) {
+                this.selectedModel = this.defaultModel;
+                localStorage.removeItem('vivmorph_selected_model');
             }
             this.renderModelList();
             this.updateModelInfo();
@@ -812,7 +818,7 @@
                 </button>`;
             }).join('');
             c.querySelectorAll('.model-card:not([disabled])').forEach(card => {
-                card.addEventListener('click', () => { this.selectedModel = card.dataset.modelId; this.renderModelList(); this.updateModelInfo(); this.updateAspectRatioButtons(); this.closeModelModal(); });
+                card.addEventListener('click', () => { this.selectedModel = card.dataset.modelId; localStorage.setItem('vivmorph_selected_model', this.selectedModel); this.renderModelList(); this.updateModelInfo(); this.updateAspectRatioButtons(); this.closeModelModal(); });
             });
         }
 
