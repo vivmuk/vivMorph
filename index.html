@@ -673,12 +673,15 @@
                             <span id="modelMaxPrompt" class="text-[9px] px-2 py-0.5 rounded-md font-mono" style="background: var(--c-surface3); color: var(--c-dim);">1,500 chars</span>
                             <span id="modelCombine" class="hidden text-[9px] px-2 py-0.5 rounded-md font-mono" style="background: var(--c-surface3); color: var(--c-dim);">combine</span>
                         </div>
-                        <div class="flex items-center gap-1.5 px-2 py-1 rounded-lg cursor-pointer mt-2.5" style="background: var(--c-surface2); border: 1px solid var(--c-border);" id="autoPickRow" title="Automatically switch to a face-consistent model when your prompt mentions identity/likeness">
-                            <span class="text-[10px] flex-1" style="color: var(--c-dim);">Auto-pick model for faces</span>
-                            <input type="checkbox" id="autoPickToggleInput" class="sr-only peer">
-                            <div id="autoPickToggle" class="toggle-track">
-                                <div class="toggle-knob"></div>
+                        <div class="mt-2.5">
+                            <div class="flex items-center gap-1.5 px-2 py-1 rounded-lg cursor-pointer" style="background: var(--c-surface2); border: 1px solid var(--c-border);" id="autoPickRow">
+                                <span class="text-[10px] flex-1" style="color: var(--c-dim);">Auto-pick model for faces</span>
+                                <input type="checkbox" id="autoPickToggleInput" class="sr-only peer">
+                                <div id="autoPickToggle" class="toggle-track">
+                                    <div class="toggle-knob"></div>
+                                </div>
                             </div>
+                            <p class="text-[9px] mt-1 px-0.5" style="color: #3d3a50;">When on, prompts like "keep her face the same" auto-switch to a face-consistent model instead of just suggesting it.</p>
                         </div>
                     </div>
                 </div>
