@@ -560,6 +560,12 @@
                         <button id="uploadNewBtn" class="icon-btn" title="Upload new image">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                         </button>
+                        <button id="bgRemoveBtn" class="icon-btn" title="Remove background">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4l16 16M4 20L20 4"/><rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="3 3"/></svg>
+                        </button>
+                        <button id="upscaleBtn" class="icon-btn" title="Upscale &amp; enhance 2x">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+                        </button>
                         <button id="downloadBtn" class="hidden icon-btn" title="Download" style="color: var(--c-glow2);">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                         </button>
@@ -615,6 +621,15 @@
                         <textarea id="promptInput" placeholder="Describe how you want to transform the image..." class="prompt-area w-full h-24 lg:h-32 p-3"></textarea>
                     </div>
 
+                    <!-- Model Suggestion Banner -->
+                    <div id="modelSuggestion" class="hidden mb-4 p-2.5 rounded-lg flex items-center justify-between gap-2 text-[11px]" style="background: rgba(0,229,160,0.06); border: 1px solid rgba(0,229,160,0.18); color: var(--c-text);">
+                        <span>This prompt sounds like it needs strong face/identity consistency — <strong id="suggestedModelName">Nano Banana Pro</strong> tends to do better at that.</span>
+                        <div class="flex items-center gap-1 shrink-0">
+                            <button id="applySuggestionBtn" class="text-[10px] px-2 py-1 rounded-md font-semibold whitespace-nowrap" style="background: var(--c-glow2); color: #06060b;">Switch</button>
+                            <button id="dismissSuggestionBtn" class="text-[10px] px-1.5 py-1 rounded-md" style="color: var(--c-dim);">&times;</button>
+                        </div>
+                    </div>
+
                     <!-- Transform Button (right after prompt) -->
                     <div class="mb-5">
                         <button id="submitBtn" class="glow-btn w-full h-11 flex items-center justify-center gap-2 text-sm">
@@ -635,6 +650,12 @@
                             <button class="aspect-btn tag" data-ratio="9:16">9:16</button>
                             <button class="aspect-btn tag" data-ratio="4:5">4:5</button>
                         </div>
+                    </div>
+
+                    <!-- Quality (only for models that expose quality tiers) -->
+                    <div class="mb-5 hidden" id="qualitySection">
+                        <h3 class="text-[10px] font-bold uppercase tracking-widest mb-2" style="color: #3d3a50;">Quality</h3>
+                        <div class="flex flex-wrap gap-1.5" id="qualityButtons"></div>
                     </div>
 
                     <!-- Model Info Card -->
@@ -717,6 +738,10 @@
             this.defaultModel = 'grok-imagine-edit';
             this.selectedModel = localStorage.getItem('vivmorph_selected_model') || this.defaultModel;
             this.selectedAspectRatio = 'auto';
+            this.selectedQuality = null;
+            // Models known to preserve face/character identity well across edits.
+            this.identityModelIds = ['nano-banana-pro-edit'];
+            this.suggestionDismissedFor = null;
             this.models = [];
             this.history = [];
             this.maxHistory = 20;
@@ -782,6 +807,8 @@
                     { id:'qwen-edit', model_spec:{ name:'Qwen Edit 2511', pricing:{inpaint:{usd:0.04}}, constraints:{aspectRatios:['auto','1:1','3:2','16:9','21:9','9:16','2:3','4:5'], promptCharacterLimit:1500, combineImages:true}, privacy:'private', offline:false }},
                     { id:'flux-2-max-edit', model_spec:{ name:'Flux 2 Max', pricing:{inpaint:{usd:0.09}}, constraints:{aspectRatios:['auto','1:1','3:2','16:9','21:9','9:16','2:3','4:5'], promptCharacterLimit:3000, combineImages:true}, privacy:'anonymized', offline:false }},
                     { id:'gpt-image-1-5-edit', model_spec:{ name:'GPT Image 1.5', pricing:{inpaint:{usd:0.23}}, constraints:{aspectRatios:['auto','1:1','3:2','2:3'], promptCharacterLimit:32768, combineImages:true}, privacy:'anonymized', offline:false }},
+                    // Price is an estimate — this fallback entry is only used if the live Venice API is unreachable.
+                    { id:'gpt-image-2-edit', model_spec:{ name:'GPT Image 2', pricing:{inpaint:{usd:0.19}}, constraints:{aspectRatios:['auto','1:1','3:2','2:3'], promptCharacterLimit:32768, combineImages:true, quality:['low','medium','high']}, privacy:'anonymized', offline:false }},
                     { id:'nano-banana-pro-edit', model_spec:{ name:'Nano Banana Pro', pricing:{inpaint:{usd:0.18}}, constraints:{aspectRatios:['auto','1:1','3:2','16:9','21:9','9:16','2:3','4:5'], promptCharacterLimit:32768, combineImages:true}, privacy:'anonymized', offline:false }},
                     { id:'seedream-v4-edit', model_spec:{ name:'SeedreamV4.5', pricing:{inpaint:{usd:0.05}}, constraints:{aspectRatios:['auto','1:1','3:2','16:9','9:16','2:3','4:5'], promptCharacterLimit:10000, combineImages:true}, privacy:'anonymized', offline:false }},
                 ];
@@ -839,6 +866,59 @@
             const ce = document.getElementById('modelCombine');
             s.constraints?.combineImages ? ce.classList.remove('hidden') : ce.classList.add('hidden');
             this.updateAspectRatioButtons();
+            this.updateQualityButtons();
+            this.checkModelSuggestion();
+        }
+
+        updateQualityButtons() {
+            const m = this.models.find(x => x.id === this.selectedModel);
+            const qualities = m?.model_spec?.constraints?.quality;
+            const section = document.getElementById('qualitySection');
+            const container = document.getElementById('qualityButtons');
+            if (!Array.isArray(qualities) || !qualities.length) {
+                section.classList.add('hidden');
+                this.selectedQuality = null;
+                return;
+            }
+            section.classList.remove('hidden');
+            if (!this.selectedQuality || !qualities.includes(this.selectedQuality)) {
+                this.selectedQuality = qualities.includes('high') ? 'high' : qualities[qualities.length - 1];
+            }
+            container.innerHTML = qualities.map(q => `<button class="quality-btn tag${q === this.selectedQuality ? ' active' : ''}" data-quality="${q}">${q.charAt(0).toUpperCase() + q.slice(1)}</button>`).join('');
+            container.querySelectorAll('.quality-btn').forEach(b => {
+                b.addEventListener('click', () => { this.selectedQuality = b.dataset.quality; this.updateQualityButtons(); });
+            });
+        }
+
+        // ==================== MODEL SUGGESTION ====================
+        checkModelSuggestion() {
+            const banner = document.getElementById('modelSuggestion');
+            const prompt = document.getElementById('promptInput')?.value || '';
+            const identityIntent = /\b(same face|keep (her|his|their|the) face|preserve (the |her |his |their )?(face|identity|likeness)|identity|likeness|consistent face|face consistency|don'?t change (her|his|their) face|same person|recognizable)\b/i.test(prompt);
+            const recommended = this.models.find(m => this.identityModelIds.includes(m.id));
+            if (!identityIntent || !recommended || recommended.id === this.selectedModel || !prompt.trim() || this.suggestionDismissedFor === prompt) {
+                banner.classList.add('hidden');
+                return;
+            }
+            document.getElementById('suggestedModelName').textContent = recommended.model_spec.name;
+            banner.dataset.modelId = recommended.id;
+            banner.classList.remove('hidden');
+        }
+
+        applyModelSuggestion() {
+            const banner = document.getElementById('modelSuggestion');
+            const id = banner.dataset.modelId;
+            if (!id || !this.models.some(m => m.id === id)) return;
+            this.selectedModel = id;
+            localStorage.setItem('vivmorph_selected_model', id);
+            this.renderModelList();
+            this.updateModelInfo();
+            banner.classList.add('hidden');
+        }
+
+        dismissModelSuggestion() {
+            this.suggestionDismissedFor = document.getElementById('promptInput')?.value || '';
+            document.getElementById('modelSuggestion').classList.add('hidden');
         }
 
         updateAspectRatioButtons() {
@@ -1171,6 +1251,12 @@
             document.getElementById('submitBtn').addEventListener('click', () => this.transformImage());
             document.getElementById('optimizeBtn').addEventListener('click', () => this.optimizePrompt());
             document.getElementById('downloadBtn').addEventListener('click', () => this.downloadImage());
+            document.getElementById('bgRemoveBtn').addEventListener('click', () => this.removeBackground());
+            document.getElementById('upscaleBtn').addEventListener('click', () => this.upscaleImage());
+
+            document.getElementById('promptInput').addEventListener('input', () => this.checkModelSuggestion());
+            document.getElementById('applySuggestionBtn').addEventListener('click', () => this.applyModelSuggestion());
+            document.getElementById('dismissSuggestionBtn').addEventListener('click', () => this.dismissModelSuggestion());
 
             document.getElementById('modelSelectorBtn').addEventListener('click', () => this.openModelModal());
             document.getElementById('closeModelModal').addEventListener('click', () => this.closeModelModal());
@@ -1510,6 +1596,7 @@
 
                 const requestBody = { prompt, image: imageBase64, modelId: this.selectedModel };
                 if (this.selectedAspectRatio !== 'auto') requestBody.aspect_ratio = this.selectedAspectRatio;
+                if (this.selectedQuality) requestBody.quality = this.selectedQuality;
                 const maskW = useTransformed ? (this.transformedWidth || this.originalWidth) : this.originalWidth;
                 const maskH = useTransformed ? (this.transformedHeight || this.originalHeight) : this.originalHeight;
                 const maskData = this.getMaskBase64(maskW, maskH);
@@ -1591,6 +1678,7 @@
 
                 const images = this.multiImages.map(img => img.base64);
                 const requestBody = { prompt, images, modelId: this.selectedModel };
+                if (this.selectedQuality) requestBody.quality = this.selectedQuality;
 
                 const fetchBody = JSON.stringify(requestBody);
                 let response;
@@ -1668,6 +1756,52 @@
                 setTimeout(() => { btn.innerHTML = orig; btn.disabled = false; }, 1500);
             } catch (e) { this.showError('Optimize failed: '+e.message); btn.innerHTML = orig; btn.disabled = false; }
         }
+
+        // ==================== BACKGROUND REMOVE / UPSCALE ====================
+        async runImageTool(endpoint, buttonId, statusLabel, extraBody) {
+            const img = (this.currentView === 'transformed' && this.transformedImage) ? this.transformedImage : this.originalImage;
+            if (!img) { this.showError('No image to process'); return; }
+            const btn = document.getElementById(buttonId);
+            const origHTML = btn.innerHTML;
+            try {
+                btn.disabled = true;
+                btn.innerHTML = '<svg class="spinner h-3.5 w-3.5" viewBox="0 0 24 24" fill="none"><circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"/><path class="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>';
+                this.setStatus(statusLabel + '...');
+                const imageBase64 = img.startsWith('data:') ? img.split(',')[1] : img;
+                const response = await fetch(`/.netlify/functions/${endpoint}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image: imageBase64, ...extraBody })
+                });
+                if (!response.ok) {
+                    let msg = `HTTP ${response.status}`;
+                    try { const d = await response.json(); msg = d.message || d.error || d.detail || msg; } catch {}
+                    throw new Error(msg);
+                }
+                const data = await response.json();
+                if (!data.image) throw new Error('No image data returned');
+                this.transformedImage = data.image;
+                try {
+                    const tDims = await this.getImageDimensions(data.image);
+                    this.transformedWidth = tDims.width;
+                    this.transformedHeight = tDims.height;
+                } catch {}
+                this.currentView = 'transformed';
+                this.updateViewToggleUI();
+                this.displayImage();
+                document.getElementById('downloadBtn').classList.remove('hidden');
+                this.setStatus(statusLabel + ' complete');
+                this.addToHistory(statusLabel, this.selectedModel, data.image);
+            } catch (error) {
+                this.showError(statusLabel + ' failed: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = origHTML;
+            }
+        }
+
+        removeBackground() { return this.runImageTool('background-remove', 'bgRemoveBtn', 'Remove background'); }
+        upscaleImage() { return this.runImageTool('upscale', 'upscaleBtn', 'Upscale', { scale: 2, enhance: true }); }
 
         // ==================== DOWNLOAD ====================
         downloadImage() {

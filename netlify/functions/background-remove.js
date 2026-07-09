@@ -41,69 +41,31 @@ exports.handler = async (event, context) => {
     // Parse the request body
     const requestBody = JSON.parse(event.body);
 
-    // Validate before spending an API call — mirrors the client-side checks, which can be bypassed.
-    if (typeof requestBody.prompt !== 'string' || !requestBody.prompt.trim()) {
-      return {
-        statusCode: 400,
-        headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
-        body: JSON.stringify({ error: 'A prompt is required.' })
-      };
-    }
-    if (requestBody.prompt.length > 40000) {
-      return {
-        statusCode: 400,
-        headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
-        body: JSON.stringify({ error: 'Prompt is too long.' })
-      };
-    }
-    if (!Array.isArray(requestBody.images) || requestBody.images.length === 0) {
-      return {
-        statusCode: 400,
-        headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
-        body: JSON.stringify({ error: 'At least one image is required.' })
-      };
-    }
-    // Matches the client's maxMultiImages limit.
-    if (requestBody.images.length > 3) {
-      return {
-        statusCode: 400,
-        headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
-        body: JSON.stringify({ error: 'A maximum of 3 images is allowed.' })
-      };
-    }
     // ~34MB base64 covers the client's 25MB raw file limit plus base64 overhead.
-    const hasInvalidImage = requestBody.images.some(img => typeof img !== 'string' || !img.trim() || img.length > 34 * 1024 * 1024);
-    if (hasInvalidImage) {
+    if (typeof requestBody.image !== 'string' || !requestBody.image.trim()) {
       return {
         statusCode: 400,
         headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
-        body: JSON.stringify({ error: 'One or more images is invalid or too large.' })
+        body: JSON.stringify({ error: 'An image is required.' })
+      };
+    }
+    if (requestBody.image.length > 34 * 1024 * 1024) {
+      return {
+        statusCode: 400,
+        headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: 'Image is too large.' })
       };
     }
 
-    // Build the Venice AI multi-edit request payload
-    const venicePayload = {
-      prompt: requestBody.prompt,
-      images: requestBody.images,
-    };
+    const venicePayload = { image: requestBody.image };
 
-    // Pass through modelId if provided
-    if (requestBody.modelId) {
-      venicePayload.modelId = requestBody.modelId;
-    }
-
-    // Pass through quality if provided (only meaningful for models that support quality tiers)
-    if (requestBody.quality) {
-      venicePayload.quality = requestBody.quality;
-    }
-
-    // Forward the request to Venice AI multi-edit API with retry for transient errors
+    // Forward the request to Venice AI API with retry for transient errors
     const maxRetries = 2;
     let response;
     let lastError;
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
-        response = await fetch('https://api.venice.ai/api/v1/image/multi-edit', {
+        response = await fetch('https://api.venice.ai/api/v1/image/background-remove', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${apiKey}`,
@@ -134,12 +96,10 @@ exports.handler = async (event, context) => {
       let errorMsg = `Venice API returned ${response.status}`;
       try {
         const text = await response.text();
-        // Try to parse as JSON for structured error
         try {
           const data = JSON.parse(text);
           errorMsg = data.message || data.error || data.detail || (data.errors ? JSON.stringify(data.errors) : null) || errorMsg;
         } catch {
-          // Not JSON — use the raw text if it's short enough
           if (text && text.length < 500) errorMsg = text;
         }
       } catch {}
@@ -167,7 +127,7 @@ exports.handler = async (event, context) => {
         body: JSON.stringify(data)
       };
     } else {
-      // Binary image response
+      // Binary image response (background-remove returns a PNG with transparency)
       const imageBuffer = await response.arrayBuffer();
       const base64Image = Buffer.from(imageBuffer).toString('base64');
 
@@ -181,7 +141,7 @@ exports.handler = async (event, context) => {
       };
     }
   } catch (error) {
-    console.error('Error proxying multi-edit request:', error);
+    console.error('Error proxying background-remove request:', error);
     return {
       statusCode: 500,
       headers: {

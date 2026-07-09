@@ -88,6 +88,11 @@ exports.handler = async (event, context) => {
       venicePayload.aspect_ratio = requestBody.aspect_ratio;
     }
 
+    // Pass through quality if provided (only meaningful for models that support quality tiers)
+    if (requestBody.quality) {
+      venicePayload.quality = requestBody.quality;
+    }
+
     // Pass through mask if provided (for region-based inpainting)
     if (requestBody.mask) {
       venicePayload.mask = requestBody.mask;
