@@ -476,10 +476,13 @@
                         </div>
                         <div class="text-center">
                             <p class="text-sm font-semibold" style="color: var(--c-text);">Drop your image here</p>
-                            <p class="text-[11px] mt-1" style="color: var(--c-dim);">or click to browse &middot; paste with Ctrl+V</p>
+                            <p id="dropZoneHint" class="text-[11px] mt-1" style="color: var(--c-dim);">or click to browse &middot; paste with Ctrl+V</p>
                             <p class="text-[10px] mt-2 font-mono" style="color: #3d3a50;">JPEG, PNG, WebP, HEIC up to 25MB</p>
                         </div>
-                        <button id="uploadBtn" class="glow-btn px-6 py-2 text-xs font-semibold mt-1">Choose File</button>
+                        <div class="flex items-center gap-2 mt-1">
+                            <button id="uploadBtn" class="glow-btn px-6 py-2 text-xs font-semibold">Choose File</button>
+                            <button id="pasteBtn" class="glow-btn px-6 py-2 text-xs font-semibold hidden" style="background: linear-gradient(135deg, var(--c-glow2), #00b880);">Paste Image</button>
+                        </div>
                         <input type="file" id="fileInput" accept="image/*,.heic,.heif" class="hidden" />
                     </div>
 
@@ -493,12 +496,15 @@
                         </div>
                         <div class="text-center">
                             <p class="text-sm font-semibold" style="color: var(--c-text);">Drop multiple images here</p>
-                            <p class="text-[11px] mt-1" style="color: var(--c-dim);">or click to browse &middot; combine & edit multiple images</p>
+                            <p id="multiDropZoneHint" class="text-[11px] mt-1" style="color: var(--c-dim);">or click to browse &middot; combine & edit multiple images</p>
                             <p class="text-[10px] mt-2 font-mono" style="color: #3d3a50;">Up to 3 images &middot; JPEG, PNG, WebP, HEIC up to 25MB each</p>
                         </div>
                         <!-- Multi-image thumbnails -->
                         <div id="multiThumbs" class="flex gap-2 flex-wrap justify-center max-w-sm"></div>
-                        <button id="multiUploadBtn" class="glow-btn px-6 py-2 text-xs font-semibold mt-1" style="background: linear-gradient(135deg, var(--c-glow2), #00b880);">Add Images</button>
+                        <div class="flex items-center gap-2 mt-1">
+                            <button id="multiUploadBtn" class="glow-btn px-6 py-2 text-xs font-semibold" style="background: linear-gradient(135deg, var(--c-glow2), #00b880);">Add Images</button>
+                            <button id="multiPasteBtn" class="glow-btn px-6 py-2 text-xs font-semibold hidden">Paste Image</button>
+                        </div>
                         <input type="file" id="multiFileInput" accept="image/*,.heic,.heif" multiple class="hidden" />
                     </div>
 
@@ -1223,6 +1229,39 @@
             });
 
             window.addEventListener('resize', () => { if (this.maskActive) this.initMask(); });
+
+            this.setupClipboardPasteButtons();
+        }
+
+        setupClipboardPasteButtons() {
+            // iOS Safari has no Ctrl+V — the async Clipboard API needs an explicit button tap instead.
+            if (!navigator.clipboard || !navigator.clipboard.read) return;
+            document.getElementById('pasteBtn').classList.remove('hidden');
+            document.getElementById('multiPasteBtn').classList.remove('hidden');
+            if (!window.matchMedia('(pointer: fine)').matches) {
+                document.getElementById('dropZoneHint').textContent = 'or click to browse · tap Paste Image to paste a photo';
+                document.getElementById('multiDropZoneHint').textContent = 'or click to browse · tap Paste Image to paste a photo';
+            }
+            document.getElementById('pasteBtn').addEventListener('click', () => this.pasteFromClipboard(false));
+            document.getElementById('multiPasteBtn').addEventListener('click', () => this.pasteFromClipboard(true));
+        }
+
+        async pasteFromClipboard(multi) {
+            try {
+                const clipboardItems = await navigator.clipboard.read();
+                for (const item of clipboardItems) {
+                    const imageType = item.types.find(t => t.startsWith('image/'));
+                    if (!imageType) continue;
+                    const blob = await item.getType(imageType);
+                    const file = new File([blob], `pasted-image.${imageType.split('/')[1] || 'png'}`, { type: imageType });
+                    if (multi) this.handleMultiFileUpload({ target: { files: [file] } });
+                    else this.handleFileUpload({ target: { files: [file] } });
+                    return;
+                }
+                this.showError('No image found on the clipboard. Copy a photo first, then tap Paste Image.');
+            } catch (e) {
+                this.showError('Could not read the clipboard. Your browser may be blocking clipboard access — try again or use Choose File.');
+            }
         }
 
         // ==================== IMAGE HANDLING ====================
