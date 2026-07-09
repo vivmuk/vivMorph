@@ -581,15 +581,6 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- History Strip -->
-                <div id="historyStrip" class="hidden shrink-0" style="border-top: 1px solid var(--c-border); background: rgba(6,6,11,0.5);">
-                    <div class="flex items-center gap-2.5 px-4 py-2 overflow-x-auto history-scroll">
-                        <span class="text-[9px] font-bold uppercase tracking-widest shrink-0" style="color: #3d3a50;">History</span>
-                        <div id="historyItems" class="flex gap-1.5 items-center"></div>
-                        <button id="clearHistoryBtn" class="shrink-0 text-[9px] px-2 py-0.5 rounded-md transition-colors" style="color: #3d3a50;" onmouseover="this.style.color='#f87171'" onmouseout="this.style.color='#3d3a50'" title="Clear history">Clear</button>
-                    </div>
-                </div>
             </div>
 
             <!-- RIGHT: Control Panel -->
@@ -718,9 +709,12 @@
         <div class="absolute inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-md sm:max-h-[70vh] rounded-2xl overflow-hidden flex flex-col" style="background: var(--c-surface); border: 1px solid var(--c-border);">
             <div class="p-4 flex items-center justify-between shrink-0" style="border-bottom: 1px solid var(--c-border);">
                 <h2 class="text-sm font-bold">Transform History</h2>
-                <button id="closeHistoryModal" class="icon-btn">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
+                <div class="flex items-center gap-2">
+                    <button id="clearHistoryBtn" class="text-[10px] px-2 py-1 rounded-md transition-colors" style="color: #3d3a50;" onmouseover="this.style.color='#f87171'" onmouseout="this.style.color='#3d3a50'" title="Clear history">Clear</button>
+                    <button id="closeHistoryModal" class="icon-btn">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                </div>
             </div>
             <div id="historyModalItems" class="p-4 overflow-y-auto flex-1 grid grid-cols-2 gap-2.5"></div>
         </div>
@@ -1004,32 +998,16 @@
         }
 
         renderHistory() {
-            const strip = document.getElementById('historyStrip');
-            const items = document.getElementById('historyItems');
             const btn = document.getElementById('historyToggleBtn');
             const modalItems = document.getElementById('historyModalItems');
 
             if (this.history.length === 0) {
-                strip.classList.add('hidden');
                 btn.classList.add('hidden');
+                modalItems.innerHTML = '';
                 return;
             }
 
-            strip.classList.remove('hidden');
             btn.classList.remove('hidden');
-
-            items.innerHTML = this.history.map((h, i) => `
-                <button class="history-thumb" data-idx="${i}" title="${h.prompt}">
-                    <span class="text-[8px] font-mono" style="color:#3d3a50">#${this.history.length - i}</span>
-                    <div class="absolute inset-0 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center" style="background:rgba(6,6,11,0.7)">
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
-                    </div>
-                </button>
-            `).join('');
-
-            items.querySelectorAll('.history-thumb').forEach(el => {
-                el.addEventListener('click', () => this.restoreFromHistory(parseInt(el.dataset.idx)));
-            });
 
             modalItems.innerHTML = this.history.map((h, i) => `
                 <button class="rounded-xl p-2.5 text-left transition-all" style="background:var(--c-surface2);border:1px solid var(--c-border)" onmouseover="this.style.borderColor='rgba(124,91,245,0.25)'" onmouseout="this.style.borderColor='var(--c-border)'" data-idx="${i}">
