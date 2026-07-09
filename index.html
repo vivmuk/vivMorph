@@ -49,12 +49,17 @@
         }
         @media (max-width: 1023px) {
             main { -webkit-overflow-scrolling: touch; scroll-behavior: smooth; overscroll-behavior-y: contain; }
+            /* Stack the photo panel and controls at their natural height and let the
+               page scroll. Without this, flexbox compresses the canvas panel below the
+               drop zone's real height, so the drop zone overflows under the controls. */
+            main > div { flex-shrink: 0 !important; }
             /* Larger image on mobile once a photo is loaded */
             #imageDisplay { max-height: 65vh !important; min-height: 50vh; }
-            /* Upload area sizes to its content so the buttons are always fully visible */
-            #dropZone, #multiDropZone { max-height: none !important; min-height: 0 !important; height: auto !important; padding: 2.25rem 1.25rem; }
-            /* Breathing room between the photo area and the controls below */
-            #controlPanel { margin-top: 0.5rem; }
+            /* Roomy, self-contained upload card: fills the top cleanly and never clips its buttons */
+            #dropZone, #multiDropZone { max-height: none !important; min-height: 44vh !important; height: auto !important; padding: 2rem 1.25rem; }
+            #canvasArea { padding: 0.75rem 0.75rem 0 !important; }
+            /* Clear separation between the photo panel and the controls below it */
+            #controlPanel { margin-top: 1rem; }
             /* Compact control panel on mobile */
             #controlPanel .mb-5 { margin-bottom: 0.75rem !important; }
             #controlPanel h3 { margin-bottom: 0.375rem !important; }
@@ -477,7 +482,7 @@
         <main class="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden min-h-0" style="-webkit-overflow-scrolling: touch; overscroll-behavior-y: contain;">
             <!-- LEFT: Canvas Area -->
             <div class="lg:flex-1 flex flex-col min-h-0 min-w-0">
-                <div class="flex items-center justify-center p-1.5 sm:p-4 lg:p-6 min-h-0 relative lg:flex-1">
+                <div id="canvasArea" class="flex items-center justify-center p-1.5 sm:p-4 lg:p-6 min-h-0 relative lg:flex-1">
                     <!-- Drop Zone (Single) -->
                     <div id="dropZone" class="dropzone w-full h-full max-w-3xl max-h-[40vh] lg:max-h-[72vh] mx-auto flex flex-col items-center justify-center gap-4">
                         <div class="dz-icon">
@@ -659,29 +664,6 @@
                         <div class="flex flex-wrap gap-1.5" id="qualityButtons"></div>
                     </div>
 
-                    <!-- Model Info Card -->
-                    <div class="glow-card p-3.5 mb-4">
-                        <div class="flex items-center justify-between mb-1">
-                            <span class="text-[10px] font-bold uppercase tracking-widest" style="color: #3d3a50;">Active Model</span>
-                            <span id="modelPrice" class="text-[10px] font-mono font-semibold" style="color: var(--c-glow2);">$0.04</span>
-                        </div>
-                        <p id="modelNameDisplay" class="text-sm font-bold mb-2" style="color: var(--c-text);">Qwen Edit 2511</p>
-                        <div class="flex items-center gap-1.5 flex-wrap">
-                            <span id="modelPrivacy" class="text-[9px] px-2 py-0.5 rounded-md font-mono" style="background: var(--c-surface3); color: var(--c-dim);">private</span>
-                            <span id="modelMaxPrompt" class="text-[9px] px-2 py-0.5 rounded-md font-mono" style="background: var(--c-surface3); color: var(--c-dim);">1,500 chars</span>
-                            <span id="modelCombine" class="hidden text-[9px] px-2 py-0.5 rounded-md font-mono" style="background: var(--c-surface3); color: var(--c-dim);">combine</span>
-                        </div>
-                        <div class="mt-2.5">
-                            <div class="flex items-center gap-1.5 px-2 py-1 rounded-lg cursor-pointer" style="background: var(--c-surface2); border: 1px solid var(--c-border);" id="autoPickRow">
-                                <span class="text-[10px] flex-1" style="color: var(--c-dim);">Auto-pick model for faces</span>
-                                <input type="checkbox" id="autoPickToggleInput" class="sr-only peer">
-                                <div id="autoPickToggle" class="toggle-track">
-                                    <div class="toggle-knob"></div>
-                                </div>
-                            </div>
-                            <p class="text-[9px] mt-1 px-0.5" style="color: #3d3a50;">When on, prompts like "keep her face the same" auto-switch to a face-consistent model instead of just suggesting it.</p>
-                        </div>
-                    </div>
                 </div>
             </div>
         </main>
@@ -705,6 +687,16 @@
                     <div class="w-7 h-7 mx-auto mb-2 rounded-full spinner" style="border: 2px solid var(--c-surface3); border-top-color: var(--c-glow);"></div>
                     <p class="text-[10px]" style="color: var(--c-dim);">Loading models...</p>
                 </div>
+            </div>
+            <div class="p-4 shrink-0" style="border-top: 1px solid var(--c-border);">
+                <div class="flex items-center gap-1.5 px-2.5 py-2 rounded-lg cursor-pointer" style="background: var(--c-surface2); border: 1px solid var(--c-border);" id="autoPickRow">
+                    <span class="text-[11px] flex-1" style="color: var(--c-dim);">Auto-pick model for faces</span>
+                    <input type="checkbox" id="autoPickToggleInput" class="sr-only peer">
+                    <div id="autoPickToggle" class="toggle-track">
+                        <div class="toggle-knob"></div>
+                    </div>
+                </div>
+                <p class="text-[9px] mt-1.5 px-0.5" style="color: #3d3a50;">When on, prompts like &ldquo;keep her face the same&rdquo; auto-switch to a face-consistent model instead of just suggesting it.</p>
             </div>
         </div>
     </div>
@@ -877,13 +869,14 @@
         updateModelInfo() {
             const m = this.models.find(x => x.id === this.selectedModel); if (!m) return;
             const s = m.model_spec;
-            document.getElementById('activeModelName').textContent = s.name;
-            document.getElementById('modelNameDisplay').textContent = s.name;
-            document.getElementById('modelPrice').textContent = '$' + (s.pricing?.inpaint?.usd||0).toFixed(2);
-            document.getElementById('modelPrivacy').textContent = s.privacy||'n/a';
-            document.getElementById('modelMaxPrompt').textContent = (s.constraints?.promptCharacterLimit||0).toLocaleString()+' chars';
+            const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+            setText('activeModelName', s.name);
+            setText('modelNameDisplay', s.name);
+            setText('modelPrice', '$' + (s.pricing?.inpaint?.usd||0).toFixed(2));
+            setText('modelPrivacy', s.privacy||'n/a');
+            setText('modelMaxPrompt', (s.constraints?.promptCharacterLimit||0).toLocaleString()+' chars');
             const ce = document.getElementById('modelCombine');
-            s.constraints?.combineImages ? ce.classList.remove('hidden') : ce.classList.add('hidden');
+            if (ce) { s.constraints?.combineImages ? ce.classList.remove('hidden') : ce.classList.add('hidden'); }
             this.updateAspectRatioButtons();
             this.updateQualityButtons();
             this.checkModelSuggestion();
