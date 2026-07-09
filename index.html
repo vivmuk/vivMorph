@@ -557,6 +557,9 @@
                         <button id="maskToggleBtn" class="icon-btn" title="Paint mask for selective edits">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
                         </button>
+                        <button id="protectFaceBtn" class="icon-btn" title="Auto-protect detected faces so edits skip them">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6l8-4z"/><circle cx="12" cy="10" r="2.5"/></svg>
+                        </button>
                         <button id="uploadNewBtn" class="icon-btn" title="Upload new image">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                         </button>
@@ -670,6 +673,13 @@
                             <span id="modelMaxPrompt" class="text-[9px] px-2 py-0.5 rounded-md font-mono" style="background: var(--c-surface3); color: var(--c-dim);">1,500 chars</span>
                             <span id="modelCombine" class="hidden text-[9px] px-2 py-0.5 rounded-md font-mono" style="background: var(--c-surface3); color: var(--c-dim);">combine</span>
                         </div>
+                        <div class="flex items-center gap-1.5 px-2 py-1 rounded-lg cursor-pointer mt-2.5" style="background: var(--c-surface2); border: 1px solid var(--c-border);" id="autoPickRow" title="Automatically switch to a face-consistent model when your prompt mentions identity/likeness">
+                            <span class="text-[10px] flex-1" style="color: var(--c-dim);">Auto-pick model for faces</span>
+                            <input type="checkbox" id="autoPickToggleInput" class="sr-only peer">
+                            <div id="autoPickToggle" class="toggle-track">
+                                <div class="toggle-knob"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -742,6 +752,9 @@
             // Models known to preserve face/character identity well across edits.
             this.identityModelIds = ['nano-banana-pro-edit'];
             this.suggestionDismissedFor = null;
+            this.autoPickModel = localStorage.getItem('vivmorph_auto_pick_model') === 'true';
+            this.faceModel = null;
+            this._faceModelLoading = null;
             this.models = [];
             this.history = [];
             this.maxHistory = 20;
@@ -896,7 +909,20 @@
             const prompt = document.getElementById('promptInput')?.value || '';
             const identityIntent = /\b(same face|keep (her|his|their|the) face|preserve (the |her |his |their )?(face|identity|likeness)|identity|likeness|consistent face|face consistency|don'?t change (her|his|their) face|same person|recognizable)\b/i.test(prompt);
             const recommended = this.models.find(m => this.identityModelIds.includes(m.id));
-            if (!identityIntent || !recommended || recommended.id === this.selectedModel || !prompt.trim() || this.suggestionDismissedFor === prompt) {
+            if (!identityIntent || !recommended || recommended.id === this.selectedModel || !prompt.trim()) {
+                banner.classList.add('hidden');
+                return;
+            }
+            if (this.autoPickModel) {
+                banner.classList.add('hidden');
+                this.selectedModel = recommended.id;
+                localStorage.setItem('vivmorph_selected_model', recommended.id);
+                this.renderModelList();
+                this.updateModelInfo();
+                this.setStatus('Auto-switched to ' + recommended.model_spec.name + ' for face consistency');
+                return;
+            }
+            if (this.suggestionDismissedFor === prompt) {
                 banner.classList.add('hidden');
                 return;
             }
@@ -1229,6 +1255,107 @@
             return maskCanvas.toDataURL('image/png').split(',')[1];
         }
 
+        // ==================== FACE PROTECTION ====================
+        loadScript(src) {
+            return new Promise((resolve, reject) => {
+                if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
+                const s = document.createElement('script');
+                s.src = src;
+                s.onload = () => resolve();
+                s.onerror = () => reject(new Error('Failed to load ' + src));
+                document.head.appendChild(s);
+            });
+        }
+
+        loadImageElement(src) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = () => reject(new Error('Failed to load image'));
+                img.src = src;
+            });
+        }
+
+        ensureFaceModel() {
+            if (this.faceModel) return Promise.resolve();
+            if (this._faceModelLoading) return this._faceModelLoading;
+            // Loaded lazily on first use — TF.js + BlazeFace only cost bandwidth for people who use this feature.
+            // Uses BlazeFace (client-side WASM/WebGL) rather than the browser's native FaceDetector API, which Safari doesn't support.
+            this._faceModelLoading = (async () => {
+                await this.loadScript('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js');
+                await this.loadScript('https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface@0.1.0/dist/blazeface.min.umd.js');
+                this.faceModel = await blazeface.load();
+            })();
+            return this._faceModelLoading;
+        }
+
+        async protectFaces() {
+            const btn = document.getElementById('protectFaceBtn');
+            const origHTML = btn.innerHTML;
+            const spinnerHTML = '<svg class="spinner h-3.5 w-3.5" viewBox="0 0 24 24" fill="none"><circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"/><path class="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>';
+            const src = (this.currentView === 'transformed' && this.transformedImage) ? this.transformedImage : this.originalImage;
+            if (!src) { this.showError('No image to process'); return; }
+            try {
+                btn.disabled = true;
+                btn.innerHTML = spinnerHTML;
+                this.setStatus('Loading face detector...');
+                await this.ensureFaceModel();
+
+                this.setStatus('Detecting faces...');
+                const dataUrl = src.startsWith('data:') ? src : 'data:image/jpeg;base64,' + src;
+                const detectImg = await this.loadImageElement(dataUrl);
+                const detectCanvas = document.createElement('canvas');
+                detectCanvas.width = detectImg.naturalWidth;
+                detectCanvas.height = detectImg.naturalHeight;
+                detectCanvas.getContext('2d').drawImage(detectImg, 0, 0);
+
+                const predictions = await this.faceModel.estimateFaces(detectCanvas, false);
+                if (!predictions.length) { this.showError('No faces detected in this image.'); return; }
+
+                if (!this.maskActive) this.toggleMask();
+                else this.initMask();
+                this.updateImageBounds();
+                const bounds = this.imageBounds;
+                if (!bounds || bounds.width <= 0 || bounds.height <= 0) { this.showError('Could not determine image position.'); return; }
+
+                const ctx = this.maskCtx;
+                // Mark the whole image editable...
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.fillStyle = 'rgba(247, 37, 133, 0.35)';
+                ctx.fillRect(bounds.left, bounds.top, bounds.width, bounds.height);
+
+                // ...then punch out each detected face (with padding for hair/jaw) so it stays untouched.
+                // Fully opaque fill so destination-out clears alpha to 0 in one pass (the mask's own
+                // fillStyle is intentionally translucent for brush strokes, which doesn't fully erase here).
+                const scaleX = bounds.width / detectCanvas.width;
+                const scaleY = bounds.height / detectCanvas.height;
+                ctx.globalCompositeOperation = 'destination-out';
+                ctx.fillStyle = 'rgba(0, 0, 0, 1)';
+                predictions.forEach(p => {
+                    const [x1, y1] = p.topLeft;
+                    const [x2, y2] = p.bottomRight;
+                    const padX = (x2 - x1) * 0.35;
+                    const padY = (y2 - y1) * 0.45;
+                    const left = bounds.left + (x1 - padX) * scaleX;
+                    const top = bounds.top + (y1 - padY) * scaleY;
+                    const w = (x2 - x1 + padX * 2) * scaleX;
+                    const h = (y2 - y1 + padY * 2) * scaleY;
+                    ctx.beginPath();
+                    ctx.ellipse(left + w / 2, top + h / 2, Math.max(w, 1) / 2, Math.max(h, 1) / 2, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+                ctx.globalCompositeOperation = 'source-over';
+
+                const n = predictions.length;
+                this.setStatus(`Protected ${n} face${n > 1 ? 's' : ''} — edits will skip ${n > 1 ? 'them' : 'it'}`);
+            } catch (error) {
+                this.showError('Face protection failed: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = origHTML;
+            }
+        }
+
         // ==================== EVENTS ====================
         setupEventListeners() {
             document.getElementById('uploadBtn').addEventListener('click', (e) => { e.stopPropagation(); document.getElementById('fileInput').click(); });
@@ -1253,10 +1380,22 @@
             document.getElementById('downloadBtn').addEventListener('click', () => this.downloadImage());
             document.getElementById('bgRemoveBtn').addEventListener('click', () => this.removeBackground());
             document.getElementById('upscaleBtn').addEventListener('click', () => this.upscaleImage());
+            document.getElementById('protectFaceBtn').addEventListener('click', () => this.protectFaces());
 
             document.getElementById('promptInput').addEventListener('input', () => this.checkModelSuggestion());
             document.getElementById('applySuggestionBtn').addEventListener('click', () => this.applyModelSuggestion());
             document.getElementById('dismissSuggestionBtn').addEventListener('click', () => this.dismissModelSuggestion());
+
+            const autoPickToggle = document.getElementById('autoPickToggle');
+            const autoPickInput = document.getElementById('autoPickToggleInput');
+            if (this.autoPickModel) { autoPickToggle.classList.add('on'); autoPickInput.checked = true; }
+            document.getElementById('autoPickRow').addEventListener('click', () => {
+                this.autoPickModel = !this.autoPickModel;
+                autoPickToggle.classList.toggle('on', this.autoPickModel);
+                autoPickInput.checked = this.autoPickModel;
+                localStorage.setItem('vivmorph_auto_pick_model', this.autoPickModel);
+                if (this.autoPickModel) this.checkModelSuggestion();
+            });
 
             document.getElementById('modelSelectorBtn').addEventListener('click', () => this.openModelModal());
             document.getElementById('closeModelModal').addEventListener('click', () => this.closeModelModal());
