@@ -1602,15 +1602,32 @@
         // ==================== MULTI-IMAGE MODE ====================
         // ==================== AUBREY PRESET ====================
         loadAubreyPreset() {
-            // Switch to multi mode and preload Aubrey's reference photo as image 1.
+            // Preserve any photos the user already has loaded so clicking @Aubrey ADDS him
+            // alongside them instead of throwing them away (setMode('multi') clears state).
+            const carried = [];
+            if (this.multiMode) {
+                for (const img of this.multiImages) {
+                    if (img && img.base64 && img.base64 !== AUBREY_REF_B64) {
+                        carried.push({ file: img.file || null, base64: img.base64, name: img.name || null });
+                    }
+                }
+            } else if (this.originalImage) {
+                const raw = this.originalImage.startsWith('data:') ? this.originalImage.split(',')[1] : this.originalImage;
+                if (raw) carried.push({ file: this.originalImageFile || null, base64: raw, name: null });
+            }
+
+            // Switch to multi mode, then place Aubrey as image 1 followed by the user's photo(s).
             this.setMode('multi');
-            this.multiImages = [{ file: null, base64: AUBREY_REF_B64, name: 'Aubrey' }];
+            this.multiImages = [{ file: null, base64: AUBREY_REF_B64, name: 'Aubrey' }, ...carried].slice(0, this.maxMultiImages);
             this.renderMultiThumbs();
+
             const p = document.getElementById('promptInput');
             const starter = 'Add @Aubrey into the photo. Keep his face, glasses and beard exactly the same. Make him ';
             if (!p.value.trim() || p.value.trim() === starter.trim()) p.value = starter;
             document.getElementById('aubreyHint')?.classList.remove('hidden');
-            this.setStatus('Aubrey loaded — add your photo & describe what he should do');
+            this.setStatus(carried.length
+                ? 'Aubrey added to your photo — describe what he should do, then Transform'
+                : 'Aubrey loaded as image 1 — add the photo you want him in, then Transform');
             p.focus();
             p.setSelectionRange(p.value.length, p.value.length);
         }
@@ -1705,7 +1722,7 @@
                     <img src="data:image/jpeg;base64,${img.base64}" alt="Image ${i+1}" />
                     <button class="remove-btn" data-idx="${i}" title="Remove">&times;</button>
                     <div class="absolute bottom-0 left-0 right-0 text-center py-0.5" style="background: rgba(0,0,0,0.6);">
-                        <span class="text-[8px] font-mono text-white">${i+1}</span>
+                        <span class="text-[8px] font-mono text-white">${img.name ? img.name : i+1}</span>
                     </div>
                 </div>
             `).join('');
@@ -1811,7 +1828,13 @@
 
         // ==================== MULTI-IMAGE TRANSFORM ====================
         async transformMultiImages(prompt) {
-            if (this.multiImages.length < 2) { this.showError('Multi-edit requires 2-3 images. Use Single mode for one image.'); return; }
+            if (this.multiImages.length < 2) {
+                const onlyAubrey = this.multiImages.length === 1 && this.multiImages[0]?.name === 'Aubrey';
+                this.showError(onlyAubrey
+                    ? 'Add the photo you want Aubrey in first (tap "Add Images" or paste one), then Transform.'
+                    : 'Multi-edit requires 2-3 images. Use Single mode for one image.');
+                return;
+            }
             if (this.multiImages.length > this.maxMultiImages) { this.showError(`Multi-edit supports up to ${this.maxMultiImages} images. Please remove some.`); return; }
 
             const submitBtn = document.getElementById('submitBtn');
