@@ -624,7 +624,7 @@
 
                     <!-- Model Suggestion Banner -->
                     <div id="modelSuggestion" class="hidden mb-4 p-2.5 rounded-lg flex items-center justify-between gap-2 text-[11px]" style="background: rgba(0,229,160,0.06); border: 1px solid rgba(0,229,160,0.18); color: var(--c-text);">
-                        <span>This prompt sounds like it needs strong face/identity consistency — <strong id="suggestedModelName">Nano Banana Pro</strong> tends to do better at that.</span>
+                        <span>This prompt sounds like it needs strong face/identity consistency — <strong id="suggestedModelName">Grok Imagine</strong> tends to do better at that.</span>
                         <div class="flex items-center gap-1 shrink-0">
                             <button id="applySuggestionBtn" class="text-[10px] px-2 py-1 rounded-md font-semibold whitespace-nowrap" style="background: var(--c-glow2); color: #06060b;">Switch</button>
                             <button id="dismissSuggestionBtn" class="text-[10px] px-1.5 py-1 rounded-md" style="color: var(--c-dim);">&times;</button>
@@ -756,7 +756,7 @@
             this.selectedAspectRatio = 'auto';
             this.selectedQuality = null;
             // Models known to preserve face/character identity well across edits.
-            this.identityModelIds = ['nano-banana-pro-edit'];
+            this.identityModelIds = ['grok-imagine-edit'];
             this.suggestionDismissedFor = null;
             this.autoPickModel = localStorage.getItem('vivmorph_auto_pick_model') === 'true';
             this.faceModel = null;
