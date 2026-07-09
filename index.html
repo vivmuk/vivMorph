@@ -420,7 +420,7 @@
         }
     </style>
 </head>
-<body class="font-sans text-[--c-text] h-screen w-screen overflow-hidden noise select-none">
+<body class="font-sans text-[--c-text] h-screen w-screen overflow-hidden noise select-none" style="height: 100vh; height: 100dvh;">
     <!-- Aurora Background -->
     <div class="aurora">
         <div class="aurora-orb"></div>
@@ -428,7 +428,7 @@
         <div class="aurora-orb"></div>
     </div>
 
-    <div id="app" class="h-screen w-screen flex flex-col relative z-10">
+    <div id="app" class="h-screen w-screen flex flex-col relative z-10" style="height: 100vh; height: 100dvh;">
 
         <!-- TOP BAR -->
         <header class="shrink-0 px-4 py-2.5 flex items-center justify-between" style="background: rgba(6,6,11,0.7); backdrop-filter: blur(20px); border-bottom: 1px solid var(--c-border);">
@@ -606,7 +606,8 @@
                             <button class="tag" data-prompt="Randomly swap and exchange the faces of all people in the picture with each other, ensuring natural blending and maintaining the same body positions, clothing, and composition."><span style="font-size:13px">&#128260;</span> Face Swap</button>
                             <button class="tag" data-prompt="Change clothing to medieval fantasy Westeros-style leather armor. Replace background with stone castle throne room."><span style="font-size:13px">&#9876;</span> GOT</button>
                             <button class="tag" data-prompt="Add well-groomed full beards to each person while maintaining the same facial features, expressions, eye color, hair color, and body positions."><span style="font-size:13px">&#129492;</span> Beards</button>
-                            <button class="tag" data-prompt="Add Donald Trump seamlessly participating in the same activity as the original subjects, maintaining natural lighting and composition."><span style="font-size:13px">&#127482;&#127480;</span> Trump</button>
+                            <button class="tag" data-prompt="Add Donald Trump seamlessly into the picture as an additional person participating in the same activity, matching the lighting and perspective. Do not remove, replace, or alter any of the original people — keep everyone else exactly as they are."><span style="font-size:13px">&#127482;&#127480;</span> Trump</button>
+                            <button class="tag" data-prompt="Add Donald Trump seamlessly into the picture, shaking hands with the person closest to him in the frame, matching the lighting and perspective. Do not remove, replace, or alter any of the original people — keep everyone else exactly as they are."><span style="font-size:13px">&#129309;</span> Trump Handshake</button>
                             <button class="tag" data-prompt="Colorize this image with vibrant, natural colors while preserving all details, textures, and composition exactly as shown."><span style="font-size:13px">&#127752;</span> Colorize</button>
                             <button class="tag" data-prompt="Seamlessly combine all the uploaded images into a single cohesive scene, maintaining the natural appearance of each person/subject while blending lighting and backgrounds harmoniously." onclick="window.vivMorph?.setMode('multi')"><span style="font-size:13px">&#129520;</span> Merge</button>
                         </div>
