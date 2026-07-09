@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?display=swap&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600" />
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script src="https://cdn.jsdelivr.net/npm/piexifjs@1.0.6/piexif.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -476,10 +477,10 @@
                         <div class="text-center">
                             <p class="text-sm font-semibold" style="color: var(--c-text);">Drop your image here</p>
                             <p class="text-[11px] mt-1" style="color: var(--c-dim);">or click to browse &middot; paste with Ctrl+V</p>
-                            <p class="text-[10px] mt-2 font-mono" style="color: #3d3a50;">JPEG, PNG, WebP up to 25MB</p>
+                            <p class="text-[10px] mt-2 font-mono" style="color: #3d3a50;">JPEG, PNG, WebP, HEIC up to 25MB</p>
                         </div>
                         <button id="uploadBtn" class="glow-btn px-6 py-2 text-xs font-semibold mt-1">Choose File</button>
-                        <input type="file" id="fileInput" accept="image/*" class="hidden" />
+                        <input type="file" id="fileInput" accept="image/*,.heic,.heif" class="hidden" />
                     </div>
 
                     <!-- Drop Zone (Multi) -->
@@ -493,12 +494,12 @@
                         <div class="text-center">
                             <p class="text-sm font-semibold" style="color: var(--c-text);">Drop multiple images here</p>
                             <p class="text-[11px] mt-1" style="color: var(--c-dim);">or click to browse &middot; combine & edit multiple images</p>
-                            <p class="text-[10px] mt-2 font-mono" style="color: #3d3a50;">Up to 3 images &middot; JPEG, PNG, WebP up to 25MB each</p>
+                            <p class="text-[10px] mt-2 font-mono" style="color: #3d3a50;">Up to 3 images &middot; JPEG, PNG, WebP, HEIC up to 25MB each</p>
                         </div>
                         <!-- Multi-image thumbnails -->
                         <div id="multiThumbs" class="flex gap-2 flex-wrap justify-center max-w-sm"></div>
                         <button id="multiUploadBtn" class="glow-btn px-6 py-2 text-xs font-semibold mt-1" style="background: linear-gradient(135deg, var(--c-glow2), #00b880);">Add Images</button>
-                        <input type="file" id="multiFileInput" accept="image/*" multiple class="hidden" />
+                        <input type="file" id="multiFileInput" accept="image/*,.heic,.heif" multiple class="hidden" />
                     </div>
 
                     <!-- Image Display -->
@@ -707,7 +708,7 @@
             this.originalImageFile = null;
             this.transformedImage = null;
             this.currentView = 'original';
-            this.selectedModel = 'qwen-edit';
+            this.selectedModel = 'grok-imagine-edit';
             this.selectedAspectRatio = 'auto';
             this.models = [];
             this.history = [];
@@ -770,13 +771,19 @@
                 this.models = data.data || [];
             } catch {
                 this.models = [
+                    { id:'grok-imagine-edit', model_spec:{ name:'Grok Imagine', pricing:{inpaint:{usd:0.04}}, constraints:{aspectRatios:['auto','1:1','3:2','16:9','21:9','9:16','2:3','4:5'], promptCharacterLimit:1500, combineImages:false}, privacy:'anonymized', offline:false }},
                     { id:'qwen-edit', model_spec:{ name:'Qwen Edit 2511', pricing:{inpaint:{usd:0.04}}, constraints:{aspectRatios:['auto','1:1','3:2','16:9','21:9','9:16','2:3','4:5'], promptCharacterLimit:1500, combineImages:true}, privacy:'private', offline:false }},
                     { id:'flux-2-max-edit', model_spec:{ name:'Flux 2 Max', pricing:{inpaint:{usd:0.09}}, constraints:{aspectRatios:['auto','1:1','3:2','16:9','21:9','9:16','2:3','4:5'], promptCharacterLimit:3000, combineImages:true}, privacy:'anonymized', offline:false }},
                     { id:'gpt-image-1-5-edit', model_spec:{ name:'GPT Image 1.5', pricing:{inpaint:{usd:0.23}}, constraints:{aspectRatios:['auto','1:1','3:2','2:3'], promptCharacterLimit:32768, combineImages:true}, privacy:'anonymized', offline:false }},
-                    { id:'grok-imagine-edit', model_spec:{ name:'Grok Imagine', pricing:{inpaint:{usd:0.04}}, constraints:{aspectRatios:['auto','1:1','3:2','16:9','21:9','9:16','2:3','4:5'], promptCharacterLimit:1500, combineImages:false}, privacy:'anonymized', offline:false }},
                     { id:'nano-banana-pro-edit', model_spec:{ name:'Nano Banana Pro', pricing:{inpaint:{usd:0.18}}, constraints:{aspectRatios:['auto','1:1','3:2','16:9','21:9','9:16','2:3','4:5'], promptCharacterLimit:32768, combineImages:true}, privacy:'anonymized', offline:false }},
                     { id:'seedream-v4-edit', model_spec:{ name:'SeedreamV4.5', pricing:{inpaint:{usd:0.05}}, constraints:{aspectRatios:['auto','1:1','3:2','16:9','9:16','2:3','4:5'], promptCharacterLimit:10000, combineImages:true}, privacy:'anonymized', offline:false }},
                 ];
+            }
+            // Always surface Grok Imagine first regardless of API ordering.
+            const defaultIdx = this.models.findIndex(m => m.id === this.selectedModel);
+            if (defaultIdx > 0) {
+                const [defaultModel] = this.models.splice(defaultIdx, 1);
+                this.models.unshift(defaultModel);
             }
             this.renderModelList();
             this.updateModelInfo();
@@ -1213,8 +1220,15 @@
         }
 
         // ==================== IMAGE HANDLING ====================
+        isHeicFile(file) {
+            const type = (file.type || '').toLowerCase();
+            const name = (file.name || '').toLowerCase();
+            return type === 'image/heic' || type === 'image/heif' || type === 'image/heic-sequence' || type === 'image/heif-sequence' || name.endsWith('.heic') || name.endsWith('.heif');
+        }
+
         validateImageFile(file) {
-            if (!file.type.startsWith('image/')) { this.showError('Please select a valid image file'); return false; }
+            // HEIC/HEIF files often report an empty or non-standard MIME type, so check by extension too.
+            if (!file.type.startsWith('image/') && !this.isHeicFile(file)) { this.showError('Please select a valid image file'); return false; }
             if (file.size > 25*1024*1024) { this.showError('Image must be less than 25MB'); return false; }
             return true;
         }
@@ -1643,9 +1657,20 @@
         setStatus(text) { const d=document.getElementById('statusDot'),l=document.getElementById('statusText'); d.classList.remove('hidden'); l.classList.remove('hidden'); l.textContent=text; setTimeout(()=>{d.classList.add('hidden');l.classList.add('hidden');},4000); }
         showError(msg) { document.getElementById('errorMessage').textContent=msg; document.getElementById('errorModal').classList.remove('hidden'); }
         hideErrorModal() { document.getElementById('errorModal').classList.add('hidden'); }
-        fileToBase64(file, maxDim = 2048) {
+        async fileToBase64(file, maxDim = 2048) {
+            let sourceFile = file;
+            if (this.isHeicFile(file)) {
+                // Most non-Safari browsers can't decode HEIC/HEIF natively; convert to JPEG via WASM first.
+                this.setStatus('Converting HEIC image…');
+                try {
+                    const converted = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.9 });
+                    sourceFile = Array.isArray(converted) ? converted[0] : converted;
+                } catch (e) {
+                    throw new Error('Could not convert HEIC image. Try converting it to JPEG first.');
+                }
+            }
             return new Promise((res, rej) => {
-                const url = URL.createObjectURL(file);
+                const url = URL.createObjectURL(sourceFile);
                 const img = new Image();
                 img.onload = () => {
                     let { width, height } = img;
