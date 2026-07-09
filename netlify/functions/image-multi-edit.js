@@ -41,6 +41,46 @@ exports.handler = async (event, context) => {
     // Parse the request body
     const requestBody = JSON.parse(event.body);
 
+    // Validate before spending an API call — mirrors the client-side checks, which can be bypassed.
+    if (typeof requestBody.prompt !== 'string' || !requestBody.prompt.trim()) {
+      return {
+        statusCode: 400,
+        headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: 'A prompt is required.' })
+      };
+    }
+    if (requestBody.prompt.length > 40000) {
+      return {
+        statusCode: 400,
+        headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: 'Prompt is too long.' })
+      };
+    }
+    if (!Array.isArray(requestBody.images) || requestBody.images.length === 0) {
+      return {
+        statusCode: 400,
+        headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: 'At least one image is required.' })
+      };
+    }
+    // Matches the client's maxMultiImages limit.
+    if (requestBody.images.length > 3) {
+      return {
+        statusCode: 400,
+        headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: 'A maximum of 3 images is allowed.' })
+      };
+    }
+    // ~34MB base64 covers the client's 25MB raw file limit plus base64 overhead.
+    const hasInvalidImage = requestBody.images.some(img => typeof img !== 'string' || !img.trim() || img.length > 34 * 1024 * 1024);
+    if (hasInvalidImage) {
+      return {
+        statusCode: 400,
+        headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: 'One or more images is invalid or too large.' })
+      };
+    }
+
     // Build the Venice AI multi-edit request payload
     const venicePayload = {
       prompt: requestBody.prompt,
