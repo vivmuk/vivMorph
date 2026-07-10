@@ -78,9 +78,12 @@ exports.handler = async (event, context) => {
       image: requestBody.image,
     };
 
-    // Pass through modelId if provided
-    if (requestBody.modelId) {
-      venicePayload.modelId = requestBody.modelId;
+    // Pass through the selected model. The Venice /image/edit endpoint expects
+    // "model" (the /image/multi-edit endpoint uses "modelId"). Sending the wrong
+    // key here silently fell back to a default model, so changing the model in
+    // the UI had no effect on single-image edits.
+    if (requestBody.modelId || requestBody.model) {
+      venicePayload.model = requestBody.model || requestBody.modelId;
     }
 
     // Pass through aspect_ratio if provided
