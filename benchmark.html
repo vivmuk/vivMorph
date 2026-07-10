@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>vivMorph — Image-Edit Model Benchmark</title>
+<!-- Optional local key file (git-ignored). Harmless 404 if absent. -->
+<script src="benchmark.config.js" onerror="void 0"></script>
+<style>
+  :root{
+    --bg:#0d0b16; --surface:#161327; --surface2:#1e1a33; --surface3:#2a2542;
+    --line:#332d4f; --text:#efeaff; --dim:#9a92c0; --dim2:#6f6790;
+    --glow:#7c5bf5; --glow2:#37d6a3; --warn:#ffb74d; --bad:#ff6b6b; --gold:#ffd75e;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 600px at 20% -10%,#1a1533 0%,var(--bg) 55%);color:var(--text);
+       font-family:'Segoe UI',system-ui,-apple-system,sans-serif;font-size:14px;line-height:1.5;min-height:100vh}
+  a{color:var(--glow)}
+  h1,h2,h3{margin:0}
+  .wrap{max-width:1400px;margin:0 auto;padding:22px 20px 80px}
+  header.top{display:flex;align-items:center;gap:14px;margin-bottom:6px}
+  .logo{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--glow),#b58cff);
+        display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 0 24px rgba(124,91,245,.5)}
+  header.top h1{font-size:20px;letter-spacing:.2px}
+  .sub{color:var(--dim);font-size:12.5px;margin:2px 0 18px}
+  .card,.panel{background:var(--surface);border:1px solid var(--line);border-radius:16px}
+  .panel{padding:16px 18px;margin-bottom:16px}
+  .panel h2{font-size:12px;text-transform:uppercase;letter-spacing:.14em;color:var(--dim);margin-bottom:12px;font-weight:700}
+  .row{display:flex;flex-wrap:wrap;gap:14px}
+  .field{display:flex;flex-direction:column;gap:5px}
+  .field label{font-size:10.5px;text-transform:uppercase;letter-spacing:.12em;color:var(--dim2);font-weight:700}
+  input[type=text],input[type=password],select,textarea{
+    background:var(--surface2);border:1px solid var(--line);color:var(--text);border-radius:10px;
+    padding:9px 11px;font-size:13px;font-family:inherit;outline:none}
+  input:focus,select:focus,textarea:focus{border-color:var(--glow);box-shadow:0 0 0 3px rgba(124,91,245,.18)}
+  textarea{resize:vertical;min-height:76px;width:100%}
+  select{cursor:pointer}
+  .btn{background:linear-gradient(135deg,var(--glow),#6b46e0);color:#fff;border:none;border-radius:10px;
+       padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;transition:.15s;display:inline-flex;
+       align-items:center;gap:8px}
+  .btn:hover{filter:brightness(1.1)}
+  .btn:disabled{opacity:.45;cursor:not-allowed;filter:none}
+  .btn.ghost{background:var(--surface3);color:var(--text)}
+  .btn.ghost:hover{background:var(--line)}
+  .btn.sm{padding:7px 12px;font-size:12px}
+  .btn.danger{background:linear-gradient(135deg,#e0574f,#b8322a)}
+  .tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+  .tab{background:var(--surface);border:1px solid var(--line);color:var(--dim);padding:10px 16px;border-radius:12px;
+       cursor:pointer;font-weight:700;font-size:13px;display:flex;gap:8px;align-items:center;transition:.15s}
+  .tab.active{color:#fff;border-color:var(--glow);background:linear-gradient(135deg,rgba(124,91,245,.28),rgba(124,91,245,.08))}
+  .tab .n{font-size:10px;background:var(--surface3);border-radius:6px;padding:1px 6px}
+  .tabpane{display:none} .tabpane.active{display:block}
+  .imgslots{display:flex;gap:14px;flex-wrap:wrap}
+  .slot{width:190px}
+  .drop{position:relative;border:1.5px dashed var(--line);border-radius:12px;background:var(--surface2);
+        aspect-ratio:1;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;transition:.15s}
+  .drop:hover{border-color:var(--glow)}
+  .drop.filled{border-style:solid}
+  .drop img{width:100%;height:100%;object-fit:cover}
+  .drop .ph{color:var(--dim2);font-size:11.5px;text-align:center;padding:10px}
+  .slot .cap{font-size:11px;color:var(--dim);margin-top:6px;display:flex;justify-content:space-between;gap:6px}
+  .slot .cap a{cursor:pointer;color:var(--dim2)}
+  .modes{display:flex;gap:8px;margin:4px 0 14px}
+  .modes .pill{border:1px solid var(--line);background:var(--surface2);color:var(--dim);border-radius:20px;
+        padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer}
+  .modes .pill.active{color:#fff;border-color:var(--glow);background:rgba(124,91,245,.2)}
+  .modelgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:8px}
+  .mcard{display:flex;align-items:center;gap:9px;background:var(--surface2);border:1px solid var(--line);
+         border-radius:10px;padding:8px 10px;cursor:pointer;transition:.12s}
+  .mcard:hover{border-color:var(--glow)}
+  .mcard.on{border-color:var(--glow);background:rgba(124,91,245,.12)}
+  .mcard.disabled{opacity:.35;cursor:not-allowed}
+  .mcard input{accent-color:var(--glow);width:15px;height:15px}
+  .mcard .mn{font-weight:600;font-size:12.5px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mcard .mp{font-size:11px;font-family:ui-monospace,monospace;font-weight:700}
+  .mcard .cb{font-size:8px;background:var(--surface3);border-radius:4px;padding:1px 4px;color:var(--dim)}
+  .toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:14px}
+  .cost{font-size:13px;color:var(--dim)} .cost b{color:var(--glow2);font-family:ui-monospace,monospace}
+  .spacer{flex:1}
+  .prog{height:8px;background:var(--surface3);border-radius:99px;overflow:hidden;margin:14px 0 4px;display:none}
+  .prog.show{display:block}
+  .prog>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--glow),var(--glow2));transition:.3s}
+  .progtext{font-size:12px;color:var(--dim);min-height:16px}
+  .results{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-top:10px}
+  .rescard{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+  .rescard.win{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold),0 0 26px rgba(255,215,94,.15)}
+  .rescard .rh{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line)}
+  .rescard .rh .nm{font-weight:700;font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rescard .rh .pr{font-size:11px;font-family:ui-monospace,monospace;color:var(--dim)}
+  .rescard .rimg{aspect-ratio:1;background:var(--surface2);display:flex;align-items:center;justify-content:center;position:relative;cursor:pointer}
+  .rescard .rimg img{width:100%;height:100%;object-fit:cover}
+  .rescard .rimg .err{color:var(--bad);font-size:12px;text-align:center;padding:14px}
+  .rescard .rbody{padding:11px 12px;display:flex;flex-direction:column;gap:8px}
+  .chip{font-size:10px;font-weight:700;border-radius:6px;padding:2px 7px;font-family:ui-monospace,monospace}
+  .chip.queued{background:var(--surface3);color:var(--dim)}
+  .chip.running{background:rgba(124,91,245,.2);color:#c3b0ff}
+  .chip.judging{background:rgba(55,214,163,.16);color:var(--glow2)}
+  .chip.done{background:rgba(55,214,163,.18);color:var(--glow2)}
+  .chip.fail{background:rgba(255,107,107,.16);color:var(--bad)}
+  .chip.code{background:rgba(255,183,77,.16);color:var(--warn)}
+  .bar{display:flex;align-items:center;gap:8px;font-size:11px}
+  .bar .bl{width:74px;color:var(--dim)} .bar .bt{width:26px;text-align:right;font-family:ui-monospace,monospace;color:var(--text)}
+  .bar .bg{flex:1;height:6px;background:var(--surface3);border-radius:99px;overflow:hidden}
+  .bar .bg>i{display:block;height:100%;border-radius:99px}
+  .composite{display:flex;align-items:center;justify-content:space-between;margin-top:2px}
+  .composite .cbadge{font-family:ui-monospace,monospace;font-weight:800;font-size:15px}
+  .comment{font-size:12px;color:var(--dim);line-height:1.45}
+  .verdict{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+  .v-pass{color:var(--glow2)} .v-partial{color:var(--warn)} .v-fail{color:var(--bad)}
+  table.lb{width:100%;border-collapse:collapse;font-size:13px}
+  table.lb th,table.lb td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line)}
+  table.lb th{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--dim2)}
+  table.lb td.num{font-family:ui-monospace,monospace;text-align:right}
+  table.lb tr.win td{color:var(--gold)}
+  .legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .legend span{font-size:11px;color:var(--dim);background:var(--surface2);border:1px solid var(--line);border-radius:8px;padding:4px 9px}
+  .keyok{font-size:11px;font-weight:700}
+  .hint{font-size:11.5px;color:var(--dim2)}
+  .lightbox{position:fixed;inset:0;background:rgba(5,3,12,.9);display:none;align-items:center;justify-content:center;z-index:50;padding:24px}
+  .lightbox.show{display:flex}
+  .lightbox img{max-width:92vw;max-height:86vh;border-radius:10px;box-shadow:0 20px 80px rgba(0,0,0,.6)}
+  .lightbox .lbbar{position:absolute;top:16px;right:20px;display:flex;gap:10px}
+  .spinner{width:26px;height:26px;border:3px solid var(--surface3);border-top-color:var(--glow);border-radius:50%;animation:spin 1s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .muted{color:var(--dim2)}
+  details summary{cursor:pointer;color:var(--dim);font-size:12px}
+  .flash{padding:9px 12px;border-radius:9px;font-size:12.5px;margin-top:10px;display:none}
+  .flash.show{display:block}
+  .flash.err{background:rgba(255,107,107,.12);color:#ffb3b3;border:1px solid rgba(255,107,107,.3)}
+  .flash.ok{background:rgba(55,214,163,.1);color:#9ff0d3;border:1px solid rgba(55,214,163,.3)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="logo">🧪</div>
+    <div>
+      <h1>vivMorph — Image-Edit Model Benchmark</h1>
+    </div>
+  </header>
+  <div class="sub">Run one input across many Venice edit models, let an AI vision judge score each result, and pick winners. Runs entirely in your browser.</div>
+
+  <!-- SETUP -->
+  <div class="panel">
+    <h2>Setup</h2>
+    <div class="row" style="align-items:flex-end">
+      <div class="field" style="flex:1;min-width:280px">
+        <label>Venice API key</label>
+        <input type="password" id="apiKey" placeholder="VENICE_INFERENCE_KEY__…" autocomplete="off">
+      </div>
+      <div class="field"><label>Judge model (vision)</label>
+        <select id="judgeModel">
+          <option value="qwen3-vl-235b-a22b">Qwen3 VL 235B (default)</option>
+          <option value="gemini-3-flash-preview">Gemini 3 Flash (fast/cheap)</option>
+          <option value="gemini-3-1-pro-preview">Gemini 3.1 Pro</option>
+          <option value="grok-4-5">Grok 4.5</option>
+          <option value="claude-opus-4-8">Claude Opus 4.8 (best)</option>
+          <option value="mistral-small-2603">Mistral Small 4</option>
+        </select>
+      </div>
+      <div class="field"><label>Aspect (single edits)</label>
+        <select id="aspect">
+          <option value="auto">auto</option><option value="1:1">1:1</option>
+          <option value="3:2">3:2</option><option value="2:3">2:3</option>
+          <option value="16:9">16:9</option><option value="9:16">9:16</option>
+        </select>
+      </div>
+      <div class="field"><label>Concurrency</label>
+        <select id="concurrency"><option>2</option><option selected>3</option><option>4</option><option>5</option></select>
+      </div>
+      <button class="btn ghost sm" id="testKeyBtn">Test key</button>
+      <span class="keyok muted" id="keyStatus"></span>
+    </div>
+    <div class="flash" id="setupFlash"></div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <div class="tab active" data-tab="t1"><span>①</span> Insertion (Trump) <span class="n">single + multi</span></div>
+    <div class="tab" data-tab="t2"><span>②</span> Multi-edit composition <span class="n">2–3 imgs</span></div>
+    <div class="tab" data-tab="t3"><span>③</span> Face preservation <span class="n">identity</span></div>
+  </div>
+
+  <!-- TEST 1 -->
+  <div class="tabpane active" id="pane-t1">
+    <div class="panel">
+      <h2>① Insert a person — does the model add them seamlessly without disturbing the rest?</h2>
+      <div class="modes">
+        <div class="pill active" data-mode="single">Single-source (photo + text)</div>
+        <div class="pill" data-mode="multi">Multi-source (photo + reference person)</div>
+      </div>
+      <div class="imgslots">
+        <div class="slot"><div class="drop" data-slot="t1a"><div class="ph">Base photo<br>(click / drop)</div></div>
+          <div class="cap"><span>Base image</span><a data-clear="t1a">clear</a></div></div>
+        <div class="slot" id="t1b-slot" style="display:none"><div class="drop" data-slot="t1b"><div class="ph">Person to insert<br>(reference)</div></div>
+          <div class="cap"><span>Reference person</span><a data-clear="t1b">clear</a></div></div>
+      </div>
+      <div class="field" style="margin-top:14px"><label>Prompt <span class="muted" id="t1promptmode">(single-source)</span></label>
+        <textarea id="t1prompt"></textarea></div>
+      <div class="hint">Multi-source runs only on models that support image combine.</div>
+    </div>
+  </div>
+
+  <!-- TEST 2 -->
+  <div class="tabpane" id="pane-t2">
+    <div class="panel">
+      <h2>② Combine 2–3 source images — which model fuses them most coherently?</h2>
+      <div class="imgslots">
+        <div class="slot"><div class="drop" data-slot="t2a"><div class="ph">Source 1</div></div>
+          <div class="cap"><span>Image 1</span><a data-clear="t2a">clear</a></div></div>
+        <div class="slot"><div class="drop" data-slot="t2b"><div class="ph">Source 2</div></div>
+          <div class="cap"><span>Image 2</span><a data-clear="t2b">clear</a></div></div>
+        <div class="slot"><div class="drop" data-slot="t2c"><div class="ph">Source 3<br>(optional)</div></div>
+          <div class="cap"><span>Image 3</span><a data-clear="t2c">clear</a></div></div>
+      </div>
+      <div class="field" style="margin-top:14px"><label>Prompt</label><textarea id="t2prompt"></textarea></div>
+      <div class="hint">Runs only on image-combine–capable models.</div>
+    </div>
+  </div>
+
+  <!-- TEST 3 -->
+  <div class="tabpane" id="pane-t3">
+    <div class="panel">
+      <h2>③ Change the scene, keep the face — which model best preserves identity?</h2>
+      <div class="imgslots">
+        <div class="slot"><div class="drop" data-slot="t3a"><div class="ph">Face / subject photo</div></div>
+          <div class="cap"><span>Subject</span><a data-clear="t3a">clear</a></div></div>
+      </div>
+      <div class="field" style="margin-top:14px"><label>Prompt</label><textarea id="t3prompt"></textarea></div>
+      <div class="field" style="margin-top:12px;max-width:520px"><label>More test presets (fills the prompt above)</label>
+        <select id="presetSelect">
+          <option value="">— choose a preset —</option>
+          <option value="face">Face preservation: Paris suit (default)</option>
+          <option value="outfit">Face preservation: change outfit only</option>
+          <option value="age">Face preservation: make them look 20 years older</option>
+          <option value="text">Text rendering: storefront sign 'VIVMORPH CAFE'</option>
+          <option value="removal">Object removal: remove background people cleanly</option>
+          <option value="style">Style transfer: Ghibli watercolor, same composition</option>
+          <option value="relight">Relight: dramatic golden-hour sunset</option>
+          <option value="detail">Small detail: change eye color to green only</option>
+          <option value="hands">Hands stress: hold up a hand showing five fingers</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODELS -->
+  <div class="panel">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+      <h2 style="margin:0">Models</h2>
+      <span class="spacer"></span>
+      <button class="btn ghost sm" id="selDefault">Default set</button>
+      <button class="btn ghost sm" id="selAll">Select listed</button>
+      <button class="btn ghost sm" id="selNone">None</button>
+      <button class="btn ghost sm" id="reloadModels">↻ Reload</button>
+    </div>
+    <div class="modelgrid" id="modelGrid"><div class="muted">Loading models…</div></div>
+  </div>
+
+  <!-- RUN -->
+  <div class="panel">
+    <div class="toolbar">
+      <button class="btn" id="runBtn">▶ Run benchmark</button>
+      <button class="btn danger sm" id="stopBtn" style="display:none">■ Stop</button>
+      <span class="cost" id="costEst"></span>
+      <span class="spacer"></span>
+      <button class="btn ghost sm" id="exportHtml" disabled>⬇ HTML report</button>
+      <button class="btn ghost sm" id="exportJson" disabled>⬇ JSON</button>
+      <button class="btn ghost sm" id="copyMd" disabled>⧉ Copy summary</button>
+    </div>
+    <div class="prog" id="prog"><i></i></div>
+    <div class="progtext" id="progText"></div>
+    <div class="flash" id="runFlash"></div>
+  </div>
+
+  <!-- LEADERBOARD -->
+  <div class="panel" id="lbPanel" style="display:none">
+    <h2>Leaderboard <span class="muted" id="lbTestName"></span></h2>
+    <table class="lb" id="lbTable"></table>
+    <h2 style="margin-top:20px">Reliability &amp; status codes</h2>
+    <table class="lb" id="relTable"></table>
+    <div class="legend">
+      <span><b>400</b> bad request (unsupported param/prompt)</span>
+      <span><b>402/403</b> billing / auth</span>
+      <span><b>429</b> rate limited</span>
+      <span><b>500/503/504</b> transient / timeout</span>
+      <span><b>502</b> Bad Gateway — model backend overloaded/crashed/timed out (transient, model-specific)</span>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="resultsHost"></div>
+</div>
+
+<div class="lightbox" id="lightbox">
+  <div class="lbbar"><a class="btn ghost sm" id="lbDownload">⬇ Download</a><button class="btn ghost sm" id="lbClose">✕ Close</button></div>
+  <img id="lbImg" src="" alt="">
+</div>
+
+<script>
+"use strict";
+const BASE = "https://api.venice.ai/api/v1";
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+const RETRY_CODES = new Set([429,500,502,503,504]);
+
+// ---------- Default prompts ----------
+const PROMPTS = {
+  t1single: "Add Donald Trump seamlessly into the picture as an additional person participating in the same activity, matching the lighting and perspective. Do not remove, replace, or alter any of the original people — keep everyone else exactly as they are.",
+  t1multi: "Add the man from the second image into the first image as an additional person standing with the group, matching the lighting, skin tone, scale and perspective of the first image. Do not remove, replace, or alter any of the original people — keep everyone else exactly as they are.",
+  t2: "Combine these images into a single cohesive, photorealistic group photo: place all of the people together standing side by side outdoors, with consistent lighting, scale, shadows and perspective. Keep each person's face and likeness accurate.",
+  t3: "Keep this person's face and identity exactly the same, but change the scene: place them on a busy Paris street at golden hour wearing an elegant navy business suit. Preserve their facial features, skin tone, hair and likeness precisely — only change the clothing and background."
+};
+const PRESETS = {
+  face:"Keep this person's face and identity exactly the same, but change the scene: place them on a busy Paris street at golden hour wearing an elegant navy business suit. Preserve their facial features, skin tone, hair and likeness precisely — only change the clothing and background.",
+  outfit:"Keep this person's face and identity exactly the same. Change only their outfit to a formal black tuxedo. Do not alter the face, hair, skin tone or background.",
+  age:"Keep this person's identity and bone structure recognizable but make them look about 20 years older, with realistic aging, grey hair and wrinkles. Same person, same pose.",
+  text:"Add a storefront sign behind the subject that clearly and legibly reads 'VIVMORPH CAFE' in bold letters, integrated realistically with matching lighting and perspective.",
+  removal:"Remove all other people in the background cleanly, keeping only the main subject, and realistically fill in the background.",
+  style:"Repaint this scene in the style of a Studio Ghibli watercolor while keeping the exact same composition, poses and subject placement.",
+  relight:"Change the lighting to dramatic golden-hour sunset with warm rim light and long shadows. Keep the subject, pose and composition exactly the same.",
+  detail:"Change only the subject's eye color to bright green. Do not change anything else in the image.",
+  hands:"Have the subject raise one hand toward the camera showing five fingers clearly and anatomically correct. Keep everything else the same."
+};
+
+// ---------- State ----------
+const state = {
+  models: [],            // live edit models
+  selected: new Set(),   // selected model ids
+  images: {},            // slotId -> {dataUrl, name}
+  t1mode: "single",
+  activeTab: "t1",
+  running: false,
+  cancelled: false,
+  lastRun: null          // {test, mode, prompt, judge, results:[...]}
+};
+const DEFAULT_SET = ["grok-imagine-edit","qwen-image-2-edit","seedream-v5-pro-edit","wan-2-7-pro-edit","flux-2-max-edit","nano-banana-pro-edit","gpt-image-1-5-edit"];
+const FALLBACK_MODELS = [
+  fallbackModel("grok-imagine-edit","Grok Imagine",0.04,true,7500,["1:1","16:9","9:16","3:4","3:2","2:3"]),
+  fallbackModel("qwen-image-2-edit","Qwen Image 2",0.05,true,10000,["1:1","3:2","16:9","21:9","9:16","2:3","3:4","4:5"]),
+  fallbackModel("seedream-v5-pro-edit","Seedream V5 Pro",0.11,true,10000,["auto","1:1","3:2","16:9","9:16","2:3","3:4"]),
+  fallbackModel("wan-2-7-pro-edit","Wan 2.7 Pro Edit",0.094,true,5000,["auto"]),
+  fallbackModel("flux-2-max-edit","Flux 2 Max",0.19,true,3000,["auto","1:1","3:2","16:9","21:9","9:16","2:3","3:4","4:5"]),
+  fallbackModel("nano-banana-pro-edit","Nano Banana Pro",0.18,true,32768,["auto","1:1","3:2","16:9","21:9","9:16","2:3","3:4","4:5"]),
+  fallbackModel("gpt-image-1-5-edit","GPT Image 1.5",0.36,true,5000,["auto","1:1","3:2","2:3"])
+];
+
+// ---------- Helpers ----------
+function getKey(){ return $("#apiKey").value.trim(); }
+function stripPrefix(d){ return d.includes(",") ? d.split(",")[1] : d; }
+function flash(el,msg,kind){ el.textContent=msg; el.className="flash show "+(kind||""); }
+function clearFlash(el){ el.className="flash"; }
+
+function blobToDataUrl(blob){ return new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(fr.result);fr.onerror=rej;fr.readAsDataURL(blob);}); }
+
+function downscale(dataUrl, maxDim, quality){
+  return new Promise((res)=>{
+    const img=new Image();
+    img.onload=()=>{
+      let {width:w,height:h}=img;
+      if(Math.max(w,h)>maxDim){ const s=maxDim/Math.max(w,h); w=Math.round(w*s); h=Math.round(h*s); }
+      const c=document.createElement("canvas"); c.width=w; c.height=h;
+      c.getContext("2d").drawImage(img,0,0,w,h);
+      res(c.toDataURL("image/jpeg", quality||0.85));
+    };
+    img.onerror=()=>res(dataUrl);
+    img.src=dataUrl;
+  });
+}
+async function fileToState(file){
+  let dataUrl;
+  if(/heic|heif/i.test(file.type)){ dataUrl = await blobToDataUrl(file); }
+  else dataUrl = await blobToDataUrl(file);
+  dataUrl = await downscale(dataUrl, 2048, 0.9);
+  return {dataUrl, name:file.name};
+}
+
+// ---------- API ----------
+async function apiImage(path, payload){
+  const t0=performance.now();
+  let last={ok:false,status:0,error:"unknown",attempts:0};
+  for(let a=0;a<3;a++){
+    try{
+      const res=await fetch(BASE+path,{method:"POST",
+        headers:{Authorization:"Bearer "+getKey(),"Content-Type":"application/json"},
+        body:JSON.stringify(payload)});
+      if(res.ok){
+        const ct=res.headers.get("content-type")||"";
+        let dataUrl;
+        if(ct.includes("application/json")){
+          const d=await res.json();
+          const b64=(d.images&&d.images[0]) || d.image || (d.data&&d.data[0]&&d.data[0].b64_json);
+          if(!b64) throw new Error("No image field in JSON response");
+          dataUrl="data:image/png;base64,"+b64;
+        } else {
+          const blob=await res.blob();
+          dataUrl=await blobToDataUrl(blob);
+        }
+        return {ok:true,status:res.status,dataUrl,attempts:a+1,ms:Math.round(performance.now()-t0)};
+      }
+      let msg="HTTP "+res.status;
+      try{ const t=await res.text(); try{const d=JSON.parse(t); msg=d.message||d.error||d.detail||(d.errors?JSON.stringify(d.errors):null)||msg;}catch{ if(t&&t.length<300)msg=t; } }catch{}
+      last={ok:false,status:res.status,error:msg,attempts:a+1,ms:Math.round(performance.now()-t0)};
+      if(RETRY_CODES.has(res.status) && a<2){ await sleep((a+1)*1500); continue; }
+      return last;
+    }catch(e){
+      last={ok:false,status:0,error:e.message||String(e),attempts:a+1,ms:Math.round(performance.now()-t0)};
+      if(a<2){ await sleep((a+1)*1500); continue; }
+      return last;
+    }
+  }
+  return last;
+}
+
+function singleEdit(model, prompt, imgDataUrl, aspect){
+  const p={prompt, image:stripPrefix(imgDataUrl), modelId:model};
+  if(aspect && aspect!=="auto") p.aspect_ratio=aspect;
+  return apiImage("/image/edit", p);
+}
+function multiEdit(modelId, prompt, imgDataUrls){
+  return apiImage("/image/multi-edit", {prompt, images:imgDataUrls.map(stripPrefix), modelId});
+}
+
+// ---------- Vision judge ----------
+const WEIGHTS = {
+  t1:{prompt_adherence:.5, realism:.3, preservation:.2},
+  t2:{prompt_adherence:.4, realism:.3, preservation:.3},
+  t3:{prompt_adherence:.2, realism:.2, preservation:.6}
+};
+function judgeInstruction(test, mode){
+  const common="You are a strict, impartial image-editing judge. You are shown the ORIGINAL source image(s) first, then the EDITED RESULT last. ";
+  const schema=' Respond with ONLY compact JSON, no prose, no code fences: {"prompt_adherence":0-10,"realism":0-10,"preservation":0-10,"artifacts":["..."],"verdict":"pass|partial|fail","comment":"one short sentence"}.';
+  let crit;
+  if(test==="t1") crit="Judge: (prompt_adherence) was the requested new person added and does the scene follow the instruction; (realism) is it photorealistic and seamless in lighting/perspective; (preservation) were ALL the original people and scene kept unchanged and un-distorted.";
+  else if(test==="t2") crit="Judge: (prompt_adherence) are all requested source subjects present and combined as instructed; (realism) is the fused scene photorealistic with consistent lighting/scale; (preservation) is each source person's face/likeness faithfully carried over.";
+  else crit="Judge: (preservation) is this EXACTLY the same person — face, identity and likeness perfectly preserved (this matters most); (prompt_adherence) was the requested scene/outfit/style change applied; (realism) is the result photorealistic and free of artifacts.";
+  return common+crit+schema;
+}
+function extractJson(txt){
+  if(!txt) return null;
+  let t=txt.replace(/```json|```/gi,"").trim();
+  const i=t.indexOf("{"), j=t.lastIndexOf("}");
+  if(i<0||j<0) return null;
+  try{ return JSON.parse(t.slice(i,j+1)); }catch{ return null; }
+}
+async function judge(test, mode, originalDataUrls, resultDataUrl){
+  const jm=$("#judgeModel").value;
+  const content=[{type:"text",text:"Original image(s) then edited result. Instruction that was given to the editor: \""+currentPrompt()+"\""}];
+  for(const o of originalDataUrls){
+    const small=await downscale(o,1024,0.82);
+    content.push({type:"image_url",image_url:{url:small}});
+  }
+  const smallRes=await downscale(resultDataUrl,1024,0.82);
+  content.push({type:"text",text:"EDITED RESULT:"});
+  content.push({type:"image_url",image_url:{url:smallRes}});
+  const body={model:jm,messages:[
+    {role:"system",content:judgeInstruction(test,mode)},
+    {role:"user",content}
+  ],max_tokens:400,temperature:0.1};
+  try{
+    const res=await fetch(BASE+"/chat/completions",{method:"POST",
+      headers:{Authorization:"Bearer "+getKey(),"Content-Type":"application/json"},body:JSON.stringify(body)});
+    if(!res.ok){ const t=await res.text().catch(()=>""); return {error:"judge HTTP "+res.status+" "+t.slice(0,120)}; }
+    const d=await res.json();
+    const txt=d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content;
+    const parsed=extractJson(txt);
+    if(!parsed) return {error:"judge returned unparseable output", raw:txt};
+    return {scores:parsed};
+  }catch(e){ return {error:"judge failed: "+(e.message||e)}; }
+}
+function composite(test, s){
+  if(!s) return 0;
+  const w=WEIGHTS[test]; let sum=0,wt=0;
+  for(const k in w){ const v=Number(s[k]); if(!isNaN(v)){ sum+=v*w[k]; wt+=w[k]; } }
+  return wt? Math.round((sum/wt)*10) : 0;
+}
+
+// ---------- Current test context ----------
+function currentTest(){ return state.activeTab; }
+function currentPrompt(){
+  const t=currentTest();
+  if(t==="t1") return $("#t1prompt").value.trim();
+  if(t==="t2") return $("#t2prompt").value.trim();
+  return $("#t3prompt").value.trim();
+}
+function currentMode(){ return currentTest()==="t1" ? state.t1mode : (currentTest()==="t2" ? "multi":"single"); }
+function currentOriginals(){
+  const t=currentTest();
+  if(t==="t1"){
+    const a=state.images.t1a; const b=state.images.t1b;
+    return state.t1mode==="multi" ? [a,b].filter(Boolean) : [a].filter(Boolean);
+  }
+  if(t==="t2"){ return ["t2a","t2b","t2c"].map(k=>state.images[k]).filter(Boolean); }
+  return [state.images.t3a].filter(Boolean);
+}
+function testUsesMulti(){ return currentMode()==="multi"; }
+
+// ---------- Models ----------
+function fallbackModel(id, name, price, combineImages, promptCharacterLimit, aspectRatios){
+  return {
+    id,
+    fallback: true,
+    model_spec: {
+      name,
+      pricing: { inpaint: { usd: price } },
+      constraints: {
+        aspectRatios,
+        combineImages,
+        promptCharacterLimit
+      }
+    }
+  };
+}
+function modelSpec(m){ return (m && m.model_spec) || {}; }
+function modelConstraints(m){ return modelSpec(m).constraints || {}; }
+function modelPromptLimit(m){ return Number(modelConstraints(m).promptCharacterLimit) || Infinity; }
+function selectedAspect(){ return ($("#aspect") && $("#aspect").value) || "auto"; }
+function modelSupportsAspect(m, aspect){
+  if(!aspect || aspect==="auto") return true;
+  const ratios=modelConstraints(m).aspectRatios;
+  return !Array.isArray(ratios) || ratios.includes(aspect);
+}
+async function loadModels(){
+  const grid=$("#modelGrid"); grid.innerHTML='<div class="muted">Loading models…</div>';
+  try{
+    const res=await fetch(BASE+"/models?type=inpaint",{headers:{Authorization:"Bearer "+getKey()}});
+    if(!res.ok) throw Object.assign(new Error("HTTP "+res.status), {status:res.status});
+    const d=await res.json();
+    const liveById=new Map((d.data||[]).filter(m=>!(m.offline || modelSpec(m).offline)).map(m=>[m.id,m]));
+    state.models=DEFAULT_SET.map(id=>liveById.get(id)).filter(Boolean);
+    if(!state.models.length) throw new Error("empty");
+    if(!state.selected.size) DEFAULT_SET.forEach(id=>{ if(state.models.some(m=>m.id===id)) state.selected.add(id); });
+    renderModels(); updateCost();
+    clearFlash($("#setupFlash"));
+  }catch(e){
+    if(e && (e.status===401 || e.status===403)){
+      state.models=[];
+      grid.innerHTML='<div class="muted">Could not load models (check API key). <a href="#" id="retryM">retry</a></div>';
+      const r=$("#retryM"); if(r) r.onclick=ev=>{ev.preventDefault();loadModels();};
+      return;
+    }
+    state.models=FALLBACK_MODELS.slice();
+    if(!state.selected.size) DEFAULT_SET.forEach(id=>state.selected.add(id));
+    renderModels(); updateCost();
+    flash($("#setupFlash"),"Could not load the live model catalog; using the built-in fallback list. Retry model loading before comparing costs or newly added models.","err");
+  }
+}
+function modelCombine(m){ return !!modelConstraints(m).combineImages; }
+function modelPrice(m){ return (modelSpec(m).pricing&&modelSpec(m).pricing.inpaint&&modelSpec(m).pricing.inpaint.usd)||0; }
+function renderModels(){
+  const grid=$("#modelGrid");
+  const needCombine=testUsesMulti();
+  const aspect=needCombine ? "auto" : selectedAspect();
+  grid.innerHTML=state.models.map(m=>{
+    const id=m.id, name=modelSpec(m).name||id, p=modelPrice(m), comb=modelCombine(m);
+    const blockedByCombine=needCombine && !comb;
+    const blockedByAspect=!needCombine && !modelSupportsAspect(m, aspect);
+    const disabled=blockedByCombine || blockedByAspect;
+    const on=state.selected.has(id) && !disabled;
+    const pc=p<=0.05?"var(--glow2)":p<=0.11?"var(--warn)":"var(--bad)";
+    const title=blockedByCombine ? "No image-combine support - skipped for multi-source tests"
+      : blockedByAspect ? `Aspect ${aspect} is not supported by this model`
+      : name;
+    return `<label class="mcard ${on?'on':''} ${disabled?'disabled':''}" title="${escapeHtml(title)}">
+      <input type="checkbox" data-mid="${escapeHtml(id)}" ${on?'checked':''} ${disabled?'disabled':''}>
+      <span class="mn">${escapeHtml(name)}</span>
+      ${comb?'<span class="cb">combine</span>':''}
+      <span class="mp" style="color:${pc}">$${p.toFixed(2)}</span>
+    </label>`;
+  }).join("");
+  $$('#modelGrid input[type=checkbox]').forEach(cb=>{
+    cb.onchange=()=>{ const id=cb.dataset.mid; if(cb.checked)state.selected.add(id); else state.selected.delete(id);
+      cb.closest('.mcard').classList.toggle('on',cb.checked); updateCost(); };
+  });
+}
+function activeModels(){
+  const needCombine=testUsesMulti();
+  const aspect=needCombine ? "auto" : selectedAspect();
+  return state.models.filter(m=>state.selected.has(m.id) && (!needCombine || modelCombine(m)) && modelSupportsAspect(m, aspect));
+}
+function updateCost(){
+  const ms=activeModels();
+  const gen=ms.reduce((s,m)=>s+modelPrice(m),0);
+  const judgeEst=ms.length*0.01;
+  $("#costEst").innerHTML=`${ms.length} model${ms.length!==1?'s':''} · est <b>$${gen.toFixed(2)}</b> gen + ~$${judgeEst.toFixed(2)} judge`;
+}
+
+// ---------- Runner ----------
+async function runPool(items, worker, conc){
+  const q=items.map((_,i)=>i);
+  async function loop(){ while(q.length && !state.cancelled){ const i=q.shift(); await worker(items[i]); } }
+  await Promise.all(Array.from({length:Math.min(conc,items.length||1)},loop));
+}
+
+function resultCardHtml(m){
+  const name=modelSpec(m).name||m.id;
+  return `<div class="rescard" id="rc-${cssId(m.id)}">
+    <div class="rh"><span class="nm">${escapeHtml(name)}</span><span class="pr">$${modelPrice(m).toFixed(2)}</span><span class="chip queued" id="st-${cssId(m.id)}">queued</span></div>
+    <div class="rimg" id="im-${cssId(m.id)}"><div class="spinner" style="opacity:.3"></div></div>
+    <div class="rbody" id="bd-${cssId(m.id)}"></div>
+  </div>`;
+}
+function cssId(s){ return s.replace(/[^a-z0-9]/gi,"_"); }
+function setStatus(id,txt,cls){ const el=$("#st-"+cssId(id)); if(el){ el.textContent=txt; el.className="chip "+cls; } }
+
+async function runBenchmark(){
+  clearFlash($("#runFlash"));
+  if(!getKey()){ flash($("#runFlash"),"Enter your Venice API key first.","err"); return; }
+  const prompt=currentPrompt();
+  if(!prompt){ flash($("#runFlash"),"Enter a prompt for this test.","err"); return; }
+  const originals=currentOriginals();
+  const test=currentTest(), mode=currentMode();
+  const needImgs = testUsesMulti()?2:1;
+  if(originals.length<needImgs){ flash($("#runFlash"),`This test needs at least ${needImgs} image${needImgs>1?'s':''}.`,"err"); return; }
+  const models=activeModels();
+  if(!models.length){ flash($("#runFlash"),"Select at least one model (some are skipped because of multi-source or aspect-ratio limits).","err"); return; }
+  const tooLong=models.filter(m=>prompt.length>modelPromptLimit(m));
+  if(tooLong.length){
+    const names=tooLong.slice(0,3).map(m=>modelSpec(m).name||m.id).join(", ");
+    const more=tooLong.length>3?` and ${tooLong.length-3} more`:"";
+    flash($("#runFlash"),`Prompt is too long for ${names}${more}. Shorten it or deselect those model(s).`,"err");
+    return;
+  }
+
+  state.running=true; state.cancelled=false;
+  $("#runBtn").disabled=true; $("#stopBtn").style.display="inline-flex";
+  ["#exportHtml","#exportJson","#copyMd"].forEach(s=>$(s).disabled=true);
+  $("#prog").classList.add("show"); $("#prog>i").style.width="0%";
+  $("#lbPanel").style.display="none";
+
+  // Build results host
+  const testTitle={t1:"Insertion (Trump)",t2:"Multi-edit composition",t3:"Face preservation"}[test]+(test==="t1"?" — "+mode+"-source":"");
+  const host=$("#resultsHost");
+  host.innerHTML=`<div class="panel"><h2>Results — ${testTitle}</h2>
+    <div class="results" id="resGrid">${models.map(resultCardHtml).join("")}</div></div>`;
+
+  const conc=parseInt($("#concurrency").value,10)||3;
+  const aspect=$("#aspect").value;
+  const results=[]; let done=0;
+  const total=models.length;
+  const tick=()=>{ $("#prog>i").style.width=Math.round(done/total*100)+"%";
+    $("#progText").textContent=`${done}/${total} models complete`; };
+  tick();
+
+  await runPool(models, async (m)=>{
+    if(state.cancelled) return;
+    const rec={id:m.id,name:modelSpec(m).name||m.id,price:modelPrice(m)};
+    setStatus(m.id,"running","running");
+    const gen = testUsesMulti()
+      ? await multiEdit(m.id, prompt, originals.map(o=>o.dataUrl))
+      : await singleEdit(m.id, prompt, originals[0].dataUrl, aspect);
+    rec.status=gen.status; rec.attempts=gen.attempts; rec.ms=gen.ms;
+    const imEl=$("#im-"+cssId(m.id)), bdEl=$("#bd-"+cssId(m.id));
+    if(!gen.ok){
+      rec.ok=false; rec.error=gen.error;
+      setStatus(m.id,"FAIL","fail");
+      imEl.innerHTML=`<div class="err">✕ ${escapeHtml(gen.error)}</div>`;
+      bdEl.innerHTML=`<div class="bar"><span class="chip code">HTTP ${gen.status||"—"}</span> <span class="muted" style="font-size:11px">${gen.attempts} attempt(s)${statusHint(gen.status)}</span></div>`;
+      results.push(rec); done++; tick(); return;
+    }
+    rec.ok=true; rec.dataUrl=gen.dataUrl;
+    imEl.innerHTML=`<img src="${gen.dataUrl}" alt="${rec.name}">`;
+    imEl.onclick=()=>openLightbox(gen.dataUrl, rec.name);
+    setStatus(m.id,"judging","judging");
+    bdEl.innerHTML=`<div class="muted" style="font-size:11.5px">🔎 judging…</div>`;
+    const jr=await judge(test, mode, originals.map(o=>o.dataUrl), gen.dataUrl);
+    if(jr.error){ rec.judgeError=jr.error; rec.comp=0;
+      setStatus(m.id,"done (no score)","done");
+      bdEl.innerHTML=`<div class="comment">⚠ ${escapeHtml(jr.error)}</div>`;
+    } else {
+      rec.scores=jr.scores; rec.comp=composite(test,jr.scores);
+      setStatus(m.id,gen.status===200?"✓ "+rec.comp:"done","done");
+      bdEl.innerHTML=scoresHtml(test,jr.scores,rec.comp,gen);
+    }
+    // downscaled copy for report
+    rec.thumb=await downscale(gen.dataUrl, 900, 0.8);
+    results.push(rec); done++; tick();
+  }, conc);
+
+  // finalize
+  $("#prog>i").style.width="100%";
+  $("#progText").textContent = state.cancelled ? `Stopped — ${done}/${total} completed` : `Done — ${done}/${total} models`;
+  state.running=false; $("#runBtn").disabled=false; $("#stopBtn").style.display="none";
+
+  const originalsThumb=[];
+  for(const o of originals){ originalsThumb.push({name:o.name, thumb:await downscale(o.dataUrl,700,0.8)}); }
+  state.lastRun={ test, mode, title:testTitle, prompt, judge:$("#judgeModel").value,
+                 aspect, when:new Date().toISOString(), originals:originalsThumb, results };
+  renderLeaderboard();
+  ["#exportHtml","#exportJson","#copyMd"].forEach(s=>$(s).disabled=false);
+}
+function statusHint(code){
+  const h={502:" — Bad Gateway (model backend overloaded/crashed, transient)",429:" — rate limited",400:" — bad request",403:" — auth/billing",500:" — server error",503:" — unavailable",504:" — timeout"};
+  return h[code]||"";
+}
+function escapeHtml(s){ return String(s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function scoreBar(label,val){
+  const v=Number(val); const pct=isNaN(v)?0:v*10;
+  const col=isNaN(v)?"var(--dim2)":v>=7?"var(--glow2)":v>=4?"var(--warn)":"var(--bad)";
+  return `<div class="bar"><span class="bl">${label}</span><span class="bg"><i style="width:${pct}%;background:${col}"></i></span><span class="bt">${isNaN(v)?"–":v}</span></div>`;
+}
+function scoresHtml(test,s,comp,gen){
+  const vcls={pass:"v-pass",partial:"v-partial",fail:"v-fail"}[String(s.verdict||"").toLowerCase()]||"muted";
+  const compCol=comp>=70?"var(--glow2)":comp>=45?"var(--warn)":"var(--bad)";
+  return `${scoreBar("adherence",s.prompt_adherence)}${scoreBar("realism",s.realism)}${scoreBar(test==="t3"?"identity":"preserve",s.preservation)}
+    <div class="composite"><span class="verdict ${vcls}">${escapeHtml(s.verdict||"")}</span><span class="cbadge" style="color:${compCol}">${comp}</span></div>
+    <div class="comment">${escapeHtml(s.comment||"")}</div>
+    <div class="muted" style="font-size:10.5px">HTTP ${gen.status} · ${(gen.ms/1000).toFixed(1)}s${gen.attempts>1?" · "+gen.attempts+" tries":""}</div>`;
+}
+
+function renderLeaderboard(){
+  const run=state.lastRun; if(!run) return;
+  $("#lbPanel").style.display="block";
+  $("#lbTestName").textContent="· "+run.title+" · judge: "+run.judge;
+  const ok=run.results.filter(r=>r.ok && r.scores).slice().sort((a,b)=>b.comp-a.comp);
+  const best=ok.length?ok[0].comp:-1;
+  // highlight winning card
+  $$(".rescard").forEach(c=>c.classList.remove("win"));
+  if(ok.length){ const w=$("#rc-"+cssId(ok[0].id)); if(w) w.classList.add("win"); }
+  $("#lbTable").innerHTML=`<tr><th>#</th><th>Model</th><th>Verdict</th><th>Adher.</th><th>Real.</th><th>${run.test==="t3"?"Identity":"Preserve"}</th><th>Score</th><th>$</th></tr>`+
+    (ok.length?ok.map((r,i)=>`<tr class="${i===0?'win':''}"><td class="num">${i+1}</td><td>${escapeHtml(r.name)}${i===0?' 🏆':''}</td>
+      <td>${escapeHtml(r.scores.verdict||'')}</td><td class="num">${r.scores.prompt_adherence??'–'}</td>
+      <td class="num">${r.scores.realism??'–'}</td><td class="num">${r.scores.preservation??'–'}</td>
+      <td class="num"><b>${r.comp}</b></td><td class="num">$${r.price.toFixed(2)}</td></tr>`).join("")
+      :`<tr><td colspan="8" class="muted">No successfully scored results.</td></tr>`);
+  // reliability
+  const rel=run.results.slice().sort((a,b)=>(b.ok-a.ok)||a.name.localeCompare(b.name));
+  $("#relTable").innerHTML=`<tr><th>Model</th><th>Result</th><th>HTTP</th><th>Attempts</th><th>Time</th><th>Note</th></tr>`+
+    rel.map(r=>`<tr><td>${escapeHtml(r.name)}</td>
+      <td>${r.ok?'<span class="chip done">OK</span>':'<span class="chip fail">FAIL</span>'}</td>
+      <td class="num"><span class="chip ${r.status===200?'done':'code'}">${r.status||'—'}</span></td>
+      <td class="num">${r.attempts||'–'}</td><td class="num">${r.ms?(r.ms/1000).toFixed(1)+'s':'–'}</td>
+      <td class="muted" style="font-size:11px">${r.ok?'':escapeHtml((r.error||'')+statusHint(r.status))}</td></tr>`).join("");
+}
+
+// ---------- Export ----------
+function download(filename, blob){
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=filename;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+}
+function safeFilename(name){
+  return String(name||"result").trim().replace(/[\\/:*?"<>|]+/g,"-").replace(/\s+/g," ").slice(0,80) || "result";
+}
+function escapeMdCell(s){
+  return String(s??"").replace(/\\/g,"\\\\").replace(/\|/g,"\\|").replace(/\r?\n/g," ");
+}
+function exportJson(){
+  if(!state.lastRun) return;
+  const clone=JSON.parse(JSON.stringify(state.lastRun));
+  clone.results.forEach(r=>{ delete r.dataUrl; delete r.thumb; }); // keep JSON light
+  clone.originals.forEach(o=>{ delete o.thumb; });
+  download(`vivmorph-benchmark-${state.lastRun.test}-${Date.now()}.json`, new Blob([JSON.stringify(clone,null,2)],{type:"application/json"}));
+}
+function markdownSummary(){
+  const r=state.lastRun; if(!r) return "";
+  const ok=r.results.filter(x=>x.ok&&x.scores).slice().sort((a,b)=>b.comp-a.comp);
+  let md=`# vivMorph benchmark — ${r.title}\n\n**Prompt:** ${r.prompt}\n\n**Judge:** ${r.judge} · ${new Date(r.when).toLocaleString()}\n\n`;
+  md+=`| # | Model | Verdict | Adher | Real | ${r.test==="t3"?"Identity":"Preserve"} | Score | $ |\n|---|---|---|---|---|---|---|---|\n`;
+  ok.forEach((x,i)=>{ md+=`| ${i+1} | ${escapeMdCell(x.name)}${i===0?" 🏆":""} | ${escapeMdCell(x.scores.verdict||"")} | ${x.scores.prompt_adherence??"-"} | ${x.scores.realism??"-"} | ${x.scores.preservation??"-"} | ${x.comp} | $${x.price.toFixed(2)} |\n`; });
+  const fails=r.results.filter(x=>!x.ok);
+  if(fails.length){ md+=`\n**Failures:** `+fails.map(f=>`${escapeMdCell(f.name)} (HTTP ${f.status||"—"})`).join(", ")+"\n"; }
+  return md;
+}
+async function copyMd(){
+  const md=markdownSummary();
+  try{
+    if(navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(md);
+    else {
+      const ta=document.createElement("textarea");
+      ta.value=md; ta.setAttribute("readonly","");
+      ta.style.position="fixed"; ta.style.left="-9999px";
+      document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove();
+    }
+    flash($("#runFlash"),"Markdown summary copied to clipboard.","ok"); setTimeout(()=>clearFlash($("#runFlash")),2500);
+  }catch(e){
+    flash($("#runFlash"),"Could not copy summary automatically. Use the HTML or JSON export instead.","err");
+  }
+}
+
+function exportHtml(){
+  const r=state.lastRun; if(!r) return;
+  const ok=r.results.filter(x=>x.ok&&x.scores).slice().sort((a,b)=>b.comp-a.comp);
+  const card=x=>{
+    if(!x.ok) return `<div class="c fail"><div class="ch">${escapeHtml(x.name)} · <span class="bad">FAIL HTTP ${x.status||"—"}</span></div>
+      <div class="err">${escapeHtml((x.error||"")+statusHint(x.status))}</div></div>`;
+    const s=x.scores||{};
+    return `<div class="c"><div class="ch">${escapeHtml(x.name)} <span class="sc">${x.comp}</span></div>
+      ${x.thumb?`<img src="${x.thumb}">`:""}
+      <div class="v ${(s.verdict||'').toLowerCase()}">${escapeHtml(s.verdict||"")}</div>
+      <div class="sr">adherence ${s.prompt_adherence??"–"} · realism ${s.realism??"–"} · ${r.test==="t3"?"identity":"preserve"} ${s.preservation??"–"}</div>
+      <div class="cm">${escapeHtml(s.comment||"")}</div>
+      <div class="mt">HTTP ${x.status} · ${(x.ms/1000).toFixed(1)}s</div></div>`;
+  };
+  const lb=ok.map((x,i)=>`<tr class="${i===0?'w':''}"><td>${i+1}</td><td>${escapeHtml(x.name)}${i===0?" 🏆":""}</td><td>${escapeHtml(x.scores.verdict||"")}</td><td>${x.scores.prompt_adherence??"–"}</td><td>${x.scores.realism??"–"}</td><td>${x.scores.preservation??"–"}</td><td><b>${x.comp}</b></td><td>$${x.price.toFixed(2)}</td></tr>`).join("");
+  const rel=r.results.slice().sort((a,b)=>(b.ok-a.ok)).map(x=>`<tr><td>${escapeHtml(x.name)}</td><td>${x.ok?"OK":"FAIL"}</td><td>${x.status||"—"}</td><td>${x.attempts||"–"}</td></tr>`).join("");
+  const html=`<!doctype html><html><head><meta charset="utf-8"><title>vivMorph benchmark — ${escapeHtml(r.title)}</title>
+<style>body{font-family:Segoe UI,system-ui,sans-serif;background:#0d0b16;color:#efeaff;margin:0;padding:28px;max-width:1300px;margin:0 auto}
+h1{font-size:22px}.meta{color:#9a92c0;font-size:13px;margin-bottom:20px}.prompt{background:#161327;border:1px solid #332d4f;border-radius:10px;padding:12px;margin-bottom:20px;font-size:13px}
+.origs{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:22px}.origs img{width:150px;border-radius:8px;border:1px solid #332d4f}
+table{border-collapse:collapse;width:100%;margin:10px 0 26px;font-size:13px}th,td{border-bottom:1px solid #332d4f;padding:7px 9px;text-align:left}th{color:#6f6790;font-size:11px;text-transform:uppercase}tr.w td{color:#ffd75e}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+.c{background:#161327;border:1px solid #332d4f;border-radius:12px;overflow:hidden}.c.fail{border-color:#5a2b2b}
+.ch{padding:9px 11px;font-weight:700;font-size:13px;border-bottom:1px solid #332d4f;display:flex;justify-content:space-between;align-items:center}
+.sc{background:#7c5bf5;color:#fff;border-radius:6px;padding:1px 8px;font-family:monospace}
+.c img{width:100%;display:block}.v{padding:6px 11px 0;font-weight:800;font-size:11px;text-transform:uppercase}.v.pass{color:#37d6a3}.v.partial{color:#ffb74d}.v.fail{color:#ff6b6b}
+.sr{padding:2px 11px;font-size:11.5px;color:#9a92c0;font-family:monospace}.cm{padding:4px 11px 8px;font-size:12px;color:#c9c2e6}.mt{padding:0 11px 10px;font-size:10.5px;color:#6f6790}
+.err{padding:11px;color:#ff9b9b;font-size:12px}.bad{color:#ff6b6b}h2{font-size:14px;margin-top:26px;color:#9a92c0}</style></head>
+<body><h1>🧪 vivMorph Image-Edit Benchmark</h1>
+<div class="meta">${escapeHtml(r.title)} · judge: ${escapeHtml(r.judge)} · ${new Date(r.when).toLocaleString()}</div>
+<div class="prompt"><b>Prompt:</b> ${escapeHtml(r.prompt)}</div>
+<h2>Source image(s)</h2><div class="origs">${r.originals.map(o=>`<img src="${o.thumb}">`).join("")}</div>
+<h2>Leaderboard</h2><table><tr><th>#</th><th>Model</th><th>Verdict</th><th>Adher</th><th>Real</th><th>${r.test==="t3"?"Identity":"Preserve"}</th><th>Score</th><th>$</th></tr>${lb||'<tr><td colspan=8>none</td></tr>'}</table>
+<h2>Reliability</h2><table><tr><th>Model</th><th>Result</th><th>HTTP</th><th>Attempts</th></tr>${rel}</table>
+<h2>All results</h2><div class="grid">${r.results.slice().sort((a,b)=>(b.ok&&b.scores?b.comp:-1)-(a.ok&&a.scores?a.comp:-1)).map(card).join("")}</div>
+</body></html>`;
+  download(`vivmorph-benchmark-${r.test}-${Date.now()}.html`, new Blob([html],{type:"text/html"}));
+}
+
+// ---------- Lightbox ----------
+function openLightbox(url,name){ $("#lbImg").src=url; $("#lbDownload").onclick=()=>download(safeFilename(name)+".png",dataUrlToBlob(url)); $("#lightbox").classList.add("show"); }
+function dataUrlToBlob(d){ const [h,b]=d.split(","); const m=h.match(/:(.*?);/)[1]; const bin=atob(b); const u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i); return new Blob([u],{type:m}); }
+
+// ---------- UI wiring ----------
+function switchTab(t){
+  state.activeTab=t;
+  $$(".tab").forEach(x=>x.classList.toggle("active",x.dataset.tab===t));
+  $$(".tabpane").forEach(x=>x.classList.toggle("active",x.id==="pane-"+t));
+  renderModels(); updateCost();
+}
+function bindSlot(el){
+  const slot=el.dataset.slot;
+  el.onclick=()=>{ const inp=document.createElement("input"); inp.type="file"; inp.accept="image/*";
+    inp.onchange=async()=>{ if(inp.files[0]){ state.images[slot]=await fileToState(inp.files[0]); paintSlot(slot); } }; inp.click(); };
+  el.ondragover=e=>{e.preventDefault();el.style.borderColor="var(--glow)";};
+  el.ondragleave=()=>{el.style.borderColor="";};
+  el.ondrop=async e=>{ e.preventDefault(); el.style.borderColor=""; const f=e.dataTransfer.files[0]; if(f){ state.images[slot]=await fileToState(f); paintSlot(slot); } };
+}
+function paintSlot(slot){
+  const el=document.querySelector(`.drop[data-slot="${slot}"]`); if(!el) return;
+  const img=state.images[slot];
+  if(img){ el.classList.add("filled"); el.innerHTML=`<img src="${img.dataUrl}" alt="">`; }
+  else { el.classList.remove("filled"); el.innerHTML=`<div class="ph">${el.getAttribute('data-ph')||'click / drop'}</div>`; }
+}
+async function tryLoadDefault(slot,path){
+  try{ const r=await fetch(path); if(!r.ok) return; const b=await r.blob(); const d=await blobToDataUrl(b);
+    state.images[slot]={dataUrl:await downscale(d,2048,0.9), name:path.split("/").pop()}; paintSlot(slot); }catch{}
+}
+
+window.addEventListener("DOMContentLoaded", async ()=>{
+  // key
+  $("#apiKey").value = window.VENICE_KEY || localStorage.getItem("vm_bench_key") || "";
+  $("#apiKey").onchange=()=>localStorage.setItem("vm_bench_key",$("#apiKey").value.trim());
+  // prompts
+  $("#t1prompt").value=PROMPTS.t1single; $("#t2prompt").value=PROMPTS.t2; $("#t3prompt").value=PROMPTS.t3;
+  $("#aspect").onchange=()=>{ renderModels(); updateCost(); };
+  // tabs
+  $$(".tab").forEach(t=>t.onclick=()=>switchTab(t.dataset.tab));
+  // t1 mode pills
+  $$('#pane-t1 .pill').forEach(p=>p.onclick=()=>{
+    state.t1mode=p.dataset.mode;
+    $$('#pane-t1 .pill').forEach(x=>x.classList.toggle('active',x===p));
+    $("#t1b-slot").style.display = state.t1mode==="multi"?"block":"none";
+    $("#t1prompt").value = state.t1mode==="multi"?PROMPTS.t1multi:PROMPTS.t1single;
+    $("#t1promptmode").textContent = "("+state.t1mode+"-source)";
+    renderModels(); updateCost();
+  });
+  // slots
+  $$(".drop").forEach(bindSlot);
+  $$("[data-clear]").forEach(a=>a.onclick=()=>{ delete state.images[a.dataset.clear]; paintSlot(a.dataset.clear); });
+  // presets
+  $("#presetSelect").onchange=e=>{ const v=e.target.value; if(PRESETS[v]) $("#t3prompt").value=PRESETS[v]; };
+  // model buttons
+  $("#selDefault").onclick=()=>{ state.selected=new Set(DEFAULT_SET.filter(id=>state.models.some(m=>m.id===id))); renderModels(); updateCost(); };
+  $("#selAll").onclick=()=>{ state.selected=new Set(state.models.map(m=>m.id)); renderModels(); updateCost(); };
+  $("#selNone").onclick=()=>{ state.selected=new Set(); renderModels(); updateCost(); };
+  $("#reloadModels").onclick=()=>loadModels();
+  // run
+  $("#runBtn").onclick=runBenchmark;
+  $("#stopBtn").onclick=()=>{ state.cancelled=true; $("#progText").textContent="Stopping…"; };
+  $("#testKeyBtn").onclick=async()=>{ $("#keyStatus").textContent="checking…"; $("#keyStatus").className="keyok muted";
+    try{ const r=await fetch(BASE+"/models?type=inpaint",{headers:{Authorization:"Bearer "+getKey()}});
+      if(r.ok){ $("#keyStatus").textContent="✓ key works"; $("#keyStatus").style.color="var(--glow2)"; loadModels(); }
+      else { $("#keyStatus").textContent="✕ HTTP "+r.status; $("#keyStatus").style.color="var(--bad)"; } }
+    catch(e){ $("#keyStatus").textContent="✕ "+e.message; $("#keyStatus").style.color="var(--bad)"; } };
+  // export
+  $("#exportHtml").onclick=exportHtml; $("#exportJson").onclick=exportJson; $("#copyMd").onclick=copyMd;
+  // lightbox
+  $("#lbClose").onclick=()=>$("#lightbox").classList.remove("show");
+  $("#lightbox").onclick=e=>{ if(e.target.id==="lightbox") $("#lightbox").classList.remove("show"); };
+
+  // defaults + models
+  await Promise.all([
+    tryLoadDefault("t1a","benchmark-assets/group-indian-chinese-phone.jpg"),
+    tryLoadDefault("t1b","benchmark-assets/person-to-insert.jpg"),
+    tryLoadDefault("t2a","benchmark-assets/group-indian-chinese-phone.jpg"),
+    tryLoadDefault("t2b","benchmark-assets/person-to-insert.jpg"),
+    tryLoadDefault("t3a","benchmark-assets/person-to-insert.jpg"),
+  ]);
+  if(getKey()) loadModels(); else $("#modelGrid").innerHTML='<div class="muted">Enter your API key and click “Test key” to load models.</div>';
+});
+</script>
+</body>
+</html>

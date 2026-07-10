@@ -747,8 +747,9 @@
             this.selectedModel = localStorage.getItem('vivmorph_selected_model') || this.defaultModel;
             this.selectedAspectRatio = 'auto';
             this.selectedQuality = null;
-            // Models known to preserve face/character identity well across edits.
-            this.identityModelIds = ['grok-imagine-edit'];
+            this.benchmarkModelIds = ['grok-imagine-edit','qwen-image-2-edit','seedream-v5-pro-edit','wan-2-7-pro-edit','flux-2-max-edit','nano-banana-pro-edit','gpt-image-1-5-edit'];
+            // The benchmark's strongest identity-preservation result.
+            this.identityModelIds = ['qwen-image-2-edit'];
             this.suggestionDismissedFor = null;
             this.autoPickModel = localStorage.getItem('vivmorph_auto_pick_model') === 'true';
             this.faceModel = null;
@@ -814,14 +815,14 @@
                 this.models = data.data || [];
             } catch {
                 this.models = [
-                    { id:'grok-imagine-edit', model_spec:{ name:'Grok Imagine', pricing:{inpaint:{usd:0.04}}, constraints:{aspectRatios:['auto','1:1','3:2','16:9','21:9','9:16','2:3','4:5'], promptCharacterLimit:1500, combineImages:false}, privacy:'anonymized', offline:false }},
-                    { id:'qwen-edit', model_spec:{ name:'Qwen Edit 2511', pricing:{inpaint:{usd:0.04}}, constraints:{aspectRatios:['auto','1:1','3:2','16:9','21:9','9:16','2:3','4:5'], promptCharacterLimit:1500, combineImages:true}, privacy:'private', offline:false }},
-                    { id:'flux-2-max-edit', model_spec:{ name:'Flux 2 Max', pricing:{inpaint:{usd:0.09}}, constraints:{aspectRatios:['auto','1:1','3:2','16:9','21:9','9:16','2:3','4:5'], promptCharacterLimit:3000, combineImages:true}, privacy:'anonymized', offline:false }},
-                    { id:'gpt-image-1-5-edit', model_spec:{ name:'GPT Image 1.5', pricing:{inpaint:{usd:0.23}}, constraints:{aspectRatios:['auto','1:1','3:2','2:3'], promptCharacterLimit:32768, combineImages:true}, privacy:'anonymized', offline:false }},
+                    { id:'grok-imagine-edit', model_spec:{ name:'Grok Imagine', pricing:{inpaint:{usd:0.04}}, constraints:{aspectRatios:['auto','1:1','3:2','16:9','9:16','2:3','3:4'], promptCharacterLimit:7500, combineImages:true}, privacy:'anonymized', offline:false }},
+                    { id:'qwen-image-2-edit', model_spec:{ name:'Qwen Image 2', pricing:{inpaint:{usd:0.05}}, constraints:{aspectRatios:['auto','1:1','3:2','16:9','21:9','9:16','2:3','3:4','4:5'], promptCharacterLimit:10000, combineImages:true}, privacy:'anonymized', offline:false }},
+                    { id:'flux-2-max-edit', model_spec:{ name:'Flux 2 Max', pricing:{inpaint:{usd:0.19}}, constraints:{aspectRatios:['auto','1:1','3:2','16:9','21:9','9:16','2:3','3:4','4:5'], promptCharacterLimit:3000, combineImages:true}, privacy:'anonymized', offline:false }},
+                    { id:'gpt-image-1-5-edit', model_spec:{ name:'GPT Image 1.5', pricing:{inpaint:{usd:0.36}}, constraints:{aspectRatios:['auto','1:1','3:2','2:3'], promptCharacterLimit:5000, combineImages:true}, privacy:'anonymized', offline:false }},
                     // Price is an estimate — this fallback entry is only used if the live Venice API is unreachable.
-                    { id:'gpt-image-2-edit', model_spec:{ name:'GPT Image 2', pricing:{inpaint:{usd:0.19}}, constraints:{aspectRatios:['auto','1:1','3:2','2:3'], promptCharacterLimit:32768, combineImages:true, quality:['low','medium','high']}, privacy:'anonymized', offline:false }},
+                    { id:'seedream-v5-pro-edit', model_spec:{ name:'Seedream V5 Pro', pricing:{inpaint:{usd:0.11}}, constraints:{aspectRatios:['auto','1:1','3:2','16:9','9:16','2:3','3:4'], promptCharacterLimit:10000, combineImages:true}, privacy:'anonymized', offline:false }},
                     { id:'nano-banana-pro-edit', model_spec:{ name:'Nano Banana Pro', pricing:{inpaint:{usd:0.18}}, constraints:{aspectRatios:['auto','1:1','3:2','16:9','21:9','9:16','2:3','4:5'], promptCharacterLimit:32768, combineImages:true}, privacy:'anonymized', offline:false }},
-                    { id:'seedream-v4-edit', model_spec:{ name:'SeedreamV4.5', pricing:{inpaint:{usd:0.05}}, constraints:{aspectRatios:['auto','1:1','3:2','16:9','9:16','2:3','4:5'], promptCharacterLimit:10000, combineImages:true}, privacy:'anonymized', offline:false }},
+                    { id:'wan-2-7-pro-edit', model_spec:{ name:'Wan 2.7 Pro Edit', pricing:{inpaint:{usd:0.094}}, constraints:{aspectRatios:['auto'], promptCharacterLimit:5000, combineImages:true}, privacy:'anonymized', offline:false }},
                 ];
             }
             // Always surface Grok Imagine first regardless of API ordering, independent of what's selected.
@@ -830,6 +831,8 @@
                 const [defaultModel] = this.models.splice(defaultIdx, 1);
                 this.models.unshift(defaultModel);
             }
+            const visibleById = new Map(this.models.filter(m => this.benchmarkModelIds.includes(m.id)).map(m => [m.id, m]));
+            this.models = this.benchmarkModelIds.map(id => visibleById.get(id)).filter(Boolean);
             // A previously persisted model choice may no longer exist (removed/renamed upstream).
             if (!this.models.some(m => m.id === this.selectedModel)) {
                 this.selectedModel = this.defaultModel;

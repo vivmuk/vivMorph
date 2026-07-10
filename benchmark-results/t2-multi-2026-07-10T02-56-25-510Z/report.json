@@ -1,0 +1,158 @@
+{
+  "test": "t2",
+  "mode": "multi",
+  "title": "Multi-edit composition",
+  "prompt": "Combine these images into a single cohesive, photorealistic group photo: place all of the people together standing side by side outdoors, with consistent lighting, scale, shadows and perspective. Keep each person's face and likeness accurate.",
+  "judge": "qwen3-vl-235b-a22b",
+  "aspect": "auto",
+  "when": "2026-07-10T02:59:35.193Z",
+  "originals": [
+    "original-base.jpg",
+    "original-reference.jpg"
+  ],
+  "results": [
+    {
+      "id": "grok-imagine-edit",
+      "name": "Grok Imagine",
+      "price": 0.04,
+      "status": 200,
+      "attempts": 1,
+      "ms": 26275,
+      "ok": true,
+      "file": "grok-imagine-edit.jpg",
+      "scores": {
+        "prompt_adherence": 10,
+        "realism": 9,
+        "preservation": 10,
+        "artifacts": [
+          "slight shadow mismatch under the fourth person's feet"
+        ],
+        "verdict": "pass",
+        "comment": "All four people are accurately placed side by side in a photorealistic park scene with consistent lighting and preserved likenesses."
+      },
+      "comp": 97
+    },
+    {
+      "id": "qwen-image-2-edit",
+      "name": "Qwen Image 2",
+      "price": 0.05,
+      "status": 200,
+      "attempts": 1,
+      "ms": 28481,
+      "ok": true,
+      "file": "qwen-image-2-edit.png",
+      "scores": {
+        "prompt_adherence": 10,
+        "realism": 9,
+        "preservation": 10,
+        "artifacts": [
+          "slight shadow mismatch under the added person's feet"
+        ],
+        "verdict": "pass",
+        "comment": "All four people are accurately placed side by side in a photorealistic park scene with consistent lighting and preserved likenesses."
+      },
+      "comp": 97
+    },
+    {
+      "id": "seedream-v5-pro-edit",
+      "name": "Seedream V5 Pro",
+      "price": 0.11,
+      "status": 200,
+      "attempts": 1,
+      "ms": 138626,
+      "ok": true,
+      "file": "seedream-v5-pro-edit.jpg",
+      "scores": {
+        "prompt_adherence": 10,
+        "realism": 9,
+        "preservation": 10,
+        "artifacts": [],
+        "verdict": "pass",
+        "comment": "All four individuals are accurately placed side-by-side in a photorealistic park setting with consistent lighting, scale, and shadows; each person’s face and likeness is faithfully preserved."
+      },
+      "comp": 97
+    },
+    {
+      "id": "wan-2-7-pro-edit",
+      "name": "Wan 2.7 Pro Edit",
+      "price": 0.094,
+      "status": 200,
+      "attempts": 1,
+      "ms": 27237,
+      "ok": true,
+      "file": "wan-2-7-pro-edit.jpg",
+      "scores": {
+        "prompt_adherence": 10,
+        "realism": 9,
+        "preservation": 10,
+        "artifacts": [],
+        "verdict": "pass",
+        "comment": "All four individuals are accurately placed side by side in a photorealistic park setting with consistent lighting, scale, and shadows; each person’s face and likeness is faithfully preserved."
+      },
+      "comp": 97
+    },
+    {
+      "id": "flux-2-max-edit",
+      "name": "Flux 2 Max",
+      "price": 0.19,
+      "status": 200,
+      "attempts": 1,
+      "ms": 32959,
+      "ok": true,
+      "file": "flux-2-max-edit.png",
+      "scores": {
+        "prompt_adherence": 10,
+        "realism": 9,
+        "preservation": 10,
+        "artifacts": [
+          "slight shadow mismatch under the fourth person's feet"
+        ],
+        "verdict": "pass",
+        "comment": "All four people are accurately placed side by side in a photorealistic park scene with consistent lighting and preserved likenesses."
+      },
+      "comp": 97
+    },
+    {
+      "id": "nano-banana-pro-edit",
+      "name": "Nano Banana Pro",
+      "price": 0.18,
+      "status": 200,
+      "attempts": 1,
+      "ms": 34987,
+      "ok": true,
+      "file": "nano-banana-pro-edit.png",
+      "scores": {
+        "prompt_adherence": 10,
+        "realism": 9,
+        "preservation": 10,
+        "artifacts": [
+          "slight shadow mismatch under the fourth person's feet"
+        ],
+        "verdict": "pass",
+        "comment": "All four people are accurately placed side-by-side in a photorealistic park scene with consistent lighting and preserved likenesses."
+      },
+      "comp": 97
+    },
+    {
+      "id": "gpt-image-1-5-edit",
+      "name": "GPT Image 1.5",
+      "price": 0.36,
+      "status": 200,
+      "attempts": 1,
+      "ms": 48864,
+      "ok": true,
+      "file": "gpt-image-1-5-edit.png",
+      "scores": {
+        "prompt_adherence": 10,
+        "realism": 9,
+        "preservation": 10,
+        "artifacts": [
+          "slight shadow mismatch under new person's feet"
+        ],
+        "verdict": "pass",
+        "comment": "All four people are accurately placed side-by-side in a photorealistic park scene with consistent lighting and preserved likenesses."
+      },
+      "comp": 97
+    }
+  ]
+}

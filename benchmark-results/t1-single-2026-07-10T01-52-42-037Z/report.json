@@ -1,0 +1,147 @@
+{
+  "test": "t1",
+  "mode": "single",
+  "title": "Insertion (Trump) ? single-source",
+  "prompt": "Add Donald Trump seamlessly into the picture as an additional person participating in the same activity, matching the lighting and perspective. Do not remove, replace, or alter any of the original people ? keep everyone else exactly as they are.",
+  "judge": "qwen3-vl-235b-a22b",
+  "aspect": "auto",
+  "when": "2026-07-10T01:55:50.846Z",
+  "original": "original-base.jpg",
+  "results": [
+    {
+      "id": "grok-imagine-edit",
+      "name": "Grok Imagine",
+      "price": 0.04,
+      "status": 200,
+      "attempts": 1,
+      "ms": 21098,
+      "ok": true,
+      "file": "grok-imagine-edit.jpg",
+      "scores": {
+        "prompt_adherence": 10,
+        "realism": 9,
+        "preservation": 10,
+        "artifacts": [],
+        "verdict": "pass",
+        "comment": "Donald Trump was added seamlessly to the right, matching lighting and perspective, with all original people unchanged."
+      },
+      "comp": 97
+    },
+    {
+      "id": "qwen-image-2-edit",
+      "name": "Qwen Image 2",
+      "price": 0.05,
+      "status": 200,
+      "attempts": 1,
+      "ms": 20523,
+      "ok": true,
+      "file": "qwen-image-2-edit.png",
+      "scores": {
+        "prompt_adherence": 10,
+        "realism": 8,
+        "preservation": 10,
+        "artifacts": [
+          "slight lighting mismatch on Trump's suit",
+          "minor edge halo around Trump's figure"
+        ],
+        "verdict": "pass",
+        "comment": "Trump added seamlessly without altering original people; lighting and perspective mostly consistent."
+      },
+      "comp": 94
+    },
+    {
+      "id": "seedream-v5-pro-edit",
+      "name": "Seedream V5 Pro",
+      "price": 0.11,
+      "status": 422,
+      "attempts": 1,
+      "ms": 153849,
+      "ok": false,
+      "error": "Your prompt violates the content policy of Venice.ai or the model provider"
+    },
+    {
+      "id": "wan-2-7-pro-edit",
+      "name": "Wan 2.7 Pro Edit",
+      "price": 0.094,
+      "status": 200,
+      "attempts": 1,
+      "ms": 25162,
+      "ok": true,
+      "file": "wan-2-7-pro-edit.jpg",
+      "scores": {
+        "prompt_adherence": 10,
+        "realism": 8,
+        "preservation": 10,
+        "artifacts": [
+          "slight lighting mismatch on Trump's suit",
+          "minor edge halo around Trump's figure"
+        ],
+        "verdict": "partial",
+        "comment": "Trump was added seamlessly without altering original people, but lighting and texture show minor inconsistencies."
+      },
+      "comp": 94
+    },
+    {
+      "id": "flux-2-max-edit",
+      "name": "Flux 2 Max",
+      "price": 0.19,
+      "status": 200,
+      "attempts": 1,
+      "ms": 29233,
+      "ok": true,
+      "file": "flux-2-max-edit.png",
+      "scores": {
+        "prompt_adherence": 8,
+        "realism": 9,
+        "preservation": 10,
+        "artifacts": [
+          "added person does not resemble Donald Trump"
+        ],
+        "verdict": "partial",
+        "comment": "A new person was added seamlessly with matching lighting and perspective, but it is not Donald Trump."
+      },
+      "comp": 87
+    },
+    {
+      "id": "nano-banana-pro-edit",
+      "name": "Nano Banana Pro",
+      "price": 0.18,
+      "status": 200,
+      "attempts": 1,
+      "ms": 36273,
+      "ok": true,
+      "file": "nano-banana-pro-edit.png",
+      "scores": {
+        "prompt_adherence": 10,
+        "realism": 8,
+        "preservation": 10,
+        "artifacts": [
+          "slight lighting mismatch on Trump's suit",
+          "minor edge halo around Trump's figure"
+        ],
+        "verdict": "partial",
+        "comment": "Trump added seamlessly with correct perspective, but lighting and edges show minor compositing artifacts."
+      },
+      "comp": 94
+    },
+    {
+      "id": "gpt-image-1-5-edit",
+      "name": "GPT Image 1.5",
+      "price": 0.36,
+      "status": 200,
+      "attempts": 1,
+      "ms": 54208,
+      "ok": true,
+      "file": "gpt-image-1-5-edit.png",
+      "scores": {
+        "prompt_adherence": 10,
+        "realism": 9,
+        "preservation": 10,
+        "artifacts": [],
+        "verdict": "pass",
+        "comment": "Donald Trump was added seamlessly into the group photo, matching lighting and perspective, with all original people unchanged."
+      },
+      "comp": 97
+    }
+  ]
+}

@@ -16,6 +16,9 @@ www/
 .env.test.local
 .env.production.local
 
+# Local benchmark secret (Venice API key) — never commit
+benchmark.config.js
+
 # IDE files
 .vscode/
 .idea/
