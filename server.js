@@ -120,8 +120,12 @@ async function handleImageEdit(req, res) {
       prompt: body.prompt,
       image: body.image,
     };
-    if (body.modelId) venicePayload.modelId = body.modelId;
+    // /image/edit expects "model" (only /image/multi-edit uses "modelId"). Sending the
+    // wrong key silently falls back to a default model — see netlify/functions/image-edit.js.
+    if (body.modelId || body.model) venicePayload.model = body.model || body.modelId;
     if (body.aspect_ratio) venicePayload.aspect_ratio = body.aspect_ratio;
+    // Quality tiers are supported by the newer edit models (e.g. GPT Image).
+    if (body.quality) venicePayload.quality = body.quality;
     if (body.mask) venicePayload.mask = body.mask;
 
     const response = await fetchWithRetry('https://api.venice.ai/api/v1/image/edit', {
@@ -150,6 +154,7 @@ async function handleImageMultiEdit(req, res) {
       images: body.images,
     };
     if (body.modelId) venicePayload.modelId = body.modelId;
+    if (body.quality) venicePayload.quality = body.quality;
 
     const response = await fetchWithRetry('https://api.venice.ai/api/v1/image/multi-edit', {
       method: 'POST',
