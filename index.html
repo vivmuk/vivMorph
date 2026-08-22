@@ -747,7 +747,18 @@
             this.selectedModel = localStorage.getItem('vivmorph_selected_model') || this.defaultModel;
             this.selectedAspectRatio = 'auto';
             this.selectedQuality = null;
-            this.benchmarkModelIds = ['grok-imagine-edit','qwen-image-2-edit','seedream-v5-pro-edit','wan-2-7-pro-edit','flux-2-max-edit','nano-banana-pro-edit','gpt-image-1-5-edit'];
+            // Curated display order. This is a preference, not a filter: any edit model the
+            // Venice catalog returns that isn't named here is still shown (appended after
+            // these, cheapest first), so newly released models appear without a code change.
+            this.preferredModelOrder = [
+                'grok-imagine-image-2-0-edit','grok-imagine-quality-edit','grok-imagine-edit',
+                'gpt-image-2-edit','gpt-image-1-5-edit',
+                'qwen-image-2-edit',
+                'seedream-v5-pro-edit','seedream-v4-edit',
+                'wan-2-7-pro-edit','flux-2-max-edit','nano-banana-pro-edit'
+            ];
+            // Models covered by the in-repo benchmark; anything else is flagged as untested.
+            this.benchmarkedModelIds = ['grok-imagine-edit','qwen-image-2-edit','seedream-v5-pro-edit','wan-2-7-pro-edit','flux-2-max-edit','nano-banana-pro-edit','gpt-image-1-5-edit'];
             // The benchmark's strongest identity-preservation result.
             this.identityModelIds = ['qwen-image-2-edit'];
             this.suggestionDismissedFor = null;
@@ -823,16 +834,16 @@
                     { id:'seedream-v5-pro-edit', model_spec:{ name:'Seedream V5 Pro', pricing:{inpaint:{usd:0.11}}, constraints:{aspectRatios:['auto','1:1','3:2','16:9','9:16','2:3','3:4'], promptCharacterLimit:10000, combineImages:true}, privacy:'anonymized', offline:false }},
                     { id:'nano-banana-pro-edit', model_spec:{ name:'Nano Banana Pro', pricing:{inpaint:{usd:0.18}}, constraints:{aspectRatios:['auto','1:1','3:2','16:9','21:9','9:16','2:3','4:5'], promptCharacterLimit:32768, combineImages:true}, privacy:'anonymized', offline:false }},
                     { id:'wan-2-7-pro-edit', model_spec:{ name:'Wan 2.7 Pro Edit', pricing:{inpaint:{usd:0.094}}, constraints:{aspectRatios:['auto'], promptCharacterLimit:5000, combineImages:true}, privacy:'anonymized', offline:false }},
+                    // Newer Grok / GPT / Seedream edit models. Specs below are best-effort
+                    // estimates used only when the live catalog is unreachable — the API
+                    // response always wins when it loads.
+                    { id:'grok-imagine-image-2-0-edit', model_spec:{ name:'Grok Imagine 2.0', pricing:{inpaint:{usd:0.06}}, constraints:{aspectRatios:['auto','1:1','3:2','16:9','9:16','2:3','3:4'], promptCharacterLimit:7500, combineImages:true}, privacy:'anonymized', offline:false }},
+                    { id:'grok-imagine-quality-edit', model_spec:{ name:'Grok Imagine Quality', pricing:{inpaint:{usd:0.08}}, constraints:{aspectRatios:['auto','1:1','3:2','16:9','9:16','2:3','3:4'], promptCharacterLimit:7500, combineImages:true}, privacy:'anonymized', offline:false }},
+                    { id:'gpt-image-2-edit', model_spec:{ name:'GPT Image 2', pricing:{inpaint:{usd:0.36}}, constraints:{aspectRatios:['auto','1:1','3:2','2:3'], promptCharacterLimit:5000, combineImages:true, quality:['low','medium','high']}, privacy:'anonymized', offline:false }},
+                    { id:'seedream-v4-edit', model_spec:{ name:'Seedream V4.5', pricing:{inpaint:{usd:0.05}}, constraints:{aspectRatios:['auto','1:1','3:2','16:9','9:16','2:3','3:4'], promptCharacterLimit:10000, combineImages:true}, privacy:'anonymized', offline:false }},
                 ];
             }
-            // Always surface Grok Imagine first regardless of API ordering, independent of what's selected.
-            const defaultIdx = this.models.findIndex(m => m.id === this.defaultModel);
-            if (defaultIdx > 0) {
-                const [defaultModel] = this.models.splice(defaultIdx, 1);
-                this.models.unshift(defaultModel);
-            }
-            const visibleById = new Map(this.models.filter(m => this.benchmarkModelIds.includes(m.id)).map(m => [m.id, m]));
-            this.models = this.benchmarkModelIds.map(id => visibleById.get(id)).filter(Boolean);
+            this.models = this.sortModels(this.models.filter(m => m && m.id && m.model_spec));
             // A previously persisted model choice may no longer exist (removed/renamed upstream).
             if (!this.models.some(m => m.id === this.selectedModel)) {
                 this.selectedModel = this.defaultModel;
@@ -842,18 +853,45 @@
             this.updateModelInfo();
         }
 
+        // The default model stays pinned first, then the curated order, then anything the
+        // API added that we don't know about yet — cheapest first, so new models are
+        // discoverable instead of silently dropped.
+        sortModels(models) {
+            const rank = id => {
+                if (id === this.defaultModel) return -1;
+                const i = this.preferredModelOrder.indexOf(id);
+                return i === -1 ? Number.MAX_SAFE_INTEGER : i;
+            };
+            const price = m => {
+                const p = m.model_spec?.pricing?.inpaint?.usd;
+                return typeof p === 'number' ? p : Number.MAX_SAFE_INTEGER;
+            };
+            return models.slice().sort((a, b) => {
+                const ra = rank(a.id), rb = rank(b.id);
+                if (ra !== rb) return ra - rb;
+                const pa = price(a), pb = price(b);
+                if (pa !== pb) return pa - pb;
+                return (a.model_spec?.name || a.id).localeCompare(b.model_spec?.name || b.id);
+            });
+        }
+
         renderModelList() {
             const c = document.getElementById('modelList');
             if (!this.models.length) { c.innerHTML = '<p class="text-[10px] text-center py-4" style="color:var(--c-dim)">No models found</p>'; return; }
             c.innerHTML = this.models.map(m => {
                 const s = m.model_spec, p = s.pricing?.inpaint?.usd||0, active = m.id===this.selectedModel, off = s.offline;
+                // A brand-new catalog entry may not carry a display name yet.
+                const name = s.name || m.id;
+                // Models the live catalog exposes that no benchmark run in this repo covers.
+                const untested = !this.benchmarkedModelIds.includes(m.id);
                 const priceColor = p <= 0.05 ? 'var(--c-glow2)' : p <= 0.10 ? '#ffb74d' : '#ff7043';
                 return `<button class="model-card ${active?'selected':''}" data-model-id="${m.id}" ${off?'disabled style="opacity:0.35;cursor:not-allowed"':''}>
                     <div class="flex items-center justify-between mb-1">
                         <div class="flex items-center gap-2">
                             <div class="w-2 h-2 rounded-full" style="background:${active?'var(--c-glow)':'var(--c-surface3)'}; ${active?'box-shadow:0 0 8px rgba(124,91,245,0.5)':''}"></div>
-                            <span class="text-xs font-semibold" style="color:${active?'var(--c-text)':'var(--c-dim)'}">${s.name}</span>
+                            <span class="text-xs font-semibold" style="color:${active?'var(--c-text)':'var(--c-dim)'}">${name}</span>
                             ${off?'<span class="text-[8px] px-1.5 rounded font-mono" style="background:rgba(248,113,113,0.08);color:#f87171">offline</span>':''}
+                            ${untested&&!off?'<span class="text-[8px] px-1.5 rounded font-mono" style="background:rgba(124,91,245,0.14);color:var(--c-glow)">new</span>':''}
                         </div>
                         <span class="text-[10px] font-mono font-semibold" style="color:${priceColor}">$${p.toFixed(2)}</span>
                     </div>
@@ -872,9 +910,10 @@
         updateModelInfo() {
             const m = this.models.find(x => x.id === this.selectedModel); if (!m) return;
             const s = m.model_spec;
+            const name = s.name || m.id;
             const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-            setText('activeModelName', s.name);
-            setText('modelNameDisplay', s.name);
+            setText('activeModelName', name);
+            setText('modelNameDisplay', name);
             setText('modelPrice', '$' + (s.pricing?.inpaint?.usd||0).toFixed(2));
             setText('modelPrivacy', s.privacy||'n/a');
             setText('modelMaxPrompt', (s.constraints?.promptCharacterLimit||0).toLocaleString()+' chars');

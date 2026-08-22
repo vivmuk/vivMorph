@@ -127,6 +127,32 @@ Use the included `test-api.html` file to verify your API key works:
 - **Max Image Size**: 10MB
 - **Response Format**: PNG image
 
+## Model Catalog
+
+The edit-model list is driven by the live Venice catalog (`GET /models?type=inpaint`),
+not by a hardcoded allow-list. Every inpaint-capable model Venice exposes on your key is
+selectable in both the app and `benchmark.html`, so newly released models — the Grok
+Imagine and GPT Image families included — show up without a code change.
+
+Ordering is curated, not restrictive:
+
+1. The default model (`grok-imagine-edit`) is pinned first.
+2. Then the known models, in the order listed in `preferredModelOrder` (index.html) /
+   `DEFAULT_SET` (benchmark.html): Grok Imagine 2.0, Grok Imagine Quality, Grok Imagine,
+   GPT Image 2, GPT Image 1.5, Qwen Image 2, Seedream V5 Pro, Seedream V4.5,
+   Wan 2.7 Pro, Flux 2 Max, Nano Banana Pro.
+3. Then anything else the catalog returns, cheapest first.
+
+Models with no benchmark run in `benchmark-results/` are tagged **new** in the picker.
+Per-model price, privacy tier, prompt character limit, supported aspect ratios, image-combine
+support, and quality tiers all come from the API's `model_spec`, so the UI adapts to each
+model's real constraints. A built-in fallback list is used only when the catalog can't be
+fetched; its specs are estimates and are replaced as soon as the live list loads.
+
+Models exposing `constraints.quality` (e.g. the GPT Image family) render Low/Medium/High
+buttons, and the selected tier is forwarded to Venice by both the Netlify functions and the
+local `server.js` dev proxy.
+
 ## Privacy & Security
 
 - **API Key**: Stored securely as environment variable in Netlify (server-side only)
@@ -204,6 +230,16 @@ This project is open source and available under the MIT License.
 - **Google Fonts**: Plus Jakarta Sans & Noto Sans fonts
 
 ## Recent Updates
+
+### Version 1.2 - Live Model Catalog
+- **All Venice edit models available**: the picker no longer filters the catalog down to a
+  fixed list, so new Grok and GPT edit models appear as soon as Venice ships them
+- **Curated ordering + "new" badge**: benchmarked models stay at the top; unbenchmarked ones
+  are labelled rather than hidden
+- **Fallback list refreshed**: Grok Imagine 2.0, Grok Imagine Quality, GPT Image 2 and
+  Seedream V4.5 added for offline/no-catalog runs
+- **Dev proxy parity**: `server.js` now sends `model` (not `modelId`) to `/image/edit` and
+  forwards the `quality` tier, matching the Netlify functions
 
 ### Version 1.1 - API Fix Update
 - **Fixed API Format**: Changed from JSON to multipart form-data (resolves 401 errors)
