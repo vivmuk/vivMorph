@@ -96,10 +96,8 @@ exports.handler = async (event, context) => {
       venicePayload.quality = requestBody.quality;
     }
 
-    // Pass through mask if provided (for region-based inpainting)
-    if (requestBody.mask) {
-      venicePayload.mask = requestBody.mask;
-    }
+    // Venice's /image/edit has no mask parameter: masked edits are composited
+    // client-side (index.html → compositeWithMask), so a mask is never forwarded.
 
     // Forward the request to Venice AI API with retry for transient errors
     const maxRetries = 2;

@@ -1,7 +1,8 @@
-const CACHE_NAME = 'vivmorph-v2';
+const CACHE_NAME = 'vivmorph-v3';
 const PRECACHE_URLS = [
   '/',
   '/index.html',
+  '/styles.css',
   '/manifest.json',
 ];
 
@@ -32,7 +33,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // CDN resources: cache-first (fonts, tailwind, piexif)
+  // CDN resources: cache-first (fonts, heic2any)
   if (url.hostname !== location.hostname) {
     event.respondWith(
       caches.match(event.request).then((cached) => {
