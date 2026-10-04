@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vivmorph-v1';
+const CACHE_NAME = 'vivmorph-v2';
 const PRECACHE_URLS = [
   '/',
   '/index.html',

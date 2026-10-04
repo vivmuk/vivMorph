@@ -48,8 +48,14 @@ function readBody(req) {
 async function handleListModels(req, res) {
   if (!API_KEY) return jsonResponse(res, 500, { error: 'API key not configured.' });
 
+  // Mirror the Netlify function: allowlist the ?type= param, default inpaint.
+  const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+  const type = url.searchParams.get('type');
+  const allowed = ['image', 'inpaint', 'text'];
+  const modelType = allowed.includes(type) ? type : 'inpaint';
+
   try {
-    const response = await fetch('https://api.venice.ai/api/v1/models?type=inpaint', {
+    const response = await fetch(`https://api.venice.ai/api/v1/models?type=${modelType}`, {
       method: 'GET',
       headers: { 'Authorization': `Bearer ${API_KEY}` }
     });
@@ -107,6 +113,42 @@ async function handleVeniceResponse(response, res) {
     const imageBuffer = await response.arrayBuffer();
     const base64Image = Buffer.from(imageBuffer).toString('base64');
     jsonResponse(res, 200, { image: base64Image });
+  }
+}
+
+async function handleImageGenerate(req, res) {
+  if (!API_KEY) return jsonResponse(res, 500, { error: 'API key not configured.' });
+
+  try {
+    const body = JSON.parse(await readBody(req));
+
+    if (typeof body.prompt !== 'string' || !body.prompt.trim()) {
+      return jsonResponse(res, 400, { error: 'A prompt is required.' });
+    }
+    if (body.prompt.length > 40000) {
+      return jsonResponse(res, 400, { error: 'Prompt is too long.' });
+    }
+
+    const venicePayload = { prompt: body.prompt };
+    if (body.model) venicePayload.model = body.model;
+    if (body.aspect_ratio) venicePayload.aspect_ratio = body.aspect_ratio;
+    if (body.resolution) venicePayload.resolution = body.resolution;
+    if (body.quality) venicePayload.quality = body.quality;
+    if (body.negative_prompt) venicePayload.negative_prompt = body.negative_prompt;
+    if (body.format) venicePayload.format = body.format;
+
+    const response = await fetchWithRetry('https://api.venice.ai/api/v1/image/generate', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(venicePayload)
+    });
+
+    await handleVeniceResponse(response, res);
+  } catch (error) {
+    jsonResponse(res, 500, { error: 'Internal server error', message: error.message });
   }
 }
 
@@ -237,8 +279,11 @@ const server = http.createServer(async (req, res) => {
   }
 
   // API routes (compatible with Netlify function paths)
-  if (req.url === '/.netlify/functions/list-models' && req.method === 'GET') {
+  if (req.url.startsWith('/.netlify/functions/list-models') && req.method === 'GET') {
     return handleListModels(req, res);
+  }
+  if (req.url === '/.netlify/functions/image-generate' && req.method === 'POST') {
+    return handleImageGenerate(req, res);
   }
   if (req.url === '/.netlify/functions/image-edit' && req.method === 'POST') {
     return handleImageEdit(req, res);
