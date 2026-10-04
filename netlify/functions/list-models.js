@@ -31,7 +31,10 @@ exports.handler = async (event, context) => {
   }
 
   try {
-    const response = await fetch('https://api.venice.ai/api/v1/models?type=inpaint', {
+    const type = event.queryStringParameters?.type;
+    const allowedTypes = ['image', 'inpaint', 'text'];
+    const modelType = allowedTypes.includes(type) ? type : 'inpaint';
+    const response = await fetch(`https://api.venice.ai/api/v1/models?type=${modelType}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${apiKey}`
