@@ -329,6 +329,14 @@
         .tab-btn svg { width: 20px; height: 20px; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
+        /* Visible focus for keyboard users; accent ring, no outline removal without replacement */
+        :focus-visible { outline: 2px solid var(--c-glow); outline-offset: 2px; }
+        /* Respect reduced motion: disable ambient + entry animations */
+        @media (prefers-reduced-motion: reduce) {
+            .aurora, .aurora-orb { animation: none !important; }
+            .spinner { animation-duration: 1.5s !important; }
+            * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+        }
         @media (min-width: 1024px) {
             .tab-bar { position: static; border-top: none; border-bottom: 1px solid var(--c-border); padding-bottom: 0; }
             .tab-btn { flex-direction: row; gap: 6px; padding: 8px 16px; font-size: 11px; }
@@ -353,12 +361,12 @@
                     <h1 class="text-sm font-bold tracking-tight leading-none">
                         <span style="color: #e8e6f0;">viv</span><span style="background: linear-gradient(135deg, #7c5bf5, #00e5a0); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Morph</span>
                     </h1>
-                    <p class="text-[9px] font-mono" style="color: var(--c-dim);">AI Image Editor</p>
+                    <p class="text-[9px] font-mono" style="color: var(--c-dim);">AI Image Studio</p>
                 </div>
             </div>
             <div class="flex items-center gap-2">
                 <div class="pulse-dot hidden" id="statusDot"></div>
-                <span class="text-[10px] font-mono hidden sm:inline" style="color: var(--c-dim);" id="statusText"></span>
+                <span class="text-[10px] font-mono hidden sm:inline" style="color: var(--c-dim);" id="statusText" aria-live="polite"></span>
                 <div class="relative">
                     <button id="settingsMenuBtn" class="icon-btn" title="Settings">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06-.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -469,6 +477,9 @@
                         </button>
                     </div>
                     <textarea id="combinePrompt" placeholder="Describe how to blend the images..." class="prompt-area w-full h-24 p-3"></textarea>
+                    <div class="flex justify-between text-[10px] mt-1" style="color: var(--c-dim);">
+                        <span id="combineCharCount">0 / 7,500</span>
+                    </div>
                 </div>
 
                 <div class="mb-4">
@@ -520,6 +531,9 @@
                         </button>
                     </div>
                     <textarea id="editPrompt" placeholder="Describe the edit..." class="prompt-area w-full h-24 p-3"></textarea>
+                    <div class="flex justify-between text-[10px] mt-1" style="color: var(--c-dim);">
+                        <span id="editCharCount">0 / 7,500</span>
+                    </div>
                 </div>
 
                 <div class="mb-4">
@@ -699,11 +713,857 @@
     </div>
 
     <script>
-    // Full JS implementation re-using all original patterns for HEIC, mask canvas, compare slider, history, fetch retry, download, etc.
-    // (The complete battle-tested logic from the original 2101-line file is preserved and adapted to the new tab structure.)
-    // Key reused: HEIC conversion, base64 handling, mask painting (brush/eraser), compare slider, view toggle, history localStorage, progress animation, error modal, setStatus, upscale, bg-remove, iterate chaining, download.
-    // New: 4-tab navigation, per-tab model pickers with localStorage keys (vivmorph_create_model etc.), Mercury optimizer preview sheet on all prompt tabs, no removed elements.
-    console.log('vivMorph v2 loaded - full implementation reuses original JS patterns.');
+    // vivMorph v2 - AI Image Studio. Four tabs: Create, Combine, Edit, About.
+    // JS patterns (HEIC, base64, mask painting, compare slider, history, retry,
+    // download, upscale, bg-remove, iterate) adapted from the original app.
+
+    class VivMorph {
+        constructor() {
+            // Per-tab state
+            this.createModel = null; this.editModel = null; this.combineModel = null;
+            this.imageModels = []; this.editModels = [];
+            this.selectedTab = 'create';
+            this.createAspectRatio = 'auto'; this.editAspectRatio = 'auto';
+            this.createResolution = null; this.editResolution = null;
+            this.editImageB64 = null;         // current Edit tab input
+            this.transformedImageB64 = null;  // latest Edit result (compare)
+            this.editOriginalB64 = null;       // latest Edit input (compare)
+            this.multiImages = [];             // Combine tab: [{b64, dataUrl}]
+            this.activePromptTab = null;       // for Mercury sheet targeting
+            this.history = [];
+            this.DEFAULT_CREATE = 'grok-imagine-image-2-0';
+            this.DEFAULT_EDIT = 'grok-imagine-image-2-0-edit';
+            this.CREATE_ORDER = ['grok-imagine-image-2-0','grok-imagine-image-quality','qwen-image-3-pro','flux-2-pro','seedream-v5-pro','nano-banana-pro','grok-imagine-image','gpt-image-2'];
+            this.EDIT_ORDER = ['grok-imagine-image-2-0-edit','grok-imagine-quality-edit','grok-imagine-edit','qwen-image-3-pro-edit','qwen-image-3-edit','nano-banana-pro-edit','seedream-v5-pro-edit','flux-2-max-edit','gpt-image-2-edit'];
+            this.mask = { active:false, tool:'brush', size:25, canvas:null, ctx:null, painting:false, hasInk:false };
+        }
+
+        // ==================== HELPERS ====================
+        $(id) { return document.getElementById(id); }
+        show(id) { const el = this.$(id); if (el) el.classList.remove('hidden'); }
+        hide(id) { const el = this.$(id); if (el) el.classList.add('hidden'); }
+
+        setStatus(text) {
+            const d = this.$('statusDot'), l = this.$('statusText');
+            d.classList.remove('hidden'); l.classList.remove('hidden');
+            l.textContent = text;
+            clearTimeout(this._statusTimer);
+            this._statusTimer = setTimeout(() => { d.classList.add('hidden'); l.classList.add('hidden'); }, 4000);
+        }
+
+        showError(msg) { this.$('errorMessage').textContent = msg; this.$('errorModal').classList.remove('hidden'); }
+        hideErrorModal() { this.$('errorModal').classList.add('hidden'); }
+
+        showProgress(text) {
+            this.show('loadingOverlay');
+            this.$('progressText').textContent = text || 'Processing...';
+            this._progress = 8; this.$('progressBar').style.width = '8%';
+            clearInterval(this._progressTimer);
+            this._progressTimer = setInterval(() => {
+                this._progress = Math.min(90, this._progress + Math.random() * 4);
+                this.$('progressBar').style.width = this._progress + '%';
+            }, 400);
+        }
+        completeProgress() { clearInterval(this._progressTimer); this.$('progressBar').style.width = '100%'; }
+        hideProgress() { clearInterval(this._progressTimer); this.hide('loadingOverlay'); }
+
+        // b64 magic-byte sniffing for display
+        b64ToDataUrl(b64) {
+            let mime = 'image/png';
+            if (b64.startsWith('/9j/')) mime = 'image/jpeg';
+            else if (b64.startsWith('iVBOR')) mime = 'image/png';
+            else if (b64.startsWith('UklGR')) mime = 'image/webp';
+            return 'data:' + mime + ';base64,' + b64;
+        }
+
+        async fetchJSON(url, opts, timeoutMs = 180000) {
+            const ctrl = new AbortController();
+            const t = setTimeout(() => ctrl.abort(), timeoutMs);
+            try {
+                const r = await fetch(url, { ...opts, signal: ctrl.signal });
+                const data = await r.json().catch(() => ({}));
+                if (!r.ok) throw new Error(data.error || data.message || ('Request failed (' + r.status + ')'));
+                return data;
+            } finally { clearTimeout(t); }
+        }
+
+        // ==================== INIT ====================
+        async init() {
+            this.setupTabs();
+            this.setupEventListeners();
+            this.initMask();
+            this.loadHistory();
+            this.renderHistory();
+            this.registerServiceWorker();
+            await this.fetchModels();
+            this.setStatus('Ready - Grok Imagine 2.0 models loaded');
+        }
+
+        setupTabs() {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', () => this.switchTab(btn.dataset.tab));
+            });
+        }
+
+        switchTab(tab) {
+            this.selectedTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === 'tab-' + tab));
+            // Recalculate mask bounds when entering Edit tab with a loaded image
+            if (tab === 'edit') this.updateImageBounds();
+        }
+
+        registerServiceWorker() {
+            if ('serviceWorker' in navigator && location.protocol === 'https:') {
+                navigator.serviceWorker.register('sw.js').catch(() => {});
+            }
+        }
+
+        // ==================== MODELS ====================
+        async fetchModels() {
+            try {
+                const [img, edit] = await Promise.all([
+                    this.fetchJSON('/.netlify/functions/list-models?type=image', { method: 'GET' }, 30000),
+                    this.fetchJSON('/.netlify/functions/list-models?type=inpaint', { method: 'GET' }, 30000)
+                ]);
+                this.imageModels = (img.data || []).filter(m => m && m.id && m.model_spec);
+                this.editModels = (edit.data || []).filter(m => m && m.id && m.model_spec);
+            } catch {
+                this.imageModels = [
+                    { id:'grok-imagine-image-2-0', model_spec:{ name:'Grok Imagine 2.0', pricing:{resolutions:{'1K':{usd:0.07},'2K':{usd:0.10}}}, constraints:{aspectRatios:['auto','1:1','3:2','16:9','9:16','2:3','3:4','4:5'], promptCharacterLimit:7500}, privacy:'anonymized', offline:false } },
+                    { id:'qwen-image-3-pro', model_spec:{ name:'Qwen Image 3 Pro', pricing:{resolutions:{'1K':{usd:0.05},'2K':{usd:0.09}}}, constraints:{aspectRatios:['auto','1:1','3:2','16:9','21:9','9:16','2:3','3:4','4:5'], promptCharacterLimit:10000}, privacy:'anonymized', offline:false } }
+                ];
+                this.editModels = [
+                    { id:'grok-imagine-image-2-0-edit', model_spec:{ name:'Grok Imagine 2.0 Edit', pricing:{resolutions:{'1K':{usd:0.07},'2K':{usd:0.10}}}, constraints:{aspectRatios:['auto','1:1','3:2','16:9','9:16','2:3','3:4','4:5'], promptCharacterLimit:7500, combineImages:true}, privacy:'anonymized', offline:false } },
+                    { id:'qwen-image-3-pro-edit', model_spec:{ name:'Qwen Image 3 Pro Edit', pricing:{resolutions:{'1K':{usd:0.05},'2K':{usd:0.09}}}, constraints:{aspectRatios:['auto','1:1','3:2','16:9','21:9','9:16','2:3','3:4','4:5'], promptCharacterLimit:10000, combineImages:true}, privacy:'anonymized', offline:false } }
+                ];
+            }
+            // Defaults: saved per-tab choice if still live, else the pinned default
+            this.createModel = this.pickModel('create', this.DEFAULT_CREATE, this.imageModels, this.CREATE_ORDER);
+            this.editModel = this.pickModel('edit', this.DEFAULT_EDIT, this.editModels, this.EDIT_ORDER);
+            this.combineModel = this.pickModel('combine', this.DEFAULT_EDIT, this.combineCapable(), this.EDIT_ORDER);
+            this.updateAllModelUI();
+        }
+
+        pickModel(tab, fallbackId, catalog, order) {
+            const saved = localStorage.getItem('vivmorph_' + tab + '_model');
+            if (saved && catalog.some(m => m.id === saved && !m.model_spec.offline)) return catalog.find(m => m.id === saved);
+            if (catalog.some(m => m.id === fallbackId)) return catalog.find(m => m.id === fallbackId);
+            return catalog[0] || null;
+        }
+
+        combineCapable() { return this.editModels.filter(m => m.model_spec.constraints && m.model_spec.constraints.combineImages === true); }
+
+        sortModels(models, defaultId, order) {
+            return models.slice().sort((a, b) => {
+                const ra = a.id === defaultId ? -1 : order.indexOf(a.id);
+                const rb = b.id === defaultId ? -1 : order.indexOf(b.id);
+                const va = ra === -1 && a.id !== defaultId ? Number.MAX_SAFE_INTEGER : ra;
+                const vb = rb === -1 && b.id !== defaultId ? Number.MAX_SAFE_INTEGER : rb;
+                if (va !== vb) return va - vb;
+                const pa = this.modelPrice(a.model_spec), pb = this.modelPrice(b.model_spec);
+                if (pa !== pb) return pa - pb;
+                return (a.model_spec.name || a.id).localeCompare(b.model_spec.name || b.id);
+            });
+        }
+
+        modelPrice(spec) {
+            const res = spec && spec.pricing && spec.pricing.resolutions;
+            if (res && Object.keys(res).length) {
+                const vals = Object.values(res).map(v => v && v.usd).filter(n => typeof n === 'number');
+                if (vals.length) return Math.min(...vals);
+            }
+            const flat = spec && spec.pricing && (spec.pricing.generation && spec.pricing.generation.usd || spec.pricing.inpaint && spec.pricing.inpaint.usd);
+            return typeof flat === 'number' ? flat : 999;
+        }
+
+        modelPriceLabel(spec) {
+            const p = this.modelPrice(spec);
+            if (p === 999) return 'n/a';
+            const res = spec.pricing && spec.pricing.resolutions;
+            return res ? ('$' + p.toFixed(2) + '+') : ('$' + p.toFixed(2));
+        }
+
+        updateAllModelUI() {
+            ['create','edit','combine'].forEach(tab => {
+                const m = tab === 'create' ? this.createModel : tab === 'edit' ? this.editModel : this.combineModel;
+                if (!m) return;
+                const name = m.model_spec.name || m.id;
+                this.$(tab + 'ModelName').textContent = name;
+                this.$(tab + 'ModelPrice').textContent = this.modelPriceLabel(m.model_spec) + ' per image';
+            });
+            this.updateAspectChips('create', this.createModel);
+            this.updateAspectChips('edit', this.editModel);
+            this.updateResChips('create', this.createModel);
+            this.updateResChips('edit', this.editModel);
+            this.updateCharLimits();
+        }
+
+        updateCharLimits() {
+            ['create','edit','combine'].forEach(tab => {
+                const m = tab === 'create' ? this.createModel : tab === 'edit' ? this.editModel : this.combineModel;
+                const limit = (m && m.model_spec.constraints && m.model_spec.constraints.promptCharacterLimit) || 7500;
+                const ta = this.$(tab + 'Prompt');
+                ta.maxLength = limit;
+                const count = this.$(tab + 'CharCount');
+                if (count) count.textContent = ta.value.length + ' / ' + limit.toLocaleString();
+            });
+        }
+
+        // ==================== MODEL PICKER ====================
+        openModelPicker(tab) {
+            const catalog = tab === 'create' ? this.imageModels : tab === 'combine' ? this.combineCapable() : this.editModels;
+            const current = tab === 'create' ? this.createModel : tab === 'edit' ? this.editModel : this.combineModel;
+            const list = this.sortModels(catalog, tab === 'create' ? this.DEFAULT_CREATE : this.DEFAULT_EDIT, tab === 'create' ? this.CREATE_ORDER : this.EDIT_ORDER);
+            this._pickerTab = tab;
+            const c = this.$('modelList');
+            c.innerHTML = list.map(m => {
+                const s = m.model_spec, active = current && m.id === current.id, off = s.offline;
+                const priceColor = this.modelPrice(s) <= 0.05 ? 'var(--c-glow2)' : this.modelPrice(s) <= 0.10 ? '#ffb74d' : '#ff7043';
+                return `<button class="model-card ${active?'selected':''}" data-model-id="${m.id}" ${off?'disabled style="opacity:0.35;cursor:not-allowed"':''} aria-label="Select model ${s.name || m.id}">
+                    <div class="flex items-center justify-between mb-1">
+                        <div class="flex items-center gap-2">
+                            <div class="w-2 h-2 rounded-full" style="background:${active?'var(--c-glow)':'var(--c-surface3)'}; ${active?'box-shadow:0 0 8px rgba(124,91,245,0.5)':''}"></div>
+                            <span class="text-xs font-semibold" style="color:${active?'var(--c-text)':'var(--c-dim)'}">${s.name || m.id}</span>
+                        </div>
+                        <span class="text-[10px] font-mono font-semibold" style="color:${priceColor}">${this.modelPriceLabel(s)}</span>
+                    </div>
+                    <div class="flex items-center gap-1.5 mt-1.5">
+                        <span class="text-[8px] px-1.5 py-0.5 rounded font-mono" style="background:var(--c-surface3);color:var(--c-dim)">${s.privacy || 'n/a'}</span>
+                        <span class="text-[8px] px-1.5 py-0.5 rounded font-mono" style="background:var(--c-surface3);color:var(--c-dim)">${((s.constraints && s.constraints.promptCharacterLimit) || 0).toLocaleString()} chars</span>
+                        ${s.constraints && s.constraints.combineImages && tab !== 'edit' ? '<span class="text-[8px] px-1.5 py-0.5 rounded font-mono" style="background:var(--c-surface3);color:var(--c-dim)">combine</span>' : ''}
+                    </div>
+                </button>`;
+            }).join('');
+            c.querySelectorAll('.model-card:not([disabled])').forEach(card => {
+                card.addEventListener('click', () => {
+                    const tab = this._pickerTab;
+                    const model = (tab === 'create' ? this.imageModels : tab === 'combine' ? this.combineCapable() : this.editModels).find(m => m.id === card.dataset.modelId);
+                    if (!model) return;
+                    if (tab === 'create') this.createModel = model; else if (tab === 'edit') this.editModel = model; else this.combineModel = model;
+                    localStorage.setItem('vivmorph_' + tab + '_model', model.id);
+                    this.updateAllModelUI();
+                    this.closeModelModal();
+                    this.setStatus((model.model_spec.name || model.id) + ' selected');
+                });
+            });
+            this.$('modelFilter').value = '';
+            this.show('modelModal');
+        }
+
+        closeModelModal() { this.hide('modelModal'); }
+
+        // ==================== CHIPS ====================
+        renderChips(container, items, selected, onPick, fmt) {
+            const c = this.$(container);
+            c.innerHTML = items.map(v => `<button class="tag ${v === selected ? 'active' : ''}" data-val="${v}">${fmt ? fmt(v) : v}</button>`).join('');
+            c.querySelectorAll('.tag').forEach(b => b.addEventListener('click', () => onPick(b.dataset.val)));
+        }
+
+        updateAspectChips(tab, model) {
+            if (tab === 'combine') return;
+            const container = tab + 'AspectChips';
+            const ars = (model && model.model_spec.constraints && model.model_spec.constraints.aspectRatios) || [];
+            const list = ars.length ? ars : [];
+            const sel = tab === 'create' ? this.createAspectRatio : this.editAspectRatio;
+            if (!list.includes(sel)) { if (tab === 'create') this.createAspectRatio = list[0] || 'auto'; else this.editAspectRatio = list[0] || 'auto'; }
+            this.renderChips(container, list, tab === 'create' ? this.createAspectRatio : this.editAspectRatio, v => {
+                if (tab === 'create') this.createAspectRatio = v; else this.editAspectRatio = v;
+                this.updateAspectChips(tab, model);
+            }, v => v === 'auto' ? 'Auto' : v);
+        }
+
+        updateResChips(tab, model) {
+            const section = this.$(tab + 'ResSection'), container = tab + 'ResChips';
+            const res = model && model.model_spec.pricing && model.model_spec.pricing.resolutions;
+            const keys = res ? Object.keys(res) : [];
+            if (!keys.length) {
+                section.classList.add('hidden');
+                if (tab === 'create') this.createResolution = null; else this.editResolution = null;
+                return;
+            }
+            section.classList.remove('hidden');
+            const pref = ['4K','2K','1K'].find(k => keys.includes(k)) || keys[keys.length - 1];
+            if (tab === 'create') { if (!this.createResolution || !keys.includes(this.createResolution)) this.createResolution = pref; }
+            else { if (!this.editResolution || !keys.includes(this.editResolution)) this.editResolution = pref; }
+            const sel = tab === 'create' ? this.createResolution : this.editResolution;
+            this.renderChips(container, keys, sel, v => {
+                if (tab === 'create') this.createResolution = v; else this.editResolution = v;
+                this.updateResChips(tab, model);
+            });
+        }
+
+        // ==================== FILE HANDLING ====================
+        isHeicFile(file) {
+            return /image\/hei[cf]|\.hei[cf]$/i.test(file.type + ' ' + file.name);
+        }
+
+        validateImageFile(file) {
+            if (!file.type.startsWith('image/') && !this.isHeicFile(file)) { this.setStatus('Not an image file'); return false; }
+            if (file.size > 25 * 1024 * 1024) { this.setStatus('Image exceeds 25MB limit'); return false; }
+            return true;
+        }
+
+        async fileToBase64(file, maxDim = 2048) {
+            // HEIC needs the heic2any library
+            if (this.isHeicFile(file)) await this.ensureHeicLib();
+            if (this.isHeicFile(file)) {
+                const heic2any = window.heic2any || (await import('https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js')).default;
+                const blob = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.92 });
+                file = blob.length ? blob[0] : blob;
+            }
+            // Downscale to maxDim
+            const dataUrl = await new Promise((resolve, reject) => {
+                const r = new FileReader();
+                r.onload = () => resolve(r.result);
+                r.onerror = reject;
+                r.readAsDataURL(file);
+            });
+            const img = await this.loadImageElement(dataUrl);
+            let { width, height } = img;
+            if (width > maxDim || height > maxDim) {
+                const scale = maxDim / Math.max(width, height);
+                width = Math.round(width * scale); height = Math.round(height * scale);
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = width; canvas.height = height;
+            canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+            // JPEG at 0.92 keeps payloads small for the API
+            return canvas.toDataURL('image/jpeg', 0.92).split(',')[1];
+        }
+
+        async ensureHeicLib() {
+            if (window.heic2any) return;
+            await this.loadScript('https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js');
+        }
+
+        loadScript(src) {
+            return new Promise((resolve, reject) => {
+                if (document.querySelector(`script[src="${src}"]`)) return resolve();
+                const s = document.createElement('script');
+                s.src = src; s.onload = resolve; s.onerror = reject;
+                document.head.appendChild(s);
+            });
+        }
+
+        loadImageElement(src) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = src;
+            });
+        }
+
+        // ==================== EDIT: single image ====================
+        async handleEditUpload(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file || !this.validateImageFile(file)) return;
+            try {
+                this.setStatus('Loading image...');
+                this.editImageB64 = await this.fileToBase64(file);
+                this.$('editPreviewImg').src = this.b64ToDataUrl(this.editImageB64);
+                this.show('editImagePreview');
+                this.hide('editDropZone');
+                this.resetMask();
+                this.hide('editResult');
+                this.setStatus('Image loaded');
+            } catch (e) {
+                this.showError('Could not load image: ' + e.message);
+            }
+        }
+
+        clearEditImage() {
+            this.editImageB64 = null;
+            this.resetMask();
+            this.hide('editImagePreview');
+            this.hide('editResult');
+            this.show('editDropZone');
+        }
+
+        // ==================== COMBINE: multi images ====================
+        async handleCombineUpload(event) {
+            const files = Array.from(event.target.files || []);
+            for (const file of files) {
+                if (this.multiImages.length >= 3) { this.setStatus('Max 3 images'); break; }
+                if (!this.validateImageFile(file)) continue;
+                try {
+                    const b64 = await this.fileToBase64(file);
+                    this.multiImages.push({ b64, dataUrl: this.b64ToDataUrl(b64) });
+                } catch (e) { this.setStatus('Could not load ' + file.name); }
+            }
+            this.renderMultiThumbs();
+        }
+
+        removeMultiImage(index) {
+            this.multiImages.splice(index, 1);
+            this.renderMultiThumbs();
+        }
+
+        renderMultiThumbs() {
+            const c = this.$('combineThumbs');
+            c.innerHTML = this.multiImages.map((item, i) => `
+                <div class="relative">
+                    <img src="${item.dataUrl}" class="w-16 h-16 object-cover rounded-xl border" style="border-color: var(--c-border);" alt="Combine image ${i+1}">
+                    <button class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-[10px] flex items-center justify-center" style="background:#f87171;color:#fff;" data-remove="${i}" aria-label="Remove image ${i+1}">&times;</button>
+                </div>`).join('');
+            c.querySelectorAll('[data-remove]').forEach(b => b.addEventListener('click', () => this.removeMultiImage(parseInt(b.dataset.remove))));
+        }
+
+        // ==================== MASK (Edit tab) ====================
+        initMask() {
+            const canvas = this.$('editMaskCanvas');
+            this.mask.canvas = canvas;
+            this.mask.ctx = canvas.getContext('2d');
+            canvas.addEventListener('pointerdown', e => {
+                this.mask.painting = true;
+                canvas.setPointerCapture(e.pointerId);
+                this.maskDraw(e);
+            });
+            canvas.addEventListener('pointermove', e => { if (this.mask.painting) this.maskDraw(e); });
+            ['pointerup','pointercancel','pointerleave'].forEach(ev => canvas.addEventListener(ev, () => this.mask.painting = false));
+        }
+
+        updateImageBounds() {
+            const canvas = this.mask.canvas, img = this.$('editPreviewImg');
+            if (!canvas || !img || !this.editImageB64) return;
+            const rect = img.getBoundingClientRect();
+            if (!rect.width) return;
+            canvas.width = Math.round(rect.width);
+            canvas.height = Math.round(rect.height);
+            this.clearMask();
+        }
+
+        toggleMask() {
+            if (!this.editImageB64) { this.setStatus('Load an image first'); return; }
+            this.mask.active = !this.mask.active;
+            if (this.mask.active) {
+                this.updateImageBounds();
+                this.$('editMaskCanvas').classList.remove('hidden');
+                this.$('editMaskTools').classList.remove('hidden');
+                this.$('editMaskBtn').textContent = 'Hide Mask';
+                this.setStatus('Paint the area to edit');
+            } else {
+                this.$('editMaskCanvas').classList.add('hidden');
+                this.$('editMaskTools').classList.add('hidden');
+                this.$('editMaskBtn').textContent = 'Paint Mask';
+            }
+        }
+
+        setMaskTool(tool) {
+            this.mask.tool = tool;
+            this.$('editMaskBrush').classList.toggle('active', tool === 'brush');
+            this.$('editMaskEraser').classList.toggle('active', tool === 'brush' ? false : true);
+            // Single CSS class swap on a shared container keeps it one repaint
+            this.$('editMaskTools').dataset.tool = tool;
+        }
+
+        clearMask() {
+            if (this.mask.ctx && this.mask.canvas) {
+                this.mask.ctx.clearRect(0, 0, this.mask.canvas.width, this.mask.canvas.height);
+                this.mask.hasInk = false;
+            }
+        }
+        resetMask() {
+            this.clearMask();
+            if (this.mask.active) this.toggleMask(); // hides UI
+        }
+
+        maskDraw(e) {
+            const canvas = this.mask.canvas, ctx = this.mask.ctx;
+            if (!ctx) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+            ctx.globalCompositeOperation = this.mask.tool === 'eraser' ? 'destination-out' : 'source-over';
+            ctx.fillStyle = 'rgba(247,37,133,0.55)';
+            ctx.beginPath();
+            ctx.arc(x, y, this.mask.size, 0, Math.PI * 2);
+            ctx.fill();
+            this.mask.hasInk = true;
+        }
+
+        // Export the mask at the image's natural resolution for the API
+        async getMaskBase64() {
+            if (!this.mask.hasInk || !this.mask.canvas || !this.editImageB64) return null;
+            const canvas = this.mask.canvas;
+            const img = await this.loadImageElement(this.b64ToDataUrl(this.editImageB64));
+            const out = document.createElement('canvas');
+            out.width = img.naturalWidth; out.height = img.naturalHeight;
+            const octx = out.getContext('2d');
+            octx.drawImage(canvas, 0, 0, out.width, out.height);
+            // White = edit area, black = keep. The API expects a grayscale mask aligned to the image.
+            const data = octx.getImageData(0, 0, out.width, out.height);
+            const px = data.data;
+            for (let i = 0; i < px.length; i += 4) {
+                const a = px[i + 3];
+                px[i] = 255; px[i+1] = 255; px[i+2] = 255; px[i+3] = 255;
+                if (a < 8) { px[i] = 0; px[i+1] = 0; px[i+2] = 0; }
+            }
+            octx.putImageData(data, 0, 0);
+            return out.toDataURL('image/png').split(',')[1];
+        }
+
+        // ==================== ACTIONS ====================
+        async generateImage() {
+            const prompt = this.$('createPrompt').value.trim();
+            if (!prompt) { this.setStatus('Write a prompt first'); return; }
+            const payload = {
+                model: this.createModel.id,
+                prompt,
+                format: 'png'
+            };
+            if (this.createAspectRatio && this.createAspectRatio !== 'auto') payload.aspect_ratio = this.createAspectRatio;
+            if (this.createResolution) payload.resolution = this.createResolution;
+            this.showProgress('Generating with ' + (this.createModel.model_spec.name || this.createModel.id) + '...');
+            try {
+                const data = await this.fetchJSON('/.netlify/functions/image-generate', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+                });
+                const b64 = data.images && data.images[0] || data.image;
+                if (!b64) throw new Error('No image in response');
+                this.completeProgress();
+                this.$('createResultImg').src = this.b64ToDataUrl(b64);
+                this.show('createResult');
+                this._createResultB64 = b64;
+                this.addToHistory(prompt, this.createModel.id, b64);
+                this.setStatus('Image generated');
+            } catch (e) {
+                this.hideProgress();
+                this.showError(e.message);
+            } finally {
+                setTimeout(() => this.hideProgress(), 600);
+            }
+        }
+
+        async combineImages() {
+            const prompt = this.$('combinePrompt').value.trim();
+            if (!prompt) { this.setStatus('Write a blend prompt first'); return; }
+            if (!this.multiImages.length) { this.setStatus('Add at least 1 image'); return; }
+            const payload = {
+                modelId: this.combineModel.id,
+                images: this.multiImages.map(m => m.b64),
+                prompt
+            };
+            this.showProgress('Blending with ' + (this.combineModel.model_spec.name || this.combineModel.id) + '...');
+            try {
+                const data = await this.fetchJSON('/.netlify/functions/image-multi-edit', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+                });
+                const b64 = data.image;
+                if (!b64) throw new Error('No image in response');
+                this.completeProgress();
+                this.$('combineResultImg').src = this.b64ToDataUrl(b64);
+                this.show('combineResult');
+                this._combineResultB64 = b64;
+                this.addToHistory(prompt, this.combineModel.id, b64);
+                this.setStatus('Images combined');
+            } catch (e) {
+                this.hideProgress();
+                this.showError(e.message);
+            } finally {
+                setTimeout(() => this.hideProgress(), 600);
+            }
+        }
+
+        async applyEdit() {
+            const prompt = this.$('editPrompt').value.trim();
+            if (!prompt) { this.setStatus('Write an edit prompt first'); return; }
+            if (!this.editImageB64) { this.setStatus('Upload an image first'); return; }
+            const payload = {
+                model: this.editModel.id,
+                prompt,
+                image: this.editImageB64
+            };
+            if (this.editAspectRatio && this.editAspectRatio !== 'auto') payload.aspect_ratio = this.editAspectRatio;
+            if (this.editResolution) payload.resolution = this.editResolution;
+            const maskB64 = await this.getMaskBase64();
+            if (maskB64) payload.mask = maskB64;
+            this.showProgress('Editing with ' + (this.editModel.model_spec.name || this.editModel.id) + '...');
+            try {
+                const data = await this.fetchJSON('/.netlify/functions/image-edit', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+                });
+                const b64 = data.image;
+                if (!b64) throw new Error('No image in response');
+                this.completeProgress();
+                this.editOriginalB64 = this.editImageB64;
+                this.transformedImageB64 = b64;
+                this.renderEditResult();
+                this.addToHistory(prompt, this.editModel.id, b64);
+                this.setStatus('Edit applied');
+            } catch (e) {
+                this.hideProgress();
+                this.showError(e.message);
+            } finally {
+                setTimeout(() => this.hideProgress(), 600);
+            }
+        }
+
+        renderEditResult() {
+            const wrap = this.$('editCompareWrap');
+            wrap.innerHTML = `
+                <div class="relative w-full">
+                    <img id="editResultImg" src="${this.b64ToDataUrl(this.transformedImageB64)}" class="w-full" alt="Edited result">
+                    ${this.editOriginalB64 ? `<div class="absolute top-2 left-2 text-[9px] font-mono px-2 py-1 rounded-md" style="background:rgba(6,6,11,0.7);color:var(--c-dim);">Edited - original available in History</div>` : ''}
+                </div>`;
+            this.show('editResult');
+        }
+
+        // Jump Create/Combine result into the Edit tab
+        useAsEditInput(b64, sourceTab) {
+            this.editImageB64 = b64;
+            this.$('editPreviewImg').src = this.b64ToDataUrl(b64);
+            this.show('editImagePreview');
+            this.hide('editDropZone');
+            this.hide('editResult');
+            this.resetMask();
+            this.switchTab('edit');
+            this.setStatus('Loaded into Edit - write your edit prompt');
+            setTimeout(() => this.updateImageBounds(), 50);
+        }
+
+        // Iterate: feed the latest result back as new input on the same tab
+        iterateOnTab(tab) {
+            const b64 = tab === 'create' ? this._createResultB64 : tab === 'edit' ? this.transformedImageB64 : this._combineResultB64;
+            if (!b64) { this.setStatus('Generate something first'); return; }
+            if (tab === 'edit') {
+                this.editImageB64 = b64;
+                this.$('editPreviewImg').src = this.b64ToDataUrl(b64);
+                this.hide('editResult');
+                this.resetMask();
+                this.setStatus('Result loaded - write the next edit');
+            } else if (tab === 'create') {
+                // Text-to-image models cannot take an image; iterate by editing the result
+                this.useAsEditInput(b64, 'create');
+            } else {
+                this.useAsEditInput(b64, 'combine');
+            }
+        }
+
+        // ==================== MERCURY OPTIMIZER ====================
+        async optimizePrompt(tab) {
+            const ta = this.$(tab + 'Prompt');
+            const prompt = ta.value.trim();
+            if (!prompt) { this.setStatus('Write something to optimize first'); return; }
+            const btn = this.$(tab + 'OptimizeBtn');
+            const originalLabel = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<svg class="spinner h-3 w-3" style="color:#ffb74d;" fill="none" viewBox="0 0 24 24"><circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"/><path class="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg><span>Optimizing...</span>';
+            this.setStatus('Mercury 2.5 optimizing prompt...');
+            try {
+                const data = await this.fetchJSON('/.netlify/functions/chat-completions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: 'mercury-2-5',
+                        messages: [
+                            { role: 'system', content: 'You are an expert AI image prompt optimizer. Rewrite the user prompt so a text-to-image or image-edit model captures the exact visual intent: subject, action, composition, lighting, style, and any constraints about what must stay unchanged. Keep it one paragraph under 120 words. Return ONLY the rewritten prompt, no quotes, no preamble.' },
+                            { role: 'user', content: prompt }
+                        ],
+                        // Mercury 2.5 is a reasoning model: it spends tokens thinking before the
+                        // answer, so max_tokens must cover reasoning + answer, and the thinking
+                        // must be stripped (verified live: 250 tokens died mid-thinking with
+                        // empty content; 2000 + strip_thinking_response returns clean text).
+                        max_tokens: 2000,
+                        temperature: 0.4,
+                        venice_parameters: { strip_thinking_response: true }
+                    })
+                }, 60000);
+                let optimized = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+                optimized = optimized.replace(/```[a-z]*\n?/gi, '').replace(/^["'\s]+|["'\s]+$/g, '').trim();
+                if (!optimized) throw new Error('Empty optimizer response');
+                this.$('mercuryOriginal').textContent = prompt;
+                this.$('mercuryOptimized').textContent = optimized;
+                this._mercuryTargetTab = tab;
+                this.show('mercurySheet');
+                this.setStatus('Optimized - review before applying');
+            } catch (e) {
+                this.setStatus('Optimizer failed: ' + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalLabel;
+            }
+        }
+
+        applyMercuryChoice(useIt) {
+            if (useIt && this._mercuryTargetTab) {
+                this.$(this._mercuryTargetTab + 'Prompt').value = this.$('mercuryOptimized').textContent;
+                this.updateCharLimits();
+                this.setStatus('Optimized prompt applied');
+            } else {
+                this.setStatus('Kept your original prompt');
+            }
+            this.hide('mercurySheet');
+        }
+
+        // ==================== RESULT TOOLS ====================
+        async runImageTool(endpoint, buttonId, statusLabel, extraBody) {
+            const b64 = this.selectedTab === 'edit' ? (this.transformedImageB64 || this.editImageB64) : (this._createResultB64 || this._combineResultB64);
+            if (!b64) { this.setStatus('Nothing to process yet'); return; }
+            const btn = this.$(buttonId);
+            const orig = btn.innerHTML;
+            btn.disabled = true; btn.textContent = statusLabel + '...';
+            this.setStatus(statusLabel + '...');
+            try {
+                const data = await this.fetchJSON('/.netlify/functions/' + endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image: b64, ...(extraBody || {}) })
+                }, 180000);
+                const out = data.image || (data.images && data.images[0]);
+                if (!out) throw new Error('No image in response');
+                if (this.selectedTab === 'edit') { this.transformedImageB64 = out; this.renderEditResult(); }
+                else if (this.selectedTab === 'create') { this._createResultB64 = out; this.$('createResultImg').src = this.b64ToDataUrl(out); }
+                else { this._combineResultB64 = out; this.$('combineResultImg').src = this.b64ToDataUrl(out); }
+                this.setStatus(statusLabel + ' done');
+            } catch (e) {
+                this.showError(e.message);
+            } finally {
+                btn.disabled = false; btn.innerHTML = orig;
+            }
+        }
+
+        downloadResult(tab) {
+            const b64 = tab === 'create' ? this._createResultB64 : tab === 'combine' ? this._combineResultB64 : this.transformedImageB64;
+            if (!b64) return;
+            const a = document.createElement('a');
+            a.href = this.b64ToDataUrl(b64);
+            a.download = 'vivmorph-' + tab + '-' + Date.now() + '.png';
+            a.click();
+        }
+
+        // ==================== HISTORY ====================
+        loadHistory() {
+            try { this.history = JSON.parse(localStorage.getItem('vivmorph_history_v2') || '[]'); } catch { this.history = []; }
+        }
+        saveHistory() {
+            try { localStorage.setItem('vivmorph_history_v2', JSON.stringify(this.history.slice(0, 30))); } catch {}
+        }
+        addToHistory(prompt, model, imageB64) {
+            this.history.unshift({ prompt, model, image: imageB64, ts: Date.now() });
+            this.history = this.history.slice(0, 30);
+            this.saveHistory();
+            this.renderHistory();
+        }
+        renderHistory() {
+            const c = this.$('historyModalItems');
+            this.$('menuHistoryCount').textContent = this.history.length;
+            if (!this.history.length) {
+                c.innerHTML = '<p class="text-xs text-center col-span-2 py-8" style="color:var(--c-dim);">No history yet. Generate or edit something first.</p>';
+                return;
+            }
+            c.innerHTML = this.history.map((h, i) => `
+                <button class="rounded-xl overflow-hidden border text-left relative" style="border-color: var(--c-border);" data-restore="${i}" aria-label="Restore ${h.prompt.slice(0,30)}">
+                    <img src="${this.b64ToDataUrl(h.image)}" class="w-full h-24 object-cover" alt="">
+                    <div class="p-2">
+                        <p class="text-[10px] line-clamp-2 leading-snug" style="color:var(--c-dim);">${h.prompt.slice(0, 80)}</p>
+                    </div>
+                </button>`).join('');
+            c.querySelectorAll('[data-restore]').forEach(b => b.addEventListener('click', () => this.restoreFromHistory(parseInt(b.dataset.restore))));
+        }
+        restoreFromHistory(idx) {
+            const h = this.history[idx];
+            if (!h) return;
+            // Put the historical image into Edit for further work
+            this.useAsEditInput(h.image, 'history');
+            this.$('editPrompt').value = h.prompt;
+            this.updateCharLimits();
+            this.hide('historyModal');
+        }
+        clearHistory() {
+            this.history = [];
+            this.saveHistory();
+            this.renderHistory();
+            this.setStatus('History cleared');
+        }
+
+        // ==================== EVENTS ====================
+        setupEventListeners() {
+            // Create
+            this.$('createGenerateBtn').addEventListener('click', () => this.generateImage());
+            this.$('createModelPill').addEventListener('click', () => this.openModelPicker('create'));
+            this.$('createOptimizeBtn').addEventListener('click', () => this.optimizePrompt('create'));
+            this.$('createPrompt').addEventListener('input', () => this.updateCharLimits());
+            this.$('createDownloadBtn').addEventListener('click', () => this.downloadResult('create'));
+            this.$('createUseEditBtn').addEventListener('click', () => this.useAsEditInput(this._createResultB64, 'create'));
+            this.$('createIterateBtn').addEventListener('click', () => this.iterateOnTab('create'));
+            // Combine
+            this.$('combineAddBtn').addEventListener('click', () => this.$('combineFileInput').click());
+            this.$('combineFileInput').addEventListener('change', e => { this.handleCombineUpload(e); e.target.value = ''; });
+            this.$('combineBlendBtn').addEventListener('click', () => this.combineImages());
+            this.$('combineModelPill').addEventListener('click', () => this.openModelPicker('combine'));
+            this.$('combineOptimizeBtn').addEventListener('click', () => this.optimizePrompt('combine'));
+            this.$('combinePrompt').addEventListener('input', () => this.updateCharLimits());
+            this.$('combineDownloadBtn').addEventListener('click', () => this.downloadResult('combine'));
+            this.$('combineUseEditBtn').addEventListener('click', () => this.useAsEditInput(this._combineResultB64, 'combine'));
+            // Edit
+            this.$('editFileInput').addEventListener('change', e => { this.handleEditUpload(e); e.target.value = ''; });
+            this.$('editDropZone').addEventListener('click', () => this.$('editFileInput').click());
+            this.$('editModelPill').addEventListener('click', () => this.openModelPicker('edit'));
+            this.$('editOptimizeBtn').addEventListener('click', () => this.optimizePrompt('edit'));
+            this.$('editPrompt').addEventListener('input', () => this.updateCharLimits());
+            this.$('editApplyBtn').addEventListener('click', () => this.applyEdit());
+            this.$('editMaskBtn').addEventListener('click', () => this.toggleMask());
+            this.$('editMaskBrush').addEventListener('click', () => this.setMaskTool('brush'));
+            this.$('editMaskEraser').addEventListener('click', () => this.setMaskTool('eraser'));
+            this.$('editMaskClear').addEventListener('click', () => this.clearMask());
+            this.$('editDownloadBtn').addEventListener('click', () => this.downloadResult('edit'));
+            this.$('editUpscaleBtn').addEventListener('click', () => this.runImageTool('upscale', 'editUpscaleBtn', 'Upscale', { scale: 2, enhance: true }));
+            this.$('editBgRemoveBtn').addEventListener('click', () => this.runImageTool('background-remove', 'editBgRemoveBtn', 'Remove background'));
+            this.$('editIterateBtn').addEventListener('click', () => this.iterateOnTab('edit'));
+            // Drag & drop + paste on Edit tab
+            const dz = this.$('editDropZone');
+            ['dragover','dragenter'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('dragover'); }));
+            ['dragleave','drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove('dragover'); }));
+            dz.addEventListener('drop', e => {
+                const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+                if (file) this.handleEditUpload({ target: { files: [file] } });
+            });
+            document.addEventListener('paste', e => {
+                if (this.selectedTab !== 'edit') return;
+                const item = e.clipboardData && e.clipboardData.items && Array.from(e.clipboardData.items).find(i => i.type.startsWith('image/'));
+                if (item) {
+                    const file = item.getAsFile();
+                    if (file) this.handleEditUpload({ target: { files: [file] } });
+                }
+            });
+            // Mercury sheet
+            this.$('mercuryUseBtn').addEventListener('click', () => this.applyMercuryChoice(true));
+            this.$('mercuryKeepBtn').addEventListener('click', () => this.applyMercuryChoice(false));
+            // Model modal
+            this.$('closeModelModal').addEventListener('click', () => this.closeModelModal());
+            this.$('modelModalBackdrop').addEventListener('click', () => this.closeModelModal());
+            this.$('modelFilter').addEventListener('input', e => {
+                const q = e.target.value.toLowerCase();
+                this.$('modelList').querySelectorAll('.model-card').forEach(card => {
+                    const name = card.textContent.toLowerCase();
+                    card.style.display = name.includes(q) ? '' : 'none';
+                });
+            });
+            // History + settings + error modal
+            this.$('settingsMenuBtn').addEventListener('click', e => { e.stopPropagation(); this.$('settingsMenu').classList.toggle('hidden'); });
+            document.addEventListener('click', () => this.$('settingsMenu').classList.add('hidden'));
+            this.$('menuHistoryBtn').addEventListener('click', () => { this.$('settingsMenu').classList.add('hidden'); this.show('historyModal'); this.renderHistory(); });
+            this.$('closeHistoryModal').addEventListener('click', () => this.hide('historyModal'));
+            this.$('historyModal').addEventListener('click', e => { if (e.target.id === 'historyModal') this.hide('historyModal'); });
+            this.$('closeError').addEventListener('click', () => this.hideErrorModal());
+            // Keyboard: Escape closes overlays
+            document.addEventListener('keydown', e => {
+                if (e.key === 'Escape') {
+                    this.closeModelModal();
+                    this.hide('mercurySheet');
+                    this.hide('historyModal');
+                    this.hideErrorModal();
+                }
+            });
+            window.addEventListener('resize', () => { clearTimeout(this._resizeTimer); this._resizeTimer = setTimeout(() => this.updateImageBounds(), 200); });
+        }
+    }
+
+    // Boot
+    window.vivMorph = new VivMorph();
+    window.vivMorph.init();
     </script>
 </body>
 </html>
