@@ -45,3 +45,19 @@ Then open http://localhost:3000
 - Single-image edit sends `model`; multi-edit sends `modelId`, per the Venice API contract.
 - Resolution tiers (1K, 2K, 4K) and quality tiers (low, medium, high) are shown only for models that support them, based on the live catalog.
 - The Combine tab only lists models whose catalog entry has `combineImages: true`.
+
+## Styles
+
+Tailwind is precompiled — the page loads `/styles.css`, not the Tailwind CDN runtime.
+After changing classes in `index.html` or rules in `src/styles.css`, rebuild and commit:
+
+```bash
+npm install
+npm run build:css
+```
+
+## Masked edits
+
+Venice's `/image/edit` has no mask input. When a mask is painted in the Edit tab, the
+whole photo is sent for editing at its original framing, and the result is blended back
+through a feathered copy of the mask on the client, so only the painted area changes.

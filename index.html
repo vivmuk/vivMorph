@@ -2,380 +2,46 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
     <title>vivMorph - AI Image Editor</title>
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#0a0a0f">
+    <meta name="theme-color" content="#ffffff">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="vivMorph">
-    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?display=swap&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600" />
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <script src="https://cdn.jsdelivr.net/npm/piexifjs@1.0.6/piexif.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Space Grotesk', 'system-ui', 'sans-serif'],
-                        mono: ['JetBrains Mono', 'monospace'],
-                    },
-                }
-            }
-        }
-    </script>
-    <style>
-        :root {
-            --c-bg: #06060b;
-            --c-surface: #0d0d14;
-            --c-surface2: #13131d;
-            --c-surface3: #1a1a28;
-            --c-border: rgba(255,255,255,0.04);
-            --c-glow: #7c5bf5;
-            --c-glow2: #00e5a0;
-            --c-glow3: #f72585;
-            --c-text: #e8e6f0;
-            --c-dim: #6b6880;
-        }
-        * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
-        body { background: var(--c-bg); margin: 0; overflow: hidden; }
-        @supports (-webkit-touch-callout: none) {
-            .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
-        }
-        @media (max-width: 1023px) {
-            main { -webkit-overflow-scrolling: touch; scroll-behavior: smooth; overscroll-behavior-y: contain; }
-            main > div { flex-shrink: 0 !important; }
-            #imageDisplay { max-height: 65vh !important; min-height: 50vh; }
-            #dropZone, #multiDropZone { max-height: none !important; min-height: 44vh !important; height: auto !important; padding: 2rem 1.25rem; }
-            #canvasArea { padding: 0.75rem 0.75rem 0 !important; }
-            #controlPanel { margin-top: 1rem; }
-            #controlPanel .mb-5 { margin-bottom: 0.75rem !important; }
-            #controlPanel h3 { margin-bottom: 0.375rem !important; }
-        }
-        ::-webkit-scrollbar { width: 3px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: var(--c-surface3); border-radius: 8px; }
-        .aurora { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
-        .aurora-orb { position: absolute; border-radius: 50%; filter: blur(120px); opacity: 0.12; animation: orbFloat 20s ease-in-out infinite; }
-        .aurora-orb:nth-child(1) { width: 600px; height: 600px; background: var(--c-glow); top: -20%; left: -10%; animation-delay: 0s; animation-duration: 22s; }
-        .aurora-orb:nth-child(2) { width: 500px; height: 500px; background: var(--c-glow2); bottom: -15%; right: -5%; animation-delay: -7s; animation-duration: 18s; }
-        .aurora-orb:nth-child(3) { width: 400px; height: 400px; background: var(--c-glow3); top: 40%; left: 50%; animation-delay: -14s; animation-duration: 25s; }
-        @keyframes orbFloat {
-            0%, 100% { transform: translate(0, 0) scale(1); }
-            25% { transform: translate(60px, -40px) scale(1.1); }
-            50% { transform: translate(-30px, 50px) scale(0.95); }
-            75% { transform: translate(40px, 20px) scale(1.05); }
-        }
-        .noise::before {
-            content:''; position:fixed; inset:0; opacity:0.025; pointer-events:none; z-index:1;
-            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-        }
-        .glow-card {
-            position: relative;
-            background: var(--c-surface);
-            border: 1px solid var(--c-border);
-            border-radius: 16px;
-        }
-        .glow-card::before {
-            content: '';
-            position: absolute; inset: -1px;
-            border-radius: 17px;
-            background: linear-gradient(135deg, rgba(124,91,245,0.15), transparent 40%, transparent 60%, rgba(0,229,160,0.1));
-            z-index: -1;
-            opacity: 0;
-            transition: opacity 0.4s ease;
-        }
-        .glow-card:hover::before { opacity: 1; }
-        .glow-btn {
-            position: relative;
-            background: linear-gradient(135deg, var(--c-glow), #5b3fe0);
-            border: none;
-            border-radius: 14px;
-            color: white;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            overflow: hidden;
-        }
-        .glow-btn::after {
-            content: '';
-            position: absolute; inset: 0;
-            background: linear-gradient(135deg, transparent, rgba(255,255,255,0.1), transparent);
-            transform: translateX(-100%);
-            transition: transform 0.5s ease;
-        }
-        .glow-btn:hover::after { transform: translateX(100%); }
-        .glow-btn:hover { box-shadow: 0 0 30px rgba(124,91,245,0.4), 0 0 60px rgba(124,91,245,0.15); transform: translateY(-1px); }
-        .glow-btn:active { transform: translateY(0); }
-        .glow-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
-        .tag {
-            display: inline-flex; align-items: center; gap: 4px;
-            padding: 4px 10px;
-            border-radius: 999px;
-            font-size: 11px; font-weight: 500;
-            background: var(--c-surface2);
-            border: 1px solid var(--c-border);
-            color: var(--c-dim);
-            cursor: pointer;
-            transition: all 0.25s ease;
-            white-space: nowrap;
-        }
-        .tag:hover { border-color: rgba(124,91,245,0.3); color: var(--c-text); background: rgba(124,91,245,0.06); transform: translateY(-1px); }
-        .tag:active { transform: translateY(0); }
-        .tag.active { border-color: rgba(124,91,245,0.4); color: #c4b5fd; background: rgba(124,91,245,0.1); }
-        .dropzone {
-            border: 2px dashed rgba(124,91,245,0.15);
-            border-radius: 24px;
-            transition: all 0.35s ease;
-            cursor: pointer;
-        }
-        .dropzone:hover { border-color: rgba(124,91,245,0.35); background: rgba(124,91,245,0.02); }
-        .dropzone.drag-over { border-color: var(--c-glow); background: rgba(124,91,245,0.05); }
-        .dropzone.drag-over .dz-icon { transform: scale(1.1); }
-        .dz-icon {
-            width: 80px; height: 80px;
-            border-radius: 24px;
-            background: linear-gradient(135deg, rgba(124,91,245,0.08), rgba(0,229,160,0.05));
-            border: 1px solid rgba(124,91,245,0.12);
-            display: flex; align-items: center; justify-content: center;
-            transition: transform 0.35s ease;
-            animation: breathe 4s ease-in-out infinite;
-        }
-        @keyframes breathe {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.04); }
-        }
-        .prompt-area {
-            background: var(--c-surface2);
-            border: 1px solid var(--c-border);
-            border-radius: 14px;
-            color: var(--c-text);
-            font-size: 13px;
-            line-height: 1.6;
-            resize: none;
-            transition: all 0.3s ease;
-            outline: none;
-        }
-        .prompt-area:focus {
-            border-color: rgba(124,91,245,0.3);
-            box-shadow: 0 0 0 3px rgba(124,91,245,0.08), 0 0 20px rgba(124,91,245,0.05);
-        }
-        .prompt-area::placeholder { color: #3d3a50; }
-        .compare-wrap { position:relative; overflow:hidden; cursor:col-resize; touch-action:none; }
-        .compare-wrap img { display:block; width:100%; height:100%; object-fit:contain; pointer-events:none; user-select:none; }
-        .compare-clip { position:absolute; inset:0; overflow:hidden; }
-        .compare-handle {
-            position:absolute; top:0; bottom:0; width:2px;
-            background: linear-gradient(180deg, var(--c-glow), var(--c-glow2));
-            z-index:10; transform:translateX(-50%);
-            box-shadow: 0 0 12px rgba(124,91,245,0.4);
-        }
-        .compare-handle::after {
-            content:''; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-            width:32px; height:32px; border-radius:50%;
-            background: linear-gradient(135deg, var(--c-glow), var(--c-glow2));
-            border:2px solid white;
-            box-shadow: 0 0 20px rgba(124,91,245,0.5), inset 0 0 8px rgba(255,255,255,0.2);
-        }
-        .mask-canvas { position:absolute; inset:0; z-index:5; cursor:crosshair; }
-        .mask-canvas.eraser { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Ccircle cx='12' cy='12' r='10' fill='none' stroke='%23f72585' stroke-width='2'/%3E%3Cline x1='6' y1='12' x2='18' y2='12' stroke='%23f72585' stroke-width='2'/%3E%3C/svg%3E") 12 12, crosshair; }
-        .pulse-dot {
-            width: 6px; height: 6px; border-radius: 50%;
-            background: var(--c-glow2);
-            box-shadow: 0 0 8px rgba(0,229,160,0.6);
-            animation: pulse 2s ease-in-out infinite;
-        }
-        @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.4)} }
-        .model-card {
-            padding: 12px 14px;
-            border-radius: 14px;
-            background: var(--c-surface2);
-            border: 1px solid var(--c-border);
-            cursor: pointer;
-            transition: all 0.25s ease;
-            text-align: left;
-            width: 100%;
-        }
-        .model-card:hover { border-color: rgba(124,91,245,0.2); background: rgba(124,91,245,0.04); }
-        .model-card.selected { border-color: rgba(124,91,245,0.4); background: rgba(124,91,245,0.06); }
-        @keyframes slideUp {
-            from { transform: translateY(24px) scale(0.97); opacity: 0; }
-            to { transform: translateY(0) scale(1); opacity: 1; }
-        }
-        .anim-slide-up { animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .anim-fade { animation: fadeIn 0.3s ease-out; }
-        .history-thumb {
-            flex-shrink: 0; width: 44px; height: 44px;
-            border-radius: 10px;
-            background: var(--c-surface2);
-            border: 1px solid var(--c-border);
-            overflow: hidden;
-            cursor: pointer;
-            transition: all 0.25s ease;
-            display: flex; align-items: center; justify-content: center;
-            position: relative;
-        }
-        .history-thumb:hover { border-color: rgba(124,91,245,0.3); transform: scale(1.08); }
-        .spinner { animation: spin 1s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .multi-thumb {
-            position: relative;
-            width: 72px; height: 72px;
-            border-radius: 12px;
-            overflow: hidden;
-            border: 1px solid var(--c-border);
-            background: var(--c-surface2);
-            flex-shrink: 0;
-            transition: all 0.25s ease;
-        }
-        .multi-thumb img { width: 100%; height: 100%; object-fit: cover; }
-        .multi-thumb:hover { border-color: rgba(124,91,245,0.3); transform: scale(1.05); }
-        .multi-thumb .remove-btn {
-            position: absolute; top: 2px; right: 2px;
-            width: 18px; height: 18px;
-            border-radius: 50%;
-            background: rgba(248,113,113,0.9);
-            border: none;
-            display: flex; align-items: center; justify-content: center;
-            cursor: pointer;
-            opacity: 0;
-            transition: opacity 0.2s ease;
-            color: white;
-            font-size: 10px; font-weight: bold;
-            line-height: 1;
-        }
-        .multi-thumb:hover .remove-btn { opacity: 1; }
-        .icon-btn {
-            width: 32px; height: 32px;
-            border-radius: 10px;
-            background: var(--c-surface2);
-            border: 1px solid var(--c-border);
-            display: flex; align-items: center; justify-content: center;
-            color: var(--c-dim);
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        .icon-btn:hover { color: var(--c-text); border-color: rgba(124,91,245,0.25); }
-        .loading-shimmer {
-            background: linear-gradient(90deg, rgba(124,91,245,0.2), rgba(0,229,160,0.3), rgba(124,91,245,0.2));
-            background-size: 200% 100%;
-            animation: shimmer 1.8s ease-in-out infinite;
-        }
-        @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
-        .toggle-track {
-            width: 32px; height: 18px;
-            border-radius: 999px;
-            background: var(--c-surface3);
-            position: relative;
-            cursor: pointer;
-            transition: background 0.3s ease;
-        }
-        .toggle-track.on { background: rgba(124,91,245,0.5); }
-        .toggle-knob {
-            position: absolute; top: 2px; left: 2px;
-            width: 14px; height: 14px;
-            border-radius: 50%;
-            background: #6b6880;
-            transition: all 0.3s ease;
-        }
-        .toggle-track.on .toggle-knob { transform: translateX(14px); background: white; box-shadow: 0 0 8px rgba(124,91,245,0.5); }
-        .fs-viewer {
-            position: fixed; inset: 0; z-index: 200;
-            background: rgba(6,6,11,0.97);
-            backdrop-filter: blur(20px);
-            display: flex; flex-direction: column;
-            touch-action: pan-x pan-y pinch-zoom;
-            animation: fadeIn 0.2s ease-out;
-        }
-        .fs-viewer-header {
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 12px 16px;
-            background: rgba(6,6,11,0.8);
-            flex-shrink: 0;
-        }
-        .fs-viewer-body {
-            flex: 1; overflow: hidden;
-            display: flex; align-items: center; justify-content: center;
-            touch-action: pinch-zoom pan-x pan-y;
-        }
-        .fs-viewer-body img {
-            max-width: 100%; max-height: 100%;
-            object-fit: contain;
-            touch-action: pinch-zoom pan-x pan-y;
-        }
-        .fs-close-btn {
-            width: 36px; height: 36px; border-radius: 50%;
-            background: var(--c-surface3); border: 1px solid var(--c-border);
-            color: var(--c-text); display: flex; align-items: center; justify-content: center;
-            cursor: pointer; font-size: 18px;
-        }
-        .tab-bar {
-            position: fixed; bottom: 0; left: 0; right: 0;
-            background: rgba(13,13,20,0.95); backdrop-filter: blur(20px);
-            border-top: 1px solid var(--c-border);
-            z-index: 50;
-            padding-bottom: env(safe-area-inset-bottom);
-        }
-        .tab-btn {
-            flex: 1; padding: 10px 0 8px;
-            display: flex; flex-direction: column; align-items: center; gap: 2px;
-            font-size: 10px; font-weight: 600; color: var(--c-dim);
-            transition: all 0.2s ease;
-        }
-        .tab-btn.active { color: var(--c-glow); }
-        .tab-btn svg { width: 20px; height: 20px; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        /* Visible focus for keyboard users; accent ring, no outline removal without replacement */
-        :focus-visible { outline: 2px solid var(--c-glow); outline-offset: 2px; }
-        /* Respect reduced motion: disable ambient + entry animations */
-        @media (prefers-reduced-motion: reduce) {
-            .aurora, .aurora-orb { animation: none !important; }
-            .spinner { animation-duration: 1.5s !important; }
-            * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
-        }
-        @media (min-width: 1024px) {
-            .tab-bar { position: static; border-top: none; border-bottom: 1px solid var(--c-border); padding-bottom: 0; }
-            .tab-btn { flex-direction: row; gap: 6px; padding: 8px 16px; font-size: 11px; }
-        }
-    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+    <!-- Precompiled Tailwind + app styles (src/styles.css → npm run build:css) -->
+    <link rel="stylesheet" href="/styles.css">
 </head>
-<body class="font-sans text-[--c-text] h-screen w-screen overflow-hidden noise select-none" style="height: 100vh; height: 100dvh;">
-    <div class="aurora">
-        <div class="aurora-orb"></div>
-        <div class="aurora-orb"></div>
-        <div class="aurora-orb"></div>
-    </div>
-
-    <div id="app" class="h-screen w-screen flex flex-col relative z-10" style="height: 100vh; height: 100dvh;">
+<body class="font-sans select-none" style="height: 100vh; height: 100dvh;">
+    <div id="app" class="w-full flex flex-col" style="height: 100vh; height: 100dvh;">
         <!-- TOP BAR -->
-        <header class="shrink-0 px-4 py-2.5 flex items-center justify-between" style="background: rgba(6,6,11,0.7); backdrop-filter: blur(20px); border-bottom: 1px solid var(--c-border);">
+        <header class="app-header shrink-0 px-4 py-2.5 flex items-center justify-between" style="padding-top: max(0.625rem, env(safe-area-inset-top));">
             <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background: linear-gradient(135deg, var(--c-glow), var(--c-glow2)); box-shadow: 0 0 16px rgba(124,91,245,0.3);">
+                <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background: linear-gradient(135deg, #7a58ff, #14b88a);">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
                 </div>
                 <div>
                     <h1 class="text-sm font-bold tracking-tight leading-none">
-                        <span style="color: #e8e6f0;">viv</span><span style="background: linear-gradient(135deg, #7c5bf5, #00e5a0); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Morph</span>
+                        <span>viv</span><span style="background: linear-gradient(135deg, #6c47ff, #0e9f76); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">Morph</span>
                     </h1>
-                    <p class="text-[9px] font-mono" style="color: var(--c-dim);">AI Image Studio</p>
+                    <p class="text-[9px] font-mono mt-0.5" style="color: var(--c-label);">AI Image Studio</p>
                 </div>
             </div>
             <div class="flex items-center gap-2">
                 <div class="pulse-dot hidden" id="statusDot"></div>
-                <span class="text-[10px] font-mono hidden sm:inline" style="color: var(--c-dim);" id="statusText" aria-live="polite"></span>
+                <span class="text-[10px] font-mono hidden truncate max-w-[42vw]" style="color: var(--c-dim);" id="statusText" aria-live="polite"></span>
                 <div class="relative">
-                    <button id="settingsMenuBtn" class="icon-btn" title="Settings">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06-.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                    <button id="settingsMenuBtn" class="icon-btn" title="Settings" aria-label="Settings">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06-.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                     </button>
-                    <div id="settingsMenu" class="hidden absolute right-0 mt-2 z-[95] w-44 rounded-xl overflow-hidden" style="background: var(--c-surface2); border: 1px solid var(--c-border); box-shadow: 0 12px 32px rgba(0,0,0,0.5); backdrop-filter: blur(16px);">
-                        <button id="menuHistoryBtn" class="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[12px] font-medium transition-colors" style="color: var(--c-text);" onmouseover="this.style.background='var(--c-surface3)'" onmouseout="this.style.background='transparent'">
+                    <div id="settingsMenu" class="hidden absolute right-0 mt-2 z-[95] w-44 rounded-xl overflow-hidden card">
+                        <button id="menuHistoryBtn" class="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[12px] font-medium hover:bg-[var(--c-surface2)]">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                             <span>History</span>
-                            <span id="menuHistoryCount" class="ml-auto text-[9px] font-mono px-1.5 py-0.5 rounded-md" style="background: var(--c-surface3); color: var(--c-dim);">0</span>
+                            <span id="menuHistoryCount" class="ml-auto chip-mono">0</span>
                         </button>
                     </div>
                 </div>
@@ -383,7 +49,7 @@
         </header>
 
         <!-- TAB BAR -->
-        <div class="tab-bar flex lg:justify-center border-b lg:border-b-0" style="background: rgba(13,13,20,0.95);">
+        <nav class="tab-bar flex lg:justify-center">
             <button class="tab-btn active" data-tab="create" id="tabCreate">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
                 <span>CREATE</span>
@@ -400,61 +66,60 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
                 <span>ABOUT</span>
             </button>
-        </div>
+        </nav>
 
         <!-- MAIN CONTENT -->
-        <main class="flex-1 flex flex-col overflow-y-auto pb-16 lg:pb-0" style="-webkit-overflow-scrolling: touch; overscroll-behavior-y: contain;">
+        <main class="flex-1 overflow-y-auto pb-24 lg:pb-8" style="-webkit-overflow-scrolling: touch; overscroll-behavior-y: contain;">
             <!-- CREATE TAB -->
             <div id="tab-create" class="tab-content active p-4 max-w-3xl mx-auto w-full">
                 <div class="mb-4">
                     <div class="flex items-center justify-between mb-2">
-                        <h3 class="text-[10px] font-bold uppercase tracking-widest" style="color: #3d3a50;">Prompt</h3>
-                        <button id="createOptimizeBtn" class="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold" style="background: rgba(255,183,77,0.06); border: 1px solid rgba(255,183,77,0.15); color: #ffb74d;">
+                        <h3 class="section-label">Prompt</h3>
+                        <button id="createOptimizeBtn" class="optimize-btn">
                             <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L9.19 8.63L2 9.24l5.46 4.73L5.82 21L12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61z"/></svg>
                             <span>Optimize</span>
                         </button>
                     </div>
                     <textarea id="createPrompt" placeholder="Describe the image you want to generate..." class="prompt-area w-full h-24 p-3"></textarea>
-                    <div class="flex justify-between text-[10px] mt-1" style="color: var(--c-dim);">
-                        <span id="createCharCount">0 / 7500</span>
+                    <div class="flex justify-between text-[10px] mt-1" style="color: var(--c-label);">
+                        <span id="createCharCount">0 / 7,500</span>
                     </div>
                 </div>
 
                 <div class="mb-4">
-                    <h3 class="text-[10px] font-bold uppercase tracking-widest mb-2" style="color: #3d3a50;">Aspect Ratio</h3>
+                    <h3 class="section-label mb-2">Aspect Ratio</h3>
                     <div class="flex flex-wrap gap-1.5" id="createAspectChips"></div>
                 </div>
 
                 <div class="mb-4">
-                    <h3 class="text-[10px] font-bold uppercase tracking-widest mb-2" style="color: #3d3a50;">Model</h3>
-                    <button id="createModelPill" class="w-full flex items-center justify-between px-4 py-3 rounded-xl text-left" style="background: var(--c-surface2); border: 1px solid var(--c-border);">
+                    <h3 class="section-label mb-2">Model</h3>
+                    <button id="createModelPill" class="card w-full flex items-center justify-between px-4 py-3 text-left">
                         <div>
                             <div id="createModelName" class="font-semibold text-sm">Grok Imagine 2.0</div>
                             <div id="createModelPrice" class="text-[10px] font-mono" style="color: var(--c-dim);">$0.07</div>
                         </div>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color: var(--c-label);"><path d="M6 9l6 6 6-6"/></svg>
                     </button>
                 </div>
 
                 <div class="mb-4 hidden" id="createResSection">
-                    <h3 class="text-[10px] font-bold uppercase tracking-widest mb-2" style="color: #3d3a50;">Resolution</h3>
+                    <h3 class="section-label mb-2">Resolution</h3>
                     <div class="flex flex-wrap gap-1.5" id="createResChips"></div>
                 </div>
 
-                <button id="createGenerateBtn" class="glow-btn w-full h-12 flex items-center justify-center gap-2 text-sm font-semibold mt-2">
+                <button id="createGenerateBtn" class="glow-btn w-full h-12 flex items-center justify-center gap-2 text-sm mt-2">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
                     <span>Generate</span>
                 </button>
 
-                <!-- Result -->
                 <div id="createResult" class="hidden mt-6">
-                    <div class="rounded-2xl overflow-hidden border" style="border-color: var(--c-border); background: var(--c-surface);">
-                        <img id="createResultImg" class="w-full" alt="Generated image">
+                    <div class="card overflow-hidden">
+                        <img id="createResultImg" class="w-full" alt="Generated image" decoding="async">
                     </div>
                     <div class="flex gap-2 mt-3">
-                        <button id="createDownloadBtn" class="flex-1 py-2.5 rounded-xl text-sm font-semibold" style="background: var(--c-surface2); border: 1px solid var(--c-border);">Download</button>
-                        <button id="createUseEditBtn" class="flex-1 py-2.5 rounded-xl text-sm font-semibold" style="background: var(--c-surface2); border: 1px solid var(--c-border);">Use as edit input</button>
-                        <button id="createIterateBtn" class="flex-1 py-2.5 rounded-xl text-sm font-semibold" style="background: var(--c-surface2); border: 1px solid var(--c-border);">Iterate</button>
+                        <button id="createDownloadBtn" class="btn-soft flex-1 py-2.5 text-sm">Download</button>
+                        <button id="createUseEditBtn" class="btn-soft flex-1 py-2.5 text-sm">Use as edit input</button>
+                        <button id="createIterateBtn" class="btn-soft flex-1 py-2.5 text-sm">Iterate</button>
                     </div>
                 </div>
             </div>
@@ -462,48 +127,48 @@
             <!-- COMBINE TAB -->
             <div id="tab-combine" class="tab-content p-4 max-w-3xl mx-auto w-full">
                 <div class="mb-4">
-                    <h3 class="text-[10px] font-bold uppercase tracking-widest mb-2" style="color: #3d3a50;">Images (1-3)</h3>
+                    <h3 class="section-label mb-2">Images (1-3)</h3>
                     <div id="combineThumbs" class="flex gap-2 flex-wrap mb-3"></div>
-                    <button id="combineAddBtn" class="px-4 py-2 rounded-xl text-sm font-semibold" style="background: var(--c-surface2); border: 1px solid var(--c-border);">+ Add image</button>
+                    <button id="combineAddBtn" class="btn-soft px-4 py-2 text-sm">+ Add image</button>
                     <input type="file" id="combineFileInput" accept="image/*,.heic,.heif" multiple class="hidden">
                 </div>
 
                 <div class="mb-4">
                     <div class="flex items-center justify-between mb-2">
-                        <h3 class="text-[10px] font-bold uppercase tracking-widest" style="color: #3d3a50;">Prompt</h3>
-                        <button id="combineOptimizeBtn" class="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold" style="background: rgba(255,183,77,0.06); border: 1px solid rgba(255,183,77,0.15); color: #ffb74d;">
+                        <h3 class="section-label">Prompt</h3>
+                        <button id="combineOptimizeBtn" class="optimize-btn">
                             <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L9.19 8.63L2 9.24l5.46 4.73L5.82 21L12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61z"/></svg>
                             <span>Optimize</span>
                         </button>
                     </div>
                     <textarea id="combinePrompt" placeholder="Describe how to blend the images..." class="prompt-area w-full h-24 p-3"></textarea>
-                    <div class="flex justify-between text-[10px] mt-1" style="color: var(--c-dim);">
+                    <div class="flex justify-between text-[10px] mt-1" style="color: var(--c-label);">
                         <span id="combineCharCount">0 / 7,500</span>
                     </div>
                 </div>
 
                 <div class="mb-4">
-                    <h3 class="text-[10px] font-bold uppercase tracking-widest mb-2" style="color: #3d3a50;">Model</h3>
-                    <button id="combineModelPill" class="w-full flex items-center justify-between px-4 py-3 rounded-xl text-left" style="background: var(--c-surface2); border: 1px solid var(--c-border);">
+                    <h3 class="section-label mb-2">Model</h3>
+                    <button id="combineModelPill" class="card w-full flex items-center justify-between px-4 py-3 text-left">
                         <div>
                             <div id="combineModelName" class="font-semibold text-sm">Grok Imagine 2.0 Edit</div>
                             <div id="combineModelPrice" class="text-[10px] font-mono" style="color: var(--c-dim);">$0.07</div>
                         </div>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color: var(--c-label);"><path d="M6 9l6 6 6-6"/></svg>
                     </button>
                 </div>
 
-                <button id="combineBlendBtn" class="glow-btn w-full h-12 flex items-center justify-center gap-2 text-sm font-semibold mt-2">
+                <button id="combineBlendBtn" class="glow-btn w-full h-12 flex items-center justify-center gap-2 text-sm mt-2">
                     <span>Blend</span>
                 </button>
 
                 <div id="combineResult" class="hidden mt-6">
-                    <div class="rounded-2xl overflow-hidden border" style="border-color: var(--c-border); background: var(--c-surface);">
-                        <img id="combineResultImg" class="w-full" alt="Combined image">
+                    <div class="card overflow-hidden">
+                        <img id="combineResultImg" class="w-full" alt="Combined image" decoding="async">
                     </div>
                     <div class="flex gap-2 mt-3">
-                        <button id="combineDownloadBtn" class="flex-1 py-2.5 rounded-xl text-sm font-semibold" style="background: var(--c-surface2); border: 1px solid var(--c-border);">Download</button>
-                        <button id="combineUseEditBtn" class="flex-1 py-2.5 rounded-xl text-sm font-semibold" style="background: var(--c-surface2); border: 1px solid var(--c-border);">Use as edit input</button>
+                        <button id="combineDownloadBtn" class="btn-soft flex-1 py-2.5 text-sm">Download</button>
+                        <button id="combineUseEditBtn" class="btn-soft flex-1 py-2.5 text-sm">Use as edit input</button>
                     </div>
                 </div>
             </div>
@@ -511,77 +176,92 @@
             <!-- EDIT TAB -->
             <div id="tab-edit" class="tab-content p-4 max-w-3xl mx-auto w-full">
                 <div class="mb-4">
-                    <h3 class="text-[10px] font-bold uppercase tracking-widest mb-2" style="color: #3d3a50;">Image</h3>
-                    <div id="editDropZone" class="dropzone w-full p-8 flex flex-col items-center justify-center gap-3 rounded-2xl" style="min-height: 140px;">
-                        <div class="dz-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></div>
-                        <p class="text-sm" style="color: var(--c-dim);">Drop or tap to upload photo</p>
+                    <h3 class="section-label mb-2">Image</h3>
+                    <div id="editDropZone" class="dropzone w-full p-8 flex flex-col items-center justify-center gap-3" style="min-height: 160px;">
+                        <div class="dz-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></div>
+                        <p class="text-sm" style="color: var(--c-dim);">Drop, paste or tap to upload a photo</p>
                         <input type="file" id="editFileInput" accept="image/*,.heic,.heif" class="hidden">
                     </div>
-                    <div id="editImagePreview" class="hidden mt-2 rounded-xl overflow-hidden border" style="border-color: var(--c-border);">
-                        <img id="editPreviewImg" class="w-full max-h-[280px] object-contain" alt="Edit input">
+
+                    <div id="editImagePreview" class="hidden">
+                        <!-- Photo with the mask canvas laid exactly over it -->
+                        <div class="mask-stage card" id="editStage">
+                            <img id="editPreviewImg" alt="Edit input" draggable="false">
+                            <canvas id="editMaskCanvas" class="mask-canvas" aria-label="Mask painting area"></canvas>
+                        </div>
+                        <div class="flex gap-2 mt-3 flex-wrap">
+                            <button id="editMaskBtn" class="btn-soft px-4 py-2 text-sm flex items-center gap-1.5">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.37 2.63 14 7l-1.59-1.59a2 2 0 0 0-2.82 0L8 7l9 9 1.59-1.59a2 2 0 0 0 0-2.82L17 10l4.37-4.37a2.12 2.12 0 1 0-3-3Z"/><path d="M9 8c-2 3-4 3.5-7 4l8 10c2-1 6-5 6-7"/></svg>
+                                <span id="editMaskBtnLabel">Paint mask</span>
+                            </button>
+                            <button id="editChangeBtn" class="btn-soft px-4 py-2 text-sm">Change photo</button>
+                            <span id="editMaskBadge" class="hidden self-center text-[11px] font-semibold px-2 py-1 rounded-lg" style="background: rgba(224,40,125,0.08); color: var(--c-glow3);">Mask on</span>
+                        </div>
+                        <div id="editMaskTools" class="hidden mt-3 card p-3">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <button id="editMaskBrush" class="tag active">Brush</button>
+                                <button id="editMaskEraser" class="tag">Eraser</button>
+                                <button id="editMaskClear" class="tag" style="color: #dc2626;">Clear</button>
+                                <label class="flex items-center gap-2 text-[11px] ml-auto" style="color: var(--c-dim);">
+                                    Size
+                                    <input id="editMaskSize" type="range" min="6" max="80" value="24" class="range w-24">
+                                </label>
+                            </div>
+                            <p class="text-[11px] mt-2" style="color: var(--c-dim);">Paint over the area to change. Only the painted area is replaced; the rest of the photo stays as-is.</p>
+                        </div>
                     </div>
                 </div>
 
                 <div class="mb-4">
                     <div class="flex items-center justify-between mb-2">
-                        <h3 class="text-[10px] font-bold uppercase tracking-widest" style="color: #3d3a50;">Prompt</h3>
-                        <button id="editOptimizeBtn" class="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold" style="background: rgba(255,183,77,0.06); border: 1px solid rgba(255,183,77,0.15); color: #ffb74d;">
+                        <h3 class="section-label">Prompt</h3>
+                        <button id="editOptimizeBtn" class="optimize-btn">
                             <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L9.19 8.63L2 9.24l5.46 4.73L5.82 21L12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61z"/></svg>
                             <span>Optimize</span>
                         </button>
                     </div>
                     <textarea id="editPrompt" placeholder="Describe the edit..." class="prompt-area w-full h-24 p-3"></textarea>
-                    <div class="flex justify-between text-[10px] mt-1" style="color: var(--c-dim);">
+                    <div class="flex justify-between text-[10px] mt-1" style="color: var(--c-label);">
                         <span id="editCharCount">0 / 7,500</span>
                     </div>
                 </div>
 
                 <div class="mb-4">
-                    <button id="editMaskBtn" class="px-4 py-2 rounded-xl text-sm font-semibold" style="background: var(--c-surface2); border: 1px solid var(--c-border);">Paint Mask</button>
-                    <div id="editMaskTools" class="hidden mt-2 flex gap-2">
-                        <button id="editMaskBrush" class="tag active">Brush</button>
-                        <button id="editMaskEraser" class="tag">Eraser</button>
-                        <button id="editMaskClear" class="tag" style="color:#f87171;">Clear</button>
-                    </div>
-                    <canvas id="editMaskCanvas" class="hidden w-full max-h-[280px] border rounded-xl mt-2" style="border-color: var(--c-border);"></canvas>
-                </div>
-
-                <div class="mb-4">
-                    <h3 class="text-[10px] font-bold uppercase tracking-widest mb-2" style="color: #3d3a50;">Model</h3>
-                    <button id="editModelPill" class="w-full flex items-center justify-between px-4 py-3 rounded-xl text-left" style="background: var(--c-surface2); border: 1px solid var(--c-border);">
+                    <h3 class="section-label mb-2">Edit Model</h3>
+                    <button id="editModelPill" class="card w-full flex items-center justify-between px-4 py-3 text-left">
                         <div>
                             <div id="editModelName" class="font-semibold text-sm">Grok Imagine 2.0 Edit</div>
                             <div id="editModelPrice" class="text-[10px] font-mono" style="color: var(--c-dim);">$0.07</div>
                         </div>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color: var(--c-label);"><path d="M6 9l6 6 6-6"/></svg>
                     </button>
                 </div>
 
-                <div class="mb-4">
-                    <h3 class="text-[10px] font-bold uppercase tracking-widest mb-2" style="color: #3d3a50;">Aspect Ratio</h3>
+                <div class="mb-4" id="editAspectSection">
+                    <h3 class="section-label mb-2">Aspect Ratio</h3>
                     <div class="flex flex-wrap gap-1.5" id="editAspectChips"></div>
+                    <p id="editAspectNote" class="hidden text-[11px] mt-1.5" style="color: var(--c-dim);">Masked edits keep the photo's original framing.</p>
                 </div>
 
                 <div class="mb-4 hidden" id="editResSection">
-                    <h3 class="text-[10px] font-bold uppercase tracking-widest mb-2" style="color: #3d3a50;">Resolution</h3>
+                    <h3 class="section-label mb-2">Resolution</h3>
                     <div class="flex flex-wrap gap-1.5" id="editResChips"></div>
                 </div>
 
-                <button id="editApplyBtn" class="glow-btn w-full h-12 flex items-center justify-center gap-2 text-sm font-semibold mt-2">
+                <button id="editApplyBtn" class="glow-btn w-full h-12 flex items-center justify-center gap-2 text-sm mt-2">
                     <span>Apply Edit</span>
                 </button>
 
-                <!-- Result view reuses compare slider etc. -->
                 <div id="editResult" class="hidden mt-6">
-                    <div class="rounded-2xl overflow-hidden border" style="border-color: var(--c-border); background: var(--c-surface);">
-                        <!-- Compare slider and controls reused from original logic -->
-                        <div id="editCompareWrap" class="compare-wrap w-full"></div>
+                    <div class="card overflow-hidden">
+                        <div id="editCompareWrap" class="w-full"></div>
                     </div>
+                    <p class="text-[11px] mt-2" style="color: var(--c-label);">Press and hold the result to see the original.</p>
                     <div class="flex gap-2 mt-3 flex-wrap">
-                        <button id="editDownloadBtn" class="px-4 py-2.5 rounded-xl text-sm font-semibold" style="background: var(--c-surface2); border: 1px solid var(--c-border);">Download</button>
-                        <button id="editUpscaleBtn" class="px-4 py-2.5 rounded-xl text-sm font-semibold" style="background: var(--c-surface2); border: 1px solid var(--c-border);">Upscale 2x</button>
-                        <button id="editBgRemoveBtn" class="px-4 py-2.5 rounded-xl text-sm font-semibold" style="background: var(--c-surface2); border: 1px solid var(--c-border);">Remove BG</button>
-                        <button id="editIterateBtn" class="px-4 py-2.5 rounded-xl text-sm font-semibold" style="background: var(--c-surface2); border: 1px solid var(--c-border);">Iterate</button>
+                        <button id="editDownloadBtn" class="btn-soft px-4 py-2.5 text-sm">Download</button>
+                        <button id="editUpscaleBtn" class="btn-soft px-4 py-2.5 text-sm">Upscale 2x</button>
+                        <button id="editBgRemoveBtn" class="btn-soft px-4 py-2.5 text-sm">Remove BG</button>
+                        <button id="editIterateBtn" class="btn-soft px-4 py-2.5 text-sm">Iterate</button>
                     </div>
                 </div>
             </div>
@@ -589,7 +269,7 @@
             <!-- ABOUT TAB -->
             <div id="tab-about" class="tab-content p-4 max-w-3xl mx-auto w-full text-sm" style="color: var(--c-dim);">
                 <h2 class="text-lg font-bold mb-4" style="color: var(--c-text);">How to use</h2>
-                
+
                 <div class="mb-6">
                     <h3 class="font-semibold mb-2" style="color: var(--c-text);">Create</h3>
                     <ul class="list-disc pl-5 space-y-1 text-[13px]">
@@ -599,7 +279,7 @@
                         <li>Use "Use as edit input" or "Iterate" to continue.</li>
                     </ul>
                 </div>
-                
+
                 <div class="mb-6">
                     <h3 class="font-semibold mb-2" style="color: var(--c-text);">Combine</h3>
                     <ul class="list-disc pl-5 space-y-1 text-[13px]">
@@ -609,28 +289,28 @@
                         <li>Tap Blend to generate the merged result.</li>
                     </ul>
                 </div>
-                
+
                 <div class="mb-6">
                     <h3 class="font-semibold mb-2" style="color: var(--c-text);">Edit</h3>
                     <ul class="list-disc pl-5 space-y-1 text-[13px]">
                         <li>Upload a single photo (drag, paste or tap).</li>
-                        <li>Optional: tap "Paint Mask" to selectively edit areas.</li>
-                        <li>Write your edit prompt and choose model + aspect.</li>
-                        <li>Tap Apply Edit. Result shows with compare slider.</li>
+                        <li>Optional: tap "Paint mask" and brush over the part to change. Only that area is replaced.</li>
+                        <li>Write your edit prompt and choose an edit model.</li>
+                        <li>Tap Apply Edit. Press and hold the result to compare with the original.</li>
                     </ul>
                 </div>
 
-                <div class="mb-6 p-4 rounded-xl" style="background: var(--c-surface2); border: 1px solid var(--c-border);">
+                <div class="mb-6 p-4 card">
                     <h3 class="font-semibold mb-2" style="color: var(--c-text);">Models + pricing</h3>
-                    <p class="text-[13px]">All models come from the live Venice catalog. Prices are shown in the model picker. Grok Imagine 2.0 is the default for Create; Grok Imagine 2.0 Edit is default for Edit and Combine.</p>
+                    <p class="text-[13px]">All models come from the live Venice catalog. Create lists text-to-image models; Edit and Combine list only Venice's image-edit models. Prices are shown in the model picker.</p>
                 </div>
 
-                <div class="mb-6 p-4 rounded-xl" style="background: var(--c-surface2); border: 1px solid var(--c-border);">
+                <div class="mb-6 p-4 card">
                     <h3 class="font-semibold mb-2" style="color: var(--c-text);">Privacy</h3>
-                    <p class="text-[13px]">Models run with the privacy level shown per model in the picker (anonymized or logged).</p>
+                    <p class="text-[13px]">Models run with the privacy level shown per model in the picker (anonymized or private). History stays on this device.</p>
                 </div>
 
-                <div class="p-4 rounded-xl" style="background: var(--c-surface2); border: 1px solid var(--c-border);">
+                <div class="p-4 card">
                     <h3 class="font-semibold mb-2" style="color: var(--c-text);">Mercury optimizer</h3>
                     <p class="text-[13px]">Optional. Tap the star button next to any prompt to rewrite it. Preview the optimized version before applying. Never automatic.</p>
                 </div>
@@ -640,14 +320,14 @@
 
     <!-- MODEL PICKER MODAL (shared) -->
     <div id="modelModal" class="fixed inset-0 z-[100] hidden">
-        <div class="absolute inset-0" style="background: rgba(6,6,11,0.7); backdrop-filter: blur(8px);" id="modelModalBackdrop"></div>
-        <div class="absolute inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-lg sm:max-h-[80vh] rounded-2xl overflow-hidden flex flex-col" style="background: var(--c-surface); border: 1px solid var(--c-border);">
-            <div class="p-4 flex items-center justify-between shrink-0" style="border-bottom: 1px solid var(--c-border);">
-                <div>
-                    <h2 class="text-sm font-bold">Select Model</h2>
-                    <input id="modelFilter" type="text" placeholder="Filter models..." class="mt-1 w-full text-sm px-3 py-1 rounded bg-[var(--c-surface2)] border border-[var(--c-border)]">
+        <div class="absolute inset-0 overlay-backdrop" id="modelModalBackdrop"></div>
+        <div class="absolute inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-lg sm:max-h-[80vh] card overflow-hidden flex flex-col" style="border-radius: 20px;">
+            <div class="p-4 flex items-start justify-between gap-3 shrink-0" style="border-bottom: 1px solid var(--c-border);">
+                <div class="flex-1">
+                    <h2 id="modelModalTitle" class="text-sm font-bold">Select Model</h2>
+                    <input id="modelFilter" type="text" placeholder="Filter models..." class="text-input mt-2 w-full text-[16px] px-3 py-1.5">
                 </div>
-                <button id="closeModelModal" class="icon-btn">
+                <button id="closeModelModal" class="icon-btn" aria-label="Close">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
             </div>
@@ -656,50 +336,55 @@
     </div>
 
     <!-- MERCURY PREVIEW SHEET -->
-    <div id="mercurySheet" class="hidden fixed bottom-0 left-0 right-0 z-[110] p-4" style="background: var(--c-surface); border-top: 1px solid var(--c-border);">
+    <div id="mercurySheet" class="hidden fixed bottom-0 left-0 right-0 z-[110] p-4 card" style="border-radius: 20px 20px 0 0; padding-bottom: max(1rem, env(safe-area-inset-bottom));">
         <div class="max-w-3xl mx-auto">
-            <div class="text-xs mb-2" style="color: var(--c-dim);">Optimized prompt preview</div>
+            <div class="text-xs mb-2 font-semibold" style="color: var(--c-dim);">Optimized prompt preview</div>
             <div class="grid grid-cols-2 gap-3 text-sm">
                 <div>
-                    <div class="text-[10px] mb-1" style="color: var(--c-dim);">Original</div>
-                    <div id="mercuryOriginal" class="p-3 rounded-xl text-[13px] opacity-60" style="background: var(--c-surface2);"></div>
+                    <div class="text-[10px] mb-1" style="color: var(--c-label);">Original</div>
+                    <div id="mercuryOriginal" class="p-3 rounded-xl text-[13px] opacity-70" style="background: var(--c-surface2);"></div>
                 </div>
                 <div>
-                    <div class="text-[10px] mb-1" style="color: var(--c-dim);">Optimized</div>
-                    <div id="mercuryOptimized" class="p-3 rounded-xl text-[13px]" style="background: var(--c-surface2);"></div>
+                    <div class="text-[10px] mb-1" style="color: var(--c-label);">Optimized</div>
+                    <div id="mercuryOptimized" class="p-3 rounded-xl text-[13px]" style="background: var(--c-glow-soft);"></div>
                 </div>
             </div>
             <div class="flex gap-2 mt-3">
-                <button id="mercuryUseBtn" class="flex-1 py-2.5 rounded-xl text-sm font-semibold" style="background: var(--c-glow); color: white;">Use optimized</button>
-                <button id="mercuryKeepBtn" class="flex-1 py-2.5 rounded-xl text-sm font-semibold" style="background: var(--c-surface2); border: 1px solid var(--c-border);">Keep mine</button>
+                <button id="mercuryUseBtn" class="glow-btn flex-1 py-2.5 text-sm">Use optimized</button>
+                <button id="mercuryKeepBtn" class="btn-soft flex-1 py-2.5 text-sm">Keep mine</button>
             </div>
         </div>
     </div>
 
-    <!-- Modals reused: history, error, loading overlay -->
+    <!-- HISTORY -->
     <div id="historyModal" class="fixed inset-0 z-[100] hidden">
-        <div class="absolute inset-0" style="background: rgba(6,6,11,0.7); backdrop-filter: blur(8px);"></div>
-        <div class="absolute inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-md sm:max-h-[70vh] rounded-2xl overflow-hidden flex flex-col" style="background: var(--c-surface); border: 1px solid var(--c-border);">
+        <div class="absolute inset-0 overlay-backdrop" id="historyModalBackdrop"></div>
+        <div class="absolute inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-md sm:max-h-[70vh] card overflow-hidden flex flex-col" style="border-radius: 20px;">
             <div class="p-4 flex items-center justify-between shrink-0" style="border-bottom: 1px solid var(--c-border);">
-                <h2 class="text-sm font-bold">Transform History</h2>
-                <button id="closeHistoryModal" class="icon-btn">×</button>
+                <h2 class="text-sm font-bold">History</h2>
+                <div class="flex items-center gap-2">
+                    <button id="clearHistoryBtn" class="tag" style="color: #dc2626;">Clear</button>
+                    <button id="closeHistoryModal" class="icon-btn" aria-label="Close">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                </div>
             </div>
-            <div id="historyModalItems" class="p-4 overflow-y-auto flex-1 grid grid-cols-2 gap-2.5"></div>
+            <div id="historyModalItems" class="p-4 overflow-y-auto flex-1 grid grid-cols-2 gap-2.5 content-start"></div>
         </div>
     </div>
 
     <div id="errorModal" class="fixed inset-0 z-[200] hidden">
-        <div class="absolute inset-0" style="background: rgba(6,6,11,0.7); backdrop-filter: blur(8px);"></div>
-        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm p-5 rounded-2xl" style="background: var(--c-surface); border: 1px solid rgba(248,113,113,0.15);">
+        <div class="absolute inset-0 overlay-backdrop"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-sm p-5 card" style="border-color: rgba(220,38,38,0.25);">
             <h3 class="text-sm font-bold mb-2">Something went wrong</h3>
-            <p id="errorMessage" class="text-xs mb-4" style="color: var(--c-dim);"></p>
-            <button id="closeError" class="w-full py-2.5 rounded-xl text-xs font-semibold" style="background: var(--c-surface2); border: 1px solid var(--c-border);">Dismiss</button>
+            <p id="errorMessage" class="text-xs mb-4 break-words" style="color: var(--c-dim);"></p>
+            <button id="closeError" class="btn-soft w-full py-2.5 text-xs">Dismiss</button>
         </div>
     </div>
 
-    <div id="loadingOverlay" class="hidden fixed inset-0 z-[150] flex items-center justify-center" style="background: rgba(6,6,11,0.85); backdrop-filter: blur(12px);">
+    <div id="loadingOverlay" class="hidden fixed inset-0 z-[150] flex items-center justify-center" style="background: rgba(247,246,251,0.88);">
         <div class="text-center">
-            <div class="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 mx-auto" style="background: linear-gradient(135deg, rgba(124,91,245,0.12), rgba(0,229,160,0.08)); border: 1px solid rgba(124,91,245,0.15);">
+            <div class="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 mx-auto card">
                 <svg class="spinner h-7 w-7" style="color: var(--c-glow);" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"/>
                     <path class="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
@@ -707,41 +392,42 @@
             </div>
             <p id="progressText" class="text-xs font-medium mb-3">Processing...</p>
             <div class="w-48 h-1.5 rounded-full overflow-hidden mx-auto" style="background: var(--c-surface3);">
-                <div id="progressBar" class="h-full rounded-full transition-all duration-500" style="width:0%; background: linear-gradient(90deg, var(--c-glow), var(--c-glow2));"></div>
+                <div id="progressBar" class="h-full rounded-full transition-all duration-500" style="width:0%; background: linear-gradient(90deg, #6c47ff, #0e9f76);"></div>
             </div>
         </div>
     </div>
 
     <script>
     // vivMorph v2 - AI Image Studio. Four tabs: Create, Combine, Edit, About.
-    // JS patterns (HEIC, base64, mask painting, compare slider, history, retry,
-    // download, upscale, bg-remove, iterate) adapted from the original app.
+
+    const HEIC_LIB = 'https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js';
+    const MODEL_CACHE_KEY = 'vivmorph_models_v3';
+    const HISTORY_LIMIT = 30;
 
     class VivMorph {
         constructor() {
-            // Per-tab state
             this.createModel = null; this.editModel = null; this.combineModel = null;
             this.imageModels = []; this.editModels = [];
             this.selectedTab = 'create';
             this.createAspectRatio = 'auto'; this.editAspectRatio = 'auto';
             this.createResolution = null; this.editResolution = null;
             this.editImageB64 = null;         // current Edit tab input
-            this.transformedImageB64 = null;  // latest Edit result (compare)
-            this.editOriginalB64 = null;       // latest Edit input (compare)
-            this.multiImages = [];             // Combine tab: [{b64, dataUrl}]
-            this.activePromptTab = null;       // for Mercury sheet targeting
-            this.history = [];
+            this.transformedImageB64 = null;  // latest Edit result
+            this.editOriginalB64 = null;      // input that produced the latest Edit result
+            this.multiImages = [];            // Combine tab: [{b64, dataUrl}]
+            this.history = [];                // [{ts, prompt, model, thumb}] (full images live in IndexedDB)
             this.DEFAULT_CREATE = 'grok-imagine-image-2-0';
             this.DEFAULT_EDIT = 'grok-imagine-image-2-0-edit';
             this.CREATE_ORDER = ['grok-imagine-image-2-0','grok-imagine-image-quality','qwen-image-3-pro','flux-2-pro','seedream-v5-pro','nano-banana-pro','grok-imagine-image','gpt-image-2'];
             this.EDIT_ORDER = ['grok-imagine-image-2-0-edit','grok-imagine-quality-edit','grok-imagine-edit','qwen-image-3-pro-edit','qwen-image-3-edit','nano-banana-pro-edit','seedream-v5-pro-edit','flux-2-max-edit','gpt-image-2-edit'];
-            this.mask = { active:false, tool:'brush', size:25, canvas:null, ctx:null, painting:false, hasInk:false };
+            this.mask = { active:false, tool:'brush', size:24, canvas:null, ctx:null, painting:false, last:null };
         }
 
         // ==================== HELPERS ====================
         $(id) { return document.getElementById(id); }
         show(id) { const el = this.$(id); if (el) el.classList.remove('hidden'); }
         hide(id) { const el = this.$(id); if (el) el.classList.add('hidden'); }
+        esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c])); }
 
         setStatus(text) {
             const d = this.$('statusDot'), l = this.$('statusText');
@@ -751,8 +437,8 @@
             this._statusTimer = setTimeout(() => { d.classList.add('hidden'); l.classList.add('hidden'); }, 4000);
         }
 
-        showError(msg) { this.$('errorMessage').textContent = msg; this.$('errorModal').classList.remove('hidden'); }
-        hideErrorModal() { this.$('errorModal').classList.add('hidden'); }
+        showError(msg) { this.$('errorMessage').textContent = msg; this.show('errorModal'); }
+        hideErrorModal() { this.hide('errorModal'); }
 
         showProgress(text) {
             this.show('loadingOverlay');
@@ -771,7 +457,6 @@
         b64ToDataUrl(b64) {
             let mime = 'image/png';
             if (b64.startsWith('/9j/')) mime = 'image/jpeg';
-            else if (b64.startsWith('iVBOR')) mime = 'image/png';
             else if (b64.startsWith('UklGR')) mime = 'image/webp';
             return 'data:' + mime + ';base64,' + b64;
         }
@@ -784,19 +469,22 @@
                 const data = await r.json().catch(() => ({}));
                 if (!r.ok) throw new Error(data.error || data.message || ('Request failed (' + r.status + ')'));
                 return data;
+            } catch (e) {
+                if (e.name === 'AbortError') throw new Error('Request timed out. Please try again.');
+                throw e;
             } finally { clearTimeout(t); }
         }
+
+        canvasOf(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
 
         // ==================== INIT ====================
         async init() {
             this.setupTabs();
             this.setupEventListeners();
             this.initMask();
-            this.loadHistory();
-            this.renderHistory();
             this.registerServiceWorker();
+            this.loadHistory(); // async, IndexedDB - does not block the UI
             await this.fetchModels();
-            this.setStatus('Ready - Grok Imagine 2.0 models loaded');
         }
 
         setupTabs() {
@@ -809,58 +497,97 @@
             this.selectedTab = tab;
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === 'tab-' + tab));
-            // Recalculate mask bounds when entering Edit tab with a loaded image
-            if (tab === 'edit') this.updateImageBounds();
+            if (this.mask.active && tab !== 'edit') this.setMaskActive(false);
         }
 
         registerServiceWorker() {
             if ('serviceWorker' in navigator && location.protocol === 'https:') {
-                navigator.serviceWorker.register('sw.js').catch(() => {});
+                navigator.serviceWorker.register('/sw.js').catch(() => {});
             }
         }
 
         // ==================== MODELS ====================
+        // Stale-while-revalidate: render instantly from the last catalog this device
+        // saw, then refresh from Venice in the background.
         async fetchModels() {
+            let cached = null;
+            try { cached = JSON.parse(localStorage.getItem(MODEL_CACHE_KEY) || 'null'); } catch {}
+            if (cached && cached.image && cached.edit) this.applyCatalog(cached.image, cached.edit);
+            const refresh = this.refreshModels(!cached);
+            if (!cached) await refresh;
+        }
+
+        async refreshModels(useFallbackOnError) {
             try {
                 const [img, edit] = await Promise.all([
-                    this.fetchJSON('/.netlify/functions/list-models?type=image', { method: 'GET' }, 30000),
-                    this.fetchJSON('/.netlify/functions/list-models?type=inpaint', { method: 'GET' }, 30000)
+                    this.fetchJSON('/.netlify/functions/list-models?type=image', { method: 'GET' }, 20000),
+                    this.fetchJSON('/.netlify/functions/list-models?type=inpaint', { method: 'GET' }, 20000)
                 ]);
-                this.imageModels = (img.data || []).filter(m => m && m.id && m.model_spec);
-                this.editModels = (edit.data || []).filter(m => m && m.id && m.model_spec);
+                const image = img.data || [], editList = edit.data || [];
+                if (!image.length && !editList.length) throw new Error('Empty catalog');
+                this.applyCatalog(image, editList);
+                try { localStorage.setItem(MODEL_CACHE_KEY, JSON.stringify({ ts: Date.now(), image, edit: editList })); } catch {}
+                this.setStatus('Models up to date');
             } catch {
-                this.imageModels = [
-                    { id:'grok-imagine-image-2-0', model_spec:{ name:'Grok Imagine 2.0', pricing:{resolutions:{'1K':{usd:0.07},'2K':{usd:0.10}}}, constraints:{aspectRatios:['auto','1:1','3:2','16:9','9:16','2:3','3:4','4:5'], promptCharacterLimit:7500}, privacy:'anonymized', offline:false } },
-                    { id:'qwen-image-3-pro', model_spec:{ name:'Qwen Image 3 Pro', pricing:{resolutions:{'1K':{usd:0.05},'2K':{usd:0.09}}}, constraints:{aspectRatios:['auto','1:1','3:2','16:9','21:9','9:16','2:3','3:4','4:5'], promptCharacterLimit:10000}, privacy:'anonymized', offline:false } }
-                ];
-                this.editModels = [
-                    { id:'grok-imagine-image-2-0-edit', model_spec:{ name:'Grok Imagine 2.0 Edit', pricing:{resolutions:{'1K':{usd:0.07},'2K':{usd:0.10}}}, constraints:{aspectRatios:['auto','1:1','3:2','16:9','9:16','2:3','3:4','4:5'], promptCharacterLimit:7500, combineImages:true}, privacy:'anonymized', offline:false } },
-                    { id:'qwen-image-3-pro-edit', model_spec:{ name:'Qwen Image 3 Pro Edit', pricing:{resolutions:{'1K':{usd:0.05},'2K':{usd:0.09}}}, constraints:{aspectRatios:['auto','1:1','3:2','16:9','21:9','9:16','2:3','3:4','4:5'], promptCharacterLimit:10000, combineImages:true}, privacy:'anonymized', offline:false } }
-                ];
+                if (useFallbackOnError) this.applyCatalog(this.fallbackImageModels(), this.fallbackEditModels());
             }
-            // Defaults: saved per-tab choice if still live, else the pinned default
-            this.createModel = this.pickModel('create', this.DEFAULT_CREATE, this.imageModels, this.CREATE_ORDER);
-            this.editModel = this.pickModel('edit', this.DEFAULT_EDIT, this.editModels, this.EDIT_ORDER);
-            this.combineModel = this.pickModel('combine', this.DEFAULT_EDIT, this.combineCapable(), this.EDIT_ORDER);
+        }
+
+        // Venice tags each catalog row with `type`. Create gets only text-to-image
+        // ("image") models; Edit/Combine get only image-edit ("inpaint") models, and
+        // anything that also appears in the generation catalog is dropped so a
+        // text-to-image model can never land in the edit picker.
+        applyCatalog(imageRaw, editRaw) {
+            const valid = m => m && m.id && m.model_spec;
+            // Strict type match, unless that would empty the list (guards against a
+            // catalog that stops sending `type`, rather than hiding every model).
+            const ofType = (list, type) => {
+                const all = list.filter(valid), typed = all.filter(m => !m.type || m.type === type);
+                return typed.length ? typed : all;
+            };
+            this.imageModels = ofType(imageRaw, 'image');
+            const genIds = new Set(this.imageModels.map(m => m.id));
+            this.editModels = ofType(editRaw, 'inpaint').filter(m => !genIds.has(m.id));
+            this.createModel = this.pickModel('create', this.DEFAULT_CREATE, this.imageModels);
+            this.editModel = this.pickModel('edit', this.DEFAULT_EDIT, this.editModels);
+            this.combineModel = this.pickModel('combine', this.DEFAULT_EDIT, this.combineCapable());
             this.updateAllModelUI();
         }
 
-        pickModel(tab, fallbackId, catalog, order) {
-            const saved = localStorage.getItem('vivmorph_' + tab + '_model');
-            if (saved && catalog.some(m => m.id === saved && !m.model_spec.offline)) return catalog.find(m => m.id === saved);
-            if (catalog.some(m => m.id === fallbackId)) return catalog.find(m => m.id === fallbackId);
-            return catalog[0] || null;
+        fallbackImageModels() {
+            return [
+                { id:'grok-imagine-image-2-0', type:'image', model_spec:{ name:'Grok Imagine 2.0', pricing:{resolutions:{'1K':{usd:0.07},'2K':{usd:0.10}}}, constraints:{aspectRatios:['auto','1:1','3:2','16:9','9:16','2:3','3:4','4:5'], promptCharacterLimit:7500}, privacy:'anonymized', offline:false } },
+                { id:'qwen-image-3-pro', type:'image', model_spec:{ name:'Qwen Image 3 Pro', pricing:{resolutions:{'1K':{usd:0.05},'2K':{usd:0.09}}}, constraints:{aspectRatios:['auto','1:1','3:2','16:9','21:9','9:16','2:3','3:4','4:5'], promptCharacterLimit:10000}, privacy:'anonymized', offline:false } }
+            ];
+        }
+        fallbackEditModels() {
+            return [
+                { id:'grok-imagine-image-2-0-edit', type:'inpaint', model_spec:{ name:'Grok Imagine 2.0 Edit', pricing:{resolutions:{'1K':{usd:0.07},'2K':{usd:0.10}}}, constraints:{aspectRatios:['auto','1:1','3:2','16:9','9:16','2:3','3:4','4:5'], promptCharacterLimit:7500, combineImages:true}, privacy:'anonymized', offline:false } },
+                { id:'qwen-image-3-pro-edit', type:'inpaint', model_spec:{ name:'Qwen Image 3 Pro Edit', pricing:{resolutions:{'1K':{usd:0.05},'2K':{usd:0.09}}}, constraints:{aspectRatios:['auto','1:1','3:2','16:9','21:9','9:16','2:3','3:4','4:5'], promptCharacterLimit:10000, combineImages:true}, privacy:'anonymized', offline:false } }
+            ];
+        }
+
+        pickModel(tab, fallbackId, catalog) {
+            const live = catalog.filter(m => !m.model_spec.offline);
+            let saved = null;
+            try { saved = localStorage.getItem('vivmorph_' + tab + '_model'); } catch {}
+            return live.find(m => m.id === saved) || live.find(m => m.id === fallbackId) || live[0] || null;
         }
 
         combineCapable() { return this.editModels.filter(m => m.model_spec.constraints && m.model_spec.constraints.combineImages === true); }
 
+        // Venice names some edit models exactly like their text-to-image sibling
+        // (grok-imagine-image-2-0-edit is "Grok Imagine 2.0"), so label them clearly.
+        modelName(m, tab) {
+            const n = (m.model_spec && m.model_spec.name) || m.id;
+            return tab !== 'create' && !/edit/i.test(n) ? n + ' Edit' : n;
+        }
+
         sortModels(models, defaultId, order) {
+            const rank = m => m.id === defaultId ? -1 : (order.indexOf(m.id) === -1 ? Number.MAX_SAFE_INTEGER : order.indexOf(m.id));
             return models.slice().sort((a, b) => {
-                const ra = a.id === defaultId ? -1 : order.indexOf(a.id);
-                const rb = b.id === defaultId ? -1 : order.indexOf(b.id);
-                const va = ra === -1 && a.id !== defaultId ? Number.MAX_SAFE_INTEGER : ra;
-                const vb = rb === -1 && b.id !== defaultId ? Number.MAX_SAFE_INTEGER : rb;
-                if (va !== vb) return va - vb;
+                const d = rank(a) - rank(b);
+                if (d) return d;
                 const pa = this.modelPrice(a.model_spec), pb = this.modelPrice(b.model_spec);
                 if (pa !== pb) return pa - pb;
                 return (a.model_spec.name || a.id).localeCompare(b.model_spec.name || b.id);
@@ -868,12 +595,13 @@
         }
 
         modelPrice(spec) {
-            const res = spec && spec.pricing && spec.pricing.resolutions;
+            const p = spec && spec.pricing;
+            const res = p && p.resolutions;
             if (res && Object.keys(res).length) {
                 const vals = Object.values(res).map(v => v && v.usd).filter(n => typeof n === 'number');
                 if (vals.length) return Math.min(...vals);
             }
-            const flat = spec && spec.pricing && (spec.pricing.generation && spec.pricing.generation.usd || spec.pricing.inpaint && spec.pricing.inpaint.usd);
+            const flat = p && ((p.inpaint && p.inpaint.usd) || (p.generation && p.generation.usd));
             return typeof flat === 'number' ? flat : 999;
         }
 
@@ -881,15 +609,20 @@
             const p = this.modelPrice(spec);
             if (p === 999) return 'n/a';
             const res = spec.pricing && spec.pricing.resolutions;
-            return res ? ('$' + p.toFixed(2) + '+') : ('$' + p.toFixed(2));
+            return res && Object.keys(res).length > 1 ? ('$' + p.toFixed(2) + '+') : ('$' + p.toFixed(2));
         }
+
+        modelFor(tab) { return tab === 'create' ? this.createModel : tab === 'edit' ? this.editModel : this.combineModel; }
 
         updateAllModelUI() {
             ['create','edit','combine'].forEach(tab => {
-                const m = tab === 'create' ? this.createModel : tab === 'edit' ? this.editModel : this.combineModel;
-                if (!m) return;
-                const name = m.model_spec.name || m.id;
-                this.$(tab + 'ModelName').textContent = name;
+                const m = this.modelFor(tab);
+                if (!m) {
+                    this.$(tab + 'ModelName').textContent = 'No models available';
+                    this.$(tab + 'ModelPrice').textContent = '';
+                    return;
+                }
+                this.$(tab + 'ModelName').textContent = this.modelName(m, tab);
                 this.$(tab + 'ModelPrice').textContent = this.modelPriceLabel(m.model_spec) + ' per image';
             });
             this.updateAspectChips('create', this.createModel);
@@ -900,55 +633,62 @@
         }
 
         updateCharLimits() {
-            ['create','edit','combine'].forEach(tab => {
-                const m = tab === 'create' ? this.createModel : tab === 'edit' ? this.editModel : this.combineModel;
-                const limit = (m && m.model_spec.constraints && m.model_spec.constraints.promptCharacterLimit) || 7500;
-                const ta = this.$(tab + 'Prompt');
-                ta.maxLength = limit;
-                const count = this.$(tab + 'CharCount');
-                if (count) count.textContent = ta.value.length + ' / ' + limit.toLocaleString();
-            });
+            ['create','edit','combine'].forEach(tab => this.updateCharCount(tab));
+        }
+        updateCharCount(tab) {
+            const m = this.modelFor(tab);
+            const limit = (m && m.model_spec.constraints && m.model_spec.constraints.promptCharacterLimit) || 7500;
+            const ta = this.$(tab + 'Prompt');
+            ta.maxLength = limit;
+            this.$(tab + 'CharCount').textContent = ta.value.length.toLocaleString() + ' / ' + limit.toLocaleString();
         }
 
         // ==================== MODEL PICKER ====================
         openModelPicker(tab) {
             const catalog = tab === 'create' ? this.imageModels : tab === 'combine' ? this.combineCapable() : this.editModels;
-            const current = tab === 'create' ? this.createModel : tab === 'edit' ? this.editModel : this.combineModel;
+            const current = this.modelFor(tab);
             const list = this.sortModels(catalog, tab === 'create' ? this.DEFAULT_CREATE : this.DEFAULT_EDIT, tab === 'create' ? this.CREATE_ORDER : this.EDIT_ORDER);
             this._pickerTab = tab;
+            this.$('modelModalTitle').textContent = tab === 'create' ? 'Text-to-image models' : tab === 'combine' ? 'Combine-capable edit models' : 'Image edit models';
             const c = this.$('modelList');
-            c.innerHTML = list.map(m => {
+            if (!list.length) {
+                c.innerHTML = '<p class="text-xs text-center py-8" style="color:var(--c-dim);">No models available right now. Check your connection and try again.</p>';
+            } else c.innerHTML = list.map(m => {
                 const s = m.model_spec, active = current && m.id === current.id, off = s.offline;
-                const priceColor = this.modelPrice(s) <= 0.05 ? 'var(--c-glow2)' : this.modelPrice(s) <= 0.10 ? '#ffb74d' : '#ff7043';
-                return `<button class="model-card ${active?'selected':''}" data-model-id="${m.id}" ${off?'disabled style="opacity:0.35;cursor:not-allowed"':''} aria-label="Select model ${s.name || m.id}">
-                    <div class="flex items-center justify-between mb-1">
-                        <div class="flex items-center gap-2">
-                            <div class="w-2 h-2 rounded-full" style="background:${active?'var(--c-glow)':'var(--c-surface3)'}; ${active?'box-shadow:0 0 8px rgba(124,91,245,0.5)':''}"></div>
-                            <span class="text-xs font-semibold" style="color:${active?'var(--c-text)':'var(--c-dim)'}">${s.name || m.id}</span>
+                const price = this.modelPrice(s);
+                const priceColor = price <= 0.05 ? 'var(--c-glow2)' : price <= 0.10 ? '#b7791f' : '#d9480f';
+                const name = this.esc(this.modelName(m, tab));
+                return `<button class="model-card ${active ? 'selected' : ''}" data-model-id="${this.esc(m.id)}" ${off ? 'disabled style="opacity:0.4;cursor:not-allowed"' : ''} aria-label="Select model ${name}">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <div class="w-2 h-2 rounded-full shrink-0" style="background:${active ? 'var(--c-glow)' : 'var(--c-surface3)'}"></div>
+                            <span class="text-[13px] font-semibold truncate">${name}</span>
                         </div>
-                        <span class="text-[10px] font-mono font-semibold" style="color:${priceColor}">${this.modelPriceLabel(s)}</span>
+                        <span class="text-[11px] font-mono font-semibold shrink-0" style="color:${priceColor}">${this.modelPriceLabel(s)}</span>
                     </div>
-                    <div class="flex items-center gap-1.5 mt-1.5">
-                        <span class="text-[8px] px-1.5 py-0.5 rounded font-mono" style="background:var(--c-surface3);color:var(--c-dim)">${s.privacy || 'n/a'}</span>
-                        <span class="text-[8px] px-1.5 py-0.5 rounded font-mono" style="background:var(--c-surface3);color:var(--c-dim)">${((s.constraints && s.constraints.promptCharacterLimit) || 0).toLocaleString()} chars</span>
-                        ${s.constraints && s.constraints.combineImages && tab !== 'edit' ? '<span class="text-[8px] px-1.5 py-0.5 rounded font-mono" style="background:var(--c-surface3);color:var(--c-dim)">combine</span>' : ''}
+                    <div class="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                        <span class="chip-mono">${this.esc(m.id)}</span>
+                        <span class="chip-mono">${this.esc(s.privacy || 'n/a')}</span>
+                        <span class="chip-mono">${((s.constraints && s.constraints.promptCharacterLimit) || 0).toLocaleString()} chars</span>
+                        ${s.constraints && s.constraints.combineImages && tab === 'combine' ? '<span class="chip-mono">combine</span>' : ''}
+                        ${off ? '<span class="chip-mono">offline</span>' : ''}
                     </div>
                 </button>`;
             }).join('');
-            c.querySelectorAll('.model-card:not([disabled])').forEach(card => {
-                card.addEventListener('click', () => {
-                    const tab = this._pickerTab;
-                    const model = (tab === 'create' ? this.imageModels : tab === 'combine' ? this.combineCapable() : this.editModels).find(m => m.id === card.dataset.modelId);
-                    if (!model) return;
-                    if (tab === 'create') this.createModel = model; else if (tab === 'edit') this.editModel = model; else this.combineModel = model;
-                    localStorage.setItem('vivmorph_' + tab + '_model', model.id);
-                    this.updateAllModelUI();
-                    this.closeModelModal();
-                    this.setStatus((model.model_spec.name || model.id) + ' selected');
-                });
-            });
             this.$('modelFilter').value = '';
             this.show('modelModal');
+        }
+
+        selectModel(modelId) {
+            const tab = this._pickerTab;
+            const catalog = tab === 'create' ? this.imageModels : tab === 'combine' ? this.combineCapable() : this.editModels;
+            const model = catalog.find(m => m.id === modelId);
+            if (!model) return;
+            if (tab === 'create') this.createModel = model; else if (tab === 'edit') this.editModel = model; else this.combineModel = model;
+            try { localStorage.setItem('vivmorph_' + tab + '_model', model.id); } catch {}
+            this.updateAllModelUI();
+            this.closeModelModal();
+            this.setStatus(this.modelName(model, tab) + ' selected');
         }
 
         closeModelModal() { this.hide('modelModal'); }
@@ -956,143 +696,130 @@
         // ==================== CHIPS ====================
         renderChips(container, items, selected, onPick, fmt) {
             const c = this.$(container);
-            c.innerHTML = items.map(v => `<button class="tag ${v === selected ? 'active' : ''}" data-val="${v}">${fmt ? fmt(v) : v}</button>`).join('');
-            c.querySelectorAll('.tag').forEach(b => b.addEventListener('click', () => onPick(b.dataset.val)));
+            c.innerHTML = items.map(v => `<button class="tag ${v === selected ? 'active' : ''}" data-val="${this.esc(v)}">${this.esc(fmt ? fmt(v) : v)}</button>`).join('');
+            c.onclick = e => { const b = e.target.closest('.tag'); if (b) onPick(b.dataset.val); };
         }
 
         updateAspectChips(tab, model) {
-            if (tab === 'combine') return;
-            const container = tab + 'AspectChips';
-            const ars = (model && model.model_spec.constraints && model.model_spec.constraints.aspectRatios) || [];
-            const list = ars.length ? ars : [];
-            const sel = tab === 'create' ? this.createAspectRatio : this.editAspectRatio;
-            if (!list.includes(sel)) { if (tab === 'create') this.createAspectRatio = list[0] || 'auto'; else this.editAspectRatio = list[0] || 'auto'; }
-            this.renderChips(container, list, tab === 'create' ? this.createAspectRatio : this.editAspectRatio, v => {
-                if (tab === 'create') this.createAspectRatio = v; else this.editAspectRatio = v;
+            const list = (model && model.model_spec.constraints && model.model_spec.constraints.aspectRatios) || [];
+            const key = tab === 'create' ? 'createAspectRatio' : 'editAspectRatio';
+            if (!list.includes(this[key])) this[key] = list.includes('auto') ? 'auto' : (list[0] || 'auto');
+            this.renderChips(tab + 'AspectChips', list, this[key], v => {
+                this[key] = v;
                 this.updateAspectChips(tab, model);
             }, v => v === 'auto' ? 'Auto' : v);
         }
 
         updateResChips(tab, model) {
-            const section = this.$(tab + 'ResSection'), container = tab + 'ResChips';
+            const section = this.$(tab + 'ResSection'), key = tab === 'create' ? 'createResolution' : 'editResolution';
             const res = model && model.model_spec.pricing && model.model_spec.pricing.resolutions;
             const keys = res ? Object.keys(res) : [];
             if (!keys.length) {
                 section.classList.add('hidden');
-                if (tab === 'create') this.createResolution = null; else this.editResolution = null;
+                this[key] = null;
                 return;
             }
             section.classList.remove('hidden');
-            const pref = ['4K','2K','1K'].find(k => keys.includes(k)) || keys[keys.length - 1];
-            if (tab === 'create') { if (!this.createResolution || !keys.includes(this.createResolution)) this.createResolution = pref; }
-            else { if (!this.editResolution || !keys.includes(this.editResolution)) this.editResolution = pref; }
-            const sel = tab === 'create' ? this.createResolution : this.editResolution;
-            this.renderChips(container, keys, sel, v => {
-                if (tab === 'create') this.createResolution = v; else this.editResolution = v;
+            if (!this[key] || !keys.includes(this[key])) this[key] = ['4K','2K','1K'].find(k => keys.includes(k)) || keys[keys.length - 1];
+            this.renderChips(tab + 'ResChips', keys, this[key], v => {
+                this[key] = v;
                 this.updateResChips(tab, model);
             });
         }
 
         // ==================== FILE HANDLING ====================
         isHeicFile(file) {
-            return /image\/hei[cf]|\.hei[cf]$/i.test(file.type + ' ' + file.name);
+            return /image\/hei[cf]|\.hei[cf]$/i.test((file.type || '') + ' ' + (file.name || ''));
         }
 
         validateImageFile(file) {
-            if (!file.type.startsWith('image/') && !this.isHeicFile(file)) { this.setStatus('Not an image file'); return false; }
+            if (!(file.type || '').startsWith('image/') && !this.isHeicFile(file)) { this.setStatus('Not an image file'); return false; }
             if (file.size > 25 * 1024 * 1024) { this.setStatus('Image exceeds 25MB limit'); return false; }
             return true;
         }
 
+        // Decode via an object URL (no giant base64 FileReader string), downscale to
+        // maxDim and re-encode as JPEG to keep API payloads small.
         async fileToBase64(file, maxDim = 2048) {
-            // HEIC needs the heic2any library
-            if (this.isHeicFile(file)) await this.ensureHeicLib();
             if (this.isHeicFile(file)) {
-                const heic2any = window.heic2any || (await import('https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js')).default;
-                const blob = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.92 });
-                file = blob.length ? blob[0] : blob;
+                await this.loadScript(HEIC_LIB); // ~1MB, only fetched when a HEIC is picked
+                const blob = await window.heic2any({ blob: file, toType: 'image/jpeg', quality: 0.92 });
+                file = Array.isArray(blob) ? blob[0] : blob;
             }
-            // Downscale to maxDim
-            const dataUrl = await new Promise((resolve, reject) => {
-                const r = new FileReader();
-                r.onload = () => resolve(r.result);
-                r.onerror = reject;
-                r.readAsDataURL(file);
-            });
-            const img = await this.loadImageElement(dataUrl);
-            let { width, height } = img;
-            if (width > maxDim || height > maxDim) {
-                const scale = maxDim / Math.max(width, height);
-                width = Math.round(width * scale); height = Math.round(height * scale);
+            const url = URL.createObjectURL(file);
+            try {
+                const img = await this.loadImageElement(url);
+                let width = img.naturalWidth, height = img.naturalHeight;
+                if (width > maxDim || height > maxDim) {
+                    const scale = maxDim / Math.max(width, height);
+                    width = Math.round(width * scale); height = Math.round(height * scale);
+                }
+                const canvas = this.canvasOf(width, height);
+                const ctx = canvas.getContext('2d');
+                ctx.imageSmoothingQuality = 'high';
+                ctx.drawImage(img, 0, 0, width, height);
+                return canvas.toDataURL('image/jpeg', 0.92).split(',')[1];
+            } finally {
+                URL.revokeObjectURL(url);
             }
-            const canvas = document.createElement('canvas');
-            canvas.width = width; canvas.height = height;
-            canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-            // JPEG at 0.92 keeps payloads small for the API
-            return canvas.toDataURL('image/jpeg', 0.92).split(',')[1];
-        }
-
-        async ensureHeicLib() {
-            if (window.heic2any) return;
-            await this.loadScript('https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js');
         }
 
         loadScript(src) {
-            return new Promise((resolve, reject) => {
-                if (document.querySelector(`script[src="${src}"]`)) return resolve();
+            if (!this._scripts) this._scripts = {};
+            if (!this._scripts[src]) this._scripts[src] = new Promise((resolve, reject) => {
                 const s = document.createElement('script');
-                s.src = src; s.onload = resolve; s.onerror = reject;
+                s.src = src; s.async = true; s.onload = resolve;
+                s.onerror = () => { delete this._scripts[src]; reject(new Error('Could not load ' + src)); };
                 document.head.appendChild(s);
             });
+            return this._scripts[src];
         }
 
         loadImageElement(src) {
             return new Promise((resolve, reject) => {
                 const img = new Image();
+                img.decoding = 'async';
                 img.onload = () => resolve(img);
-                img.onerror = reject;
+                img.onerror = () => reject(new Error('Could not decode image'));
                 img.src = src;
             });
         }
 
         // ==================== EDIT: single image ====================
-        async handleEditUpload(event) {
-            const file = event.target.files && event.target.files[0];
+        async handleEditUpload(file) {
             if (!file || !this.validateImageFile(file)) return;
             try {
                 this.setStatus('Loading image...');
-                this.editImageB64 = await this.fileToBase64(file);
-                this.$('editPreviewImg').src = this.b64ToDataUrl(this.editImageB64);
-                this.show('editImagePreview');
-                this.hide('editDropZone');
-                this.resetMask();
-                this.hide('editResult');
+                this.setEditImage(await this.fileToBase64(file));
                 this.setStatus('Image loaded');
             } catch (e) {
                 this.showError('Could not load image: ' + e.message);
             }
         }
 
-        clearEditImage() {
-            this.editImageB64 = null;
+        // Single entry point for putting a photo into the Edit tab (upload, Create,
+        // Combine, history, iterate). The mask canvas is sized from the image's
+        // natural size on load, so it works even while the tab is hidden.
+        setEditImage(b64) {
+            this.editImageB64 = b64;
             this.resetMask();
-            this.hide('editImagePreview');
+            this.$('editPreviewImg').src = this.b64ToDataUrl(b64);
+            this.show('editImagePreview');
+            this.hide('editDropZone');
             this.hide('editResult');
-            this.show('editDropZone');
         }
 
         // ==================== COMBINE: multi images ====================
-        async handleCombineUpload(event) {
-            const files = Array.from(event.target.files || []);
+        async handleCombineUpload(files) {
             for (const file of files) {
                 if (this.multiImages.length >= 3) { this.setStatus('Max 3 images'); break; }
                 if (!this.validateImageFile(file)) continue;
                 try {
                     const b64 = await this.fileToBase64(file);
                     this.multiImages.push({ b64, dataUrl: this.b64ToDataUrl(b64) });
+                    this.renderMultiThumbs();
                 } catch (e) { this.setStatus('Could not load ' + file.name); }
             }
-            this.renderMultiThumbs();
         }
 
         removeMultiImage(index) {
@@ -1105,9 +832,8 @@
             c.innerHTML = this.multiImages.map((item, i) => `
                 <div class="relative">
                     <img src="${item.dataUrl}" class="w-16 h-16 object-cover rounded-xl border" style="border-color: var(--c-border);" alt="Combine image ${i+1}">
-                    <button class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-[10px] flex items-center justify-center" style="background:#f87171;color:#fff;" data-remove="${i}" aria-label="Remove image ${i+1}">&times;</button>
+                    <button class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-[11px] flex items-center justify-center" style="background:#ef4444;color:#fff;" data-remove="${i}" aria-label="Remove image ${i+1}">&times;</button>
                 </div>`).join('');
-            c.querySelectorAll('[data-remove]').forEach(b => b.addEventListener('click', () => this.removeMultiImage(parseInt(b.dataset.remove))));
         }
 
         // ==================== MASK (Edit tab) ====================
@@ -1115,92 +841,141 @@
             const canvas = this.$('editMaskCanvas');
             this.mask.canvas = canvas;
             this.mask.ctx = canvas.getContext('2d');
+            // Match the canvas's pixel grid to the photo itself; CSS stretches it over
+            // the rendered image, so resizes/rotations never misalign or wipe the mask.
+            this.$('editPreviewImg').addEventListener('load', e => {
+                canvas.width = e.target.naturalWidth;
+                canvas.height = e.target.naturalHeight;
+                this.updateMaskBadge();
+            });
             canvas.addEventListener('pointerdown', e => {
+                if (!this.mask.active) return;
+                e.preventDefault();
                 this.mask.painting = true;
-                canvas.setPointerCapture(e.pointerId);
+                this.mask.last = null;
+                try { canvas.setPointerCapture(e.pointerId); } catch {}
                 this.maskDraw(e);
             });
-            canvas.addEventListener('pointermove', e => { if (this.mask.painting) this.maskDraw(e); });
-            ['pointerup','pointercancel','pointerleave'].forEach(ev => canvas.addEventListener(ev, () => this.mask.painting = false));
+            canvas.addEventListener('pointermove', e => {
+                if (!this.mask.painting) return;
+                e.preventDefault();
+                const pts = e.getCoalescedEvents ? e.getCoalescedEvents() : [];
+                (pts.length ? pts : [e]).forEach(p => this.maskDraw(p));
+            });
+            const end = () => {
+                if (!this.mask.painting) return;
+                this.mask.painting = false;
+                this.mask.last = null;
+                this.updateMaskBadge();
+            };
+            ['pointerup','pointercancel','lostpointercapture'].forEach(ev => canvas.addEventListener(ev, end));
         }
 
-        updateImageBounds() {
-            const canvas = this.mask.canvas, img = this.$('editPreviewImg');
-            if (!canvas || !img || !this.editImageB64) return;
-            const rect = img.getBoundingClientRect();
-            if (!rect.width) return;
-            canvas.width = Math.round(rect.width);
-            canvas.height = Math.round(rect.height);
-            this.clearMask();
+        setMaskActive(on) {
+            this.mask.active = on;
+            this.mask.canvas.classList.toggle('painting', on);
+            this.$('editMaskTools').classList.toggle('hidden', !on);
+            this.$('editMaskBtnLabel').textContent = on ? 'Done painting' : 'Paint mask';
+            if (on) this.setStatus('Paint over the area to change');
         }
 
         toggleMask() {
             if (!this.editImageB64) { this.setStatus('Load an image first'); return; }
-            this.mask.active = !this.mask.active;
-            if (this.mask.active) {
-                this.updateImageBounds();
-                this.$('editMaskCanvas').classList.remove('hidden');
-                this.$('editMaskTools').classList.remove('hidden');
-                this.$('editMaskBtn').textContent = 'Hide Mask';
-                this.setStatus('Paint the area to edit');
-            } else {
-                this.$('editMaskCanvas').classList.add('hidden');
-                this.$('editMaskTools').classList.add('hidden');
-                this.$('editMaskBtn').textContent = 'Paint Mask';
-            }
+            this.setMaskActive(!this.mask.active);
         }
 
         setMaskTool(tool) {
             this.mask.tool = tool;
             this.$('editMaskBrush').classList.toggle('active', tool === 'brush');
-            this.$('editMaskEraser').classList.toggle('active', tool === 'brush' ? false : true);
-            // Single CSS class swap on a shared container keeps it one repaint
-            this.$('editMaskTools').dataset.tool = tool;
+            this.$('editMaskEraser').classList.toggle('active', tool === 'eraser');
+            this.mask.canvas.classList.toggle('eraser', tool === 'eraser');
         }
 
         clearMask() {
-            if (this.mask.ctx && this.mask.canvas) {
-                this.mask.ctx.clearRect(0, 0, this.mask.canvas.width, this.mask.canvas.height);
-                this.mask.hasInk = false;
-            }
+            const { ctx, canvas } = this.mask;
+            if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+            this.updateMaskBadge();
         }
+
         resetMask() {
             this.clearMask();
-            if (this.mask.active) this.toggleMask(); // hides UI
+            if (this.mask.active) this.setMaskActive(false);
         }
 
         maskDraw(e) {
-            const canvas = this.mask.canvas, ctx = this.mask.ctx;
-            if (!ctx) return;
+            const { canvas, ctx } = this.mask;
             const rect = canvas.getBoundingClientRect();
-            const x = (e.clientX - rect.left) * (canvas.width / rect.width);
-            const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+            if (!rect.width || !canvas.width) return;
+            const scale = canvas.width / rect.width; // brush size is in on-screen pixels
+            const p = { x: (e.clientX - rect.left) * scale, y: (e.clientY - rect.top) * (canvas.height / rect.height) };
             ctx.globalCompositeOperation = this.mask.tool === 'eraser' ? 'destination-out' : 'source-over';
-            ctx.fillStyle = 'rgba(247,37,133,0.55)';
+            // Opaque ink; the canvas's CSS opacity makes it a translucent overlay, so
+            // overlapping strokes don't build up darker.
+            ctx.fillStyle = ctx.strokeStyle = '#e0287d';
+            ctx.lineCap = ctx.lineJoin = 'round';
+            ctx.lineWidth = this.mask.size * 2 * scale;
             ctx.beginPath();
-            ctx.arc(x, y, this.mask.size, 0, Math.PI * 2);
-            ctx.fill();
-            this.mask.hasInk = true;
+            if (this.mask.last) {
+                ctx.moveTo(this.mask.last.x, this.mask.last.y);
+                ctx.lineTo(p.x, p.y);
+                ctx.stroke();
+            } else {
+                ctx.arc(p.x, p.y, this.mask.size * scale, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            this.mask.last = p;
         }
 
-        // Export the mask at the image's natural resolution for the API
-        async getMaskBase64() {
-            if (!this.mask.hasInk || !this.mask.canvas || !this.editImageB64) return null;
-            const canvas = this.mask.canvas;
-            const img = await this.loadImageElement(this.b64ToDataUrl(this.editImageB64));
-            const out = document.createElement('canvas');
-            out.width = img.naturalWidth; out.height = img.naturalHeight;
-            const octx = out.getContext('2d');
-            octx.drawImage(canvas, 0, 0, out.width, out.height);
-            // White = edit area, black = keep. The API expects a grayscale mask aligned to the image.
-            const data = octx.getImageData(0, 0, out.width, out.height);
-            const px = data.data;
-            for (let i = 0; i < px.length; i += 4) {
-                const a = px[i + 3];
-                px[i] = 255; px[i+1] = 255; px[i+2] = 255; px[i+3] = 255;
-                if (a < 8) { px[i] = 0; px[i+1] = 0; px[i+2] = 0; }
-            }
-            octx.putImageData(data, 0, 0);
+        // Fraction of the photo covered by the mask, sampled on a small copy.
+        maskCoverage() {
+            const { canvas } = this.mask;
+            if (!canvas.width || !this.editImageB64) return 0;
+            const s = this.canvasOf(64, Math.max(1, Math.round(64 * canvas.height / canvas.width)));
+            const sctx = s.getContext('2d');
+            sctx.drawImage(canvas, 0, 0, s.width, s.height);
+            const px = sctx.getImageData(0, 0, s.width, s.height).data;
+            let on = 0;
+            for (let i = 3; i < px.length; i += 4) if (px[i] > 16) on++;
+            return on / (s.width * s.height);
+        }
+
+        updateMaskBadge() {
+            const on = this.maskCoverage() > 0;
+            this.$('editMaskBadge').classList.toggle('hidden', !on);
+            this.$('editAspectNote').classList.toggle('hidden', !on);
+        }
+
+        // Venice's /image/edit has no mask input, so masked edits run on the whole
+        // photo and the result is blended back through a feathered copy of the mask:
+        // painted pixels come from the edit, everything else stays original.
+        async compositeWithMask(origB64, resultB64, maskCanvas) {
+            const [o, r] = await Promise.all([
+                this.loadImageElement(this.b64ToDataUrl(origB64)),
+                this.loadImageElement(this.b64ToDataUrl(resultB64))
+            ]);
+            const W = o.naturalWidth, H = o.naturalHeight;
+            // If the model reframed the shot, pixels can't be lined up - keep the full edit.
+            if (Math.abs(r.naturalWidth / r.naturalHeight - W / H) > 0.03 * (W / H)) return null;
+
+            // Soft edge: blur by down/up-sampling (works everywhere, unlike ctx.filter on
+            // older iOS), then lay the hard mask on top so painted pixels stay fully replaced.
+            const feather = Math.max(4, Math.round(Math.max(W, H) / 120));
+            const small = this.canvasOf(Math.max(1, Math.round(W / feather)), Math.max(1, Math.round(H / feather)));
+            const sctx = small.getContext('2d');
+            sctx.imageSmoothingQuality = 'high';
+            sctx.drawImage(maskCanvas, 0, 0, small.width, small.height);
+            const m = this.canvasOf(W, H), mctx = m.getContext('2d');
+            mctx.imageSmoothingQuality = 'high';
+            mctx.drawImage(small, 0, 0, W, H);
+            mctx.drawImage(maskCanvas, 0, 0, W, H);
+
+            const out = this.canvasOf(W, H), octx = out.getContext('2d');
+            octx.imageSmoothingQuality = 'high';
+            octx.drawImage(r, 0, 0, W, H);
+            octx.globalCompositeOperation = 'destination-in';
+            octx.drawImage(m, 0, 0);
+            octx.globalCompositeOperation = 'destination-over';
+            octx.drawImage(o, 0, 0, W, H);
             return out.toDataURL('image/png').split(',')[1];
         }
 
@@ -1208,19 +983,16 @@
         async generateImage() {
             const prompt = this.$('createPrompt').value.trim();
             if (!prompt) { this.setStatus('Write a prompt first'); return; }
-            const payload = {
-                model: this.createModel.id,
-                prompt,
-                format: 'png'
-            };
+            if (!this.createModel) { this.showError('No image models are available right now.'); return; }
+            const payload = { model: this.createModel.id, prompt, format: 'png' };
             if (this.createAspectRatio && this.createAspectRatio !== 'auto') payload.aspect_ratio = this.createAspectRatio;
             if (this.createResolution) payload.resolution = this.createResolution;
-            this.showProgress('Generating with ' + (this.createModel.model_spec.name || this.createModel.id) + '...');
+            this.showProgress('Generating with ' + this.modelName(this.createModel, 'create') + '...');
             try {
                 const data = await this.fetchJSON('/.netlify/functions/image-generate', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
                 });
-                const b64 = data.images && data.images[0] || data.image;
+                const b64 = (data.images && data.images[0]) || data.image;
                 if (!b64) throw new Error('No image in response');
                 this.completeProgress();
                 this.$('createResultImg').src = this.b64ToDataUrl(b64);
@@ -1229,10 +1001,9 @@
                 this.addToHistory(prompt, this.createModel.id, b64);
                 this.setStatus('Image generated');
             } catch (e) {
-                this.hideProgress();
                 this.showError(e.message);
             } finally {
-                setTimeout(() => this.hideProgress(), 600);
+                setTimeout(() => this.hideProgress(), 300);
             }
         }
 
@@ -1240,12 +1011,9 @@
             const prompt = this.$('combinePrompt').value.trim();
             if (!prompt) { this.setStatus('Write a blend prompt first'); return; }
             if (!this.multiImages.length) { this.setStatus('Add at least 1 image'); return; }
-            const payload = {
-                modelId: this.combineModel.id,
-                images: this.multiImages.map(m => m.b64),
-                prompt
-            };
-            this.showProgress('Blending with ' + (this.combineModel.model_spec.name || this.combineModel.id) + '...');
+            if (!this.combineModel) { this.showError('No combine-capable models are available right now.'); return; }
+            const payload = { modelId: this.combineModel.id, images: this.multiImages.map(m => m.b64), prompt };
+            this.showProgress('Blending with ' + this.modelName(this.combineModel, 'combine') + '...');
             try {
                 const data = await this.fetchJSON('/.netlify/functions/image-multi-edit', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
@@ -1259,10 +1027,9 @@
                 this.addToHistory(prompt, this.combineModel.id, b64);
                 this.setStatus('Images combined');
             } catch (e) {
-                this.hideProgress();
                 this.showError(e.message);
             } finally {
-                setTimeout(() => this.hideProgress(), 600);
+                setTimeout(() => this.hideProgress(), 300);
             }
         }
 
@@ -1270,75 +1037,74 @@
             const prompt = this.$('editPrompt').value.trim();
             if (!prompt) { this.setStatus('Write an edit prompt first'); return; }
             if (!this.editImageB64) { this.setStatus('Upload an image first'); return; }
-            const payload = {
-                model: this.editModel.id,
-                prompt,
-                image: this.editImageB64
-            };
-            if (this.editAspectRatio && this.editAspectRatio !== 'auto') payload.aspect_ratio = this.editAspectRatio;
-            if (this.editResolution) payload.resolution = this.editResolution;
-            const maskB64 = await this.getMaskBase64();
-            if (maskB64) payload.mask = maskB64;
-            this.showProgress('Editing with ' + (this.editModel.model_spec.name || this.editModel.id) + '...');
+            if (!this.editModel) { this.showError('No edit models are available right now.'); return; }
+            const inputB64 = this.editImageB64;
+            // Snapshot the mask now so painting during the request can't change it.
+            let maskSnap = null;
+            if (this.maskCoverage() > 0) {
+                const c = this.mask.canvas;
+                maskSnap = this.canvasOf(c.width, c.height);
+                maskSnap.getContext('2d').drawImage(c, 0, 0);
+            }
+            const payload = { model: this.editModel.id, prompt, image: inputB64 };
+            // A masked edit must keep the original framing so it can be blended back.
+            if (!maskSnap && this.editAspectRatio && this.editAspectRatio !== 'auto') payload.aspect_ratio = this.editAspectRatio;
+            if (this.mask.active) this.setMaskActive(false);
+            this.showProgress('Editing with ' + this.modelName(this.editModel, 'edit') + '...');
             try {
                 const data = await this.fetchJSON('/.netlify/functions/image-edit', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
                 });
-                const b64 = data.image;
+                let b64 = data.image || (data.images && data.images[0]);
                 if (!b64) throw new Error('No image in response');
+                let note = 'Edit applied';
+                if (maskSnap) {
+                    this.$('progressText').textContent = 'Blending masked area...';
+                    const blended = await this.compositeWithMask(inputB64, b64, maskSnap);
+                    if (blended) { b64 = blended; note = 'Edit applied to the masked area'; }
+                    else note = 'Model changed the framing - showing the full edit';
+                }
                 this.completeProgress();
-                this.editOriginalB64 = this.editImageB64;
+                this.editOriginalB64 = inputB64;
                 this.transformedImageB64 = b64;
                 this.renderEditResult();
                 this.addToHistory(prompt, this.editModel.id, b64);
-                this.setStatus('Edit applied');
+                this.setStatus(note);
+                requestAnimationFrame(() => this.$('editResult').scrollIntoView({ behavior: 'smooth', block: 'start' }));
             } catch (e) {
-                this.hideProgress();
                 this.showError(e.message);
             } finally {
-                setTimeout(() => this.hideProgress(), 600);
+                setTimeout(() => this.hideProgress(), 300);
             }
         }
 
         renderEditResult() {
             const wrap = this.$('editCompareWrap');
-            wrap.innerHTML = `
-                <div class="relative w-full">
-                    <img id="editResultImg" src="${this.b64ToDataUrl(this.transformedImageB64)}" class="w-full" alt="Edited result">
-                    ${this.editOriginalB64 ? `<div class="absolute top-2 left-2 text-[9px] font-mono px-2 py-1 rounded-md" style="background:rgba(6,6,11,0.7);color:var(--c-dim);">Edited - original available in History</div>` : ''}
-                </div>`;
+            wrap.innerHTML = `<img id="editResultImg" src="${this.b64ToDataUrl(this.transformedImageB64)}" class="w-full block" alt="Edited result" draggable="false" style="-webkit-touch-callout:none;">`;
+            const img = this.$('editResultImg');
+            // Press and hold to peek at the original
+            const showOrig = () => { if (this.editOriginalB64) img.src = this.b64ToDataUrl(this.editOriginalB64); };
+            const showEdit = () => { img.src = this.b64ToDataUrl(this.transformedImageB64); };
+            img.addEventListener('pointerdown', showOrig);
+            ['pointerup','pointerleave','pointercancel'].forEach(ev => img.addEventListener(ev, showEdit));
+            img.addEventListener('contextmenu', e => e.preventDefault());
             this.show('editResult');
         }
 
-        // Jump Create/Combine result into the Edit tab
-        useAsEditInput(b64, sourceTab) {
-            this.editImageB64 = b64;
-            this.$('editPreviewImg').src = this.b64ToDataUrl(b64);
-            this.show('editImagePreview');
-            this.hide('editDropZone');
-            this.hide('editResult');
-            this.resetMask();
+        // Jump a Create/Combine/history image into the Edit tab
+        useAsEditInput(b64) {
+            if (!b64) { this.setStatus('Nothing to edit yet'); return; }
+            this.setEditImage(b64);
             this.switchTab('edit');
             this.setStatus('Loaded into Edit - write your edit prompt');
-            setTimeout(() => this.updateImageBounds(), 50);
         }
 
-        // Iterate: feed the latest result back as new input on the same tab
+        // Iterate: feed the latest result back as new input
         iterateOnTab(tab) {
             const b64 = tab === 'create' ? this._createResultB64 : tab === 'edit' ? this.transformedImageB64 : this._combineResultB64;
             if (!b64) { this.setStatus('Generate something first'); return; }
-            if (tab === 'edit') {
-                this.editImageB64 = b64;
-                this.$('editPreviewImg').src = this.b64ToDataUrl(b64);
-                this.hide('editResult');
-                this.resetMask();
-                this.setStatus('Result loaded - write the next edit');
-            } else if (tab === 'create') {
-                // Text-to-image models cannot take an image; iterate by editing the result
-                this.useAsEditInput(b64, 'create');
-            } else {
-                this.useAsEditInput(b64, 'combine');
-            }
+            this.useAsEditInput(b64);
+            if (tab === 'edit') document.querySelector('main').scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         // ==================== MERCURY OPTIMIZER ====================
@@ -1349,7 +1115,7 @@
             const btn = this.$(tab + 'OptimizeBtn');
             const originalLabel = btn.innerHTML;
             btn.disabled = true;
-            btn.innerHTML = '<svg class="spinner h-3 w-3" style="color:#ffb74d;" fill="none" viewBox="0 0 24 24"><circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"/><path class="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg><span>Optimizing...</span>';
+            btn.innerHTML = '<svg class="spinner h-3 w-3" fill="none" viewBox="0 0 24 24"><circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"/><path class="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg><span>Optimizing...</span>';
             this.setStatus('Mercury 2.5 optimizing prompt...');
             try {
                 const data = await this.fetchJSON('/.netlify/functions/chat-completions', {
@@ -1389,7 +1155,7 @@
         applyMercuryChoice(useIt) {
             if (useIt && this._mercuryTargetTab) {
                 this.$(this._mercuryTargetTab + 'Prompt').value = this.$('mercuryOptimized').textContent;
-                this.updateCharLimits();
+                this.updateCharCount(this._mercuryTargetTab);
                 this.setStatus('Optimized prompt applied');
             } else {
                 this.setStatus('Kept your original prompt');
@@ -1397,9 +1163,9 @@
             this.hide('mercurySheet');
         }
 
-        // ==================== RESULT TOOLS ====================
+        // ==================== RESULT TOOLS (Edit tab) ====================
         async runImageTool(endpoint, buttonId, statusLabel, extraBody) {
-            const b64 = this.selectedTab === 'edit' ? (this.transformedImageB64 || this.editImageB64) : (this._createResultB64 || this._combineResultB64);
+            const b64 = this.transformedImageB64 || this.editImageB64;
             if (!b64) { this.setStatus('Nothing to process yet'); return; }
             const btn = this.$(buttonId);
             const orig = btn.innerHTML;
@@ -1413,9 +1179,9 @@
                 }, 180000);
                 const out = data.image || (data.images && data.images[0]);
                 if (!out) throw new Error('No image in response');
-                if (this.selectedTab === 'edit') { this.transformedImageB64 = out; this.renderEditResult(); }
-                else if (this.selectedTab === 'create') { this._createResultB64 = out; this.$('createResultImg').src = this.b64ToDataUrl(out); }
-                else { this._combineResultB64 = out; this.$('combineResultImg').src = this.b64ToDataUrl(out); }
+                if (!this.editOriginalB64) this.editOriginalB64 = b64;
+                this.transformedImageB64 = out;
+                this.renderEditResult();
                 this.setStatus(statusLabel + ' done');
             } catch (e) {
                 this.showError(e.message);
@@ -1429,23 +1195,99 @@
             if (!b64) return;
             const a = document.createElement('a');
             a.href = this.b64ToDataUrl(b64);
-            a.download = 'vivmorph-' + tab + '-' + Date.now() + '.png';
+            a.download = 'vivmorph-' + tab + '-' + Date.now() + (b64.startsWith('/9j/') ? '.jpg' : '.png');
             a.click();
         }
 
-        // ==================== HISTORY ====================
-        loadHistory() {
-            try { this.history = JSON.parse(localStorage.getItem('vivmorph_history_v2') || '[]'); } catch { this.history = []; }
+        // ==================== HISTORY (IndexedDB) ====================
+        // Full images used to live in localStorage, which caps out around 5MB (a few
+        // images) and is parsed synchronously at startup. IndexedDB holds the full
+        // images; the list only ever loads small thumbnails.
+        idb() {
+            if (!this._db) this._db = new Promise((resolve, reject) => {
+                if (!window.indexedDB) return reject(new Error('IndexedDB unavailable'));
+                const req = indexedDB.open('vivmorph', 1);
+                req.onupgradeneeded = () => {
+                    req.result.createObjectStore('meta', { keyPath: 'ts' });
+                    req.result.createObjectStore('images', { keyPath: 'ts' });
+                };
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+            });
+            return this._db;
         }
-        saveHistory() {
-            try { localStorage.setItem('vivmorph_history_v2', JSON.stringify(this.history.slice(0, 30))); } catch {}
+
+        async idbRun(stores, mode, fn) {
+            const db = await this.idb();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(stores, mode);
+                const req = fn(tx);
+                tx.oncomplete = () => resolve(req && req.result);
+                tx.onerror = () => reject(tx.error);
+                tx.onabort = () => reject(tx.error);
+            });
         }
-        addToHistory(prompt, model, imageB64) {
-            this.history.unshift({ prompt, model, image: imageB64, ts: Date.now() });
-            this.history = this.history.slice(0, 30);
-            this.saveHistory();
+
+        async makeThumb(b64, size = 240) {
+            const img = await this.loadImageElement(this.b64ToDataUrl(b64));
+            const scale = size / Math.max(img.naturalWidth, img.naturalHeight);
+            const c = this.canvasOf(Math.max(1, Math.round(img.naturalWidth * scale)), Math.max(1, Math.round(img.naturalHeight * scale)));
+            c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+            return c.toDataURL('image/jpeg', 0.75);
+        }
+
+        async loadHistory() {
+            try {
+                const meta = await this.idbRun('meta', 'readonly', tx => tx.objectStore('meta').getAll());
+                this.history = (meta || []).sort((a, b) => b.ts - a.ts);
+                this.renderHistory();
+                await this.migrateLegacyHistory();
+            } catch {
+                this._memImages = new Map(); // no IndexedDB (e.g. some private modes): session-only history
+                this.renderHistory();
+            }
+        }
+
+        async migrateLegacyHistory() {
+            let legacy;
+            try { legacy = JSON.parse(localStorage.getItem('vivmorph_history_v2') || 'null'); } catch { legacy = null; }
+            if (!Array.isArray(legacy)) return;
+            for (const h of legacy.slice(0, HISTORY_LIMIT).reverse()) {
+                if (h && h.image) await this.addToHistory(h.prompt || '', h.model || '', h.image, h.ts).catch(() => {});
+            }
+            try { localStorage.removeItem('vivmorph_history_v2'); } catch {}
+        }
+
+        async addToHistory(prompt, model, imageB64, ts) {
+            ts = ts || Date.now();
+            while (this.history.some(h => h.ts === ts)) ts++;
+            let thumb;
+            try { thumb = await this.makeThumb(imageB64); } catch { thumb = this.b64ToDataUrl(imageB64); }
+            const entry = { ts, prompt, model, thumb };
+            this.history.push(entry);
+            this.history.sort((a, b) => b.ts - a.ts);
+            const dropped = this.history.splice(HISTORY_LIMIT);
             this.renderHistory();
+            if (this._memImages) {
+                this._memImages.set(ts, imageB64);
+                dropped.forEach(d => this._memImages.delete(d.ts));
+                return;
+            }
+            try {
+                await this.idbRun(['meta', 'images'], 'readwrite', tx => {
+                    tx.objectStore('meta').put(entry);
+                    tx.objectStore('images').put({ ts, image: imageB64 });
+                    dropped.forEach(d => { tx.objectStore('meta').delete(d.ts); tx.objectStore('images').delete(d.ts); });
+                });
+            } catch {}
         }
+
+        async getHistoryImage(ts) {
+            if (this._memImages) return this._memImages.get(ts);
+            const row = await this.idbRun('images', 'readonly', tx => tx.objectStore('images').get(ts));
+            return row && row.image;
+        }
+
         renderHistory() {
             const c = this.$('historyModalItems');
             this.$('menuHistoryCount').textContent = this.history.length;
@@ -1454,100 +1296,111 @@
                 return;
             }
             c.innerHTML = this.history.map((h, i) => `
-                <button class="rounded-xl overflow-hidden border text-left relative" style="border-color: var(--c-border);" data-restore="${i}" aria-label="Restore ${h.prompt.slice(0,30)}">
-                    <img src="${this.b64ToDataUrl(h.image)}" class="w-full h-24 object-cover" alt="">
+                <button class="card overflow-hidden text-left" data-restore="${i}" aria-label="Restore ${this.esc(h.prompt.slice(0, 30))}">
+                    <img src="${h.thumb}" class="w-full h-24 object-cover" alt="" loading="lazy" decoding="async">
                     <div class="p-2">
-                        <p class="text-[10px] line-clamp-2 leading-snug" style="color:var(--c-dim);">${h.prompt.slice(0, 80)}</p>
+                        <p class="text-[10px] line-clamp-2 leading-snug" style="color:var(--c-dim);">${this.esc(h.prompt.slice(0, 80))}</p>
                     </div>
                 </button>`).join('');
-            c.querySelectorAll('[data-restore]').forEach(b => b.addEventListener('click', () => this.restoreFromHistory(parseInt(b.dataset.restore))));
         }
-        restoreFromHistory(idx) {
+
+        async restoreFromHistory(idx) {
             const h = this.history[idx];
             if (!h) return;
-            // Put the historical image into Edit for further work
-            this.useAsEditInput(h.image, 'history');
-            this.$('editPrompt').value = h.prompt;
-            this.updateCharLimits();
-            this.hide('historyModal');
+            try {
+                const image = await this.getHistoryImage(h.ts);
+                if (!image) throw new Error('missing');
+                this.useAsEditInput(image);
+                this.$('editPrompt').value = h.prompt;
+                this.updateCharCount('edit');
+                this.hide('historyModal');
+            } catch {
+                this.setStatus('That history item is no longer available');
+            }
         }
-        clearHistory() {
+
+        async clearHistory() {
             this.history = [];
-            this.saveHistory();
+            if (this._memImages) this._memImages.clear();
+            else try { await this.idbRun(['meta', 'images'], 'readwrite', tx => { tx.objectStore('meta').clear(); tx.objectStore('images').clear(); }); } catch {}
             this.renderHistory();
             this.setStatus('History cleared');
         }
 
         // ==================== EVENTS ====================
         setupEventListeners() {
+            const on = (id, ev, fn) => this.$(id).addEventListener(ev, fn);
             // Create
-            this.$('createGenerateBtn').addEventListener('click', () => this.generateImage());
-            this.$('createModelPill').addEventListener('click', () => this.openModelPicker('create'));
-            this.$('createOptimizeBtn').addEventListener('click', () => this.optimizePrompt('create'));
-            this.$('createPrompt').addEventListener('input', () => this.updateCharLimits());
-            this.$('createDownloadBtn').addEventListener('click', () => this.downloadResult('create'));
-            this.$('createUseEditBtn').addEventListener('click', () => this.useAsEditInput(this._createResultB64, 'create'));
-            this.$('createIterateBtn').addEventListener('click', () => this.iterateOnTab('create'));
+            on('createGenerateBtn', 'click', () => this.generateImage());
+            on('createModelPill', 'click', () => this.openModelPicker('create'));
+            on('createOptimizeBtn', 'click', () => this.optimizePrompt('create'));
+            on('createPrompt', 'input', () => this.updateCharCount('create'));
+            on('createDownloadBtn', 'click', () => this.downloadResult('create'));
+            on('createUseEditBtn', 'click', () => this.useAsEditInput(this._createResultB64));
+            on('createIterateBtn', 'click', () => this.iterateOnTab('create'));
             // Combine
-            this.$('combineAddBtn').addEventListener('click', () => this.$('combineFileInput').click());
-            this.$('combineFileInput').addEventListener('change', e => { this.handleCombineUpload(e); e.target.value = ''; });
-            this.$('combineBlendBtn').addEventListener('click', () => this.combineImages());
-            this.$('combineModelPill').addEventListener('click', () => this.openModelPicker('combine'));
-            this.$('combineOptimizeBtn').addEventListener('click', () => this.optimizePrompt('combine'));
-            this.$('combinePrompt').addEventListener('input', () => this.updateCharLimits());
-            this.$('combineDownloadBtn').addEventListener('click', () => this.downloadResult('combine'));
-            this.$('combineUseEditBtn').addEventListener('click', () => this.useAsEditInput(this._combineResultB64, 'combine'));
+            on('combineAddBtn', 'click', () => this.$('combineFileInput').click());
+            on('combineFileInput', 'change', e => { this.handleCombineUpload(Array.from(e.target.files || [])); e.target.value = ''; });
+            on('combineThumbs', 'click', e => { const b = e.target.closest('[data-remove]'); if (b) this.removeMultiImage(parseInt(b.dataset.remove, 10)); });
+            on('combineBlendBtn', 'click', () => this.combineImages());
+            on('combineModelPill', 'click', () => this.openModelPicker('combine'));
+            on('combineOptimizeBtn', 'click', () => this.optimizePrompt('combine'));
+            on('combinePrompt', 'input', () => this.updateCharCount('combine'));
+            on('combineDownloadBtn', 'click', () => this.downloadResult('combine'));
+            on('combineUseEditBtn', 'click', () => this.useAsEditInput(this._combineResultB64));
             // Edit
-            this.$('editFileInput').addEventListener('change', e => { this.handleEditUpload(e); e.target.value = ''; });
-            this.$('editDropZone').addEventListener('click', () => this.$('editFileInput').click());
-            this.$('editModelPill').addEventListener('click', () => this.openModelPicker('edit'));
-            this.$('editOptimizeBtn').addEventListener('click', () => this.optimizePrompt('edit'));
-            this.$('editPrompt').addEventListener('input', () => this.updateCharLimits());
-            this.$('editApplyBtn').addEventListener('click', () => this.applyEdit());
-            this.$('editMaskBtn').addEventListener('click', () => this.toggleMask());
-            this.$('editMaskBrush').addEventListener('click', () => this.setMaskTool('brush'));
-            this.$('editMaskEraser').addEventListener('click', () => this.setMaskTool('eraser'));
-            this.$('editMaskClear').addEventListener('click', () => this.clearMask());
-            this.$('editDownloadBtn').addEventListener('click', () => this.downloadResult('edit'));
-            this.$('editUpscaleBtn').addEventListener('click', () => this.runImageTool('upscale', 'editUpscaleBtn', 'Upscale', { scale: 2, enhance: true }));
-            this.$('editBgRemoveBtn').addEventListener('click', () => this.runImageTool('background-remove', 'editBgRemoveBtn', 'Remove background'));
-            this.$('editIterateBtn').addEventListener('click', () => this.iterateOnTab('edit'));
+            on('editFileInput', 'change', e => { this.handleEditUpload(e.target.files && e.target.files[0]); e.target.value = ''; });
+            on('editDropZone', 'click', () => this.$('editFileInput').click());
+            on('editChangeBtn', 'click', () => this.$('editFileInput').click());
+            on('editModelPill', 'click', () => this.openModelPicker('edit'));
+            on('editOptimizeBtn', 'click', () => this.optimizePrompt('edit'));
+            on('editPrompt', 'input', () => this.updateCharCount('edit'));
+            on('editApplyBtn', 'click', () => this.applyEdit());
+            on('editMaskBtn', 'click', () => this.toggleMask());
+            on('editMaskBrush', 'click', () => this.setMaskTool('brush'));
+            on('editMaskEraser', 'click', () => this.setMaskTool('eraser'));
+            on('editMaskClear', 'click', () => this.clearMask());
+            on('editMaskSize', 'input', e => { this.mask.size = parseInt(e.target.value, 10) || 24; });
+            on('editDownloadBtn', 'click', () => this.downloadResult('edit'));
+            on('editUpscaleBtn', 'click', () => this.runImageTool('upscale', 'editUpscaleBtn', 'Upscale', { scale: 2, enhance: true }));
+            on('editBgRemoveBtn', 'click', () => this.runImageTool('background-remove', 'editBgRemoveBtn', 'Remove background'));
+            on('editIterateBtn', 'click', () => this.iterateOnTab('edit'));
             // Drag & drop + paste on Edit tab
             const dz = this.$('editDropZone');
             ['dragover','dragenter'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('dragover'); }));
             ['dragleave','drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove('dragover'); }));
             dz.addEventListener('drop', e => {
                 const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
-                if (file) this.handleEditUpload({ target: { files: [file] } });
+                if (file) this.handleEditUpload(file);
             });
             document.addEventListener('paste', e => {
                 if (this.selectedTab !== 'edit') return;
                 const item = e.clipboardData && e.clipboardData.items && Array.from(e.clipboardData.items).find(i => i.type.startsWith('image/'));
-                if (item) {
-                    const file = item.getAsFile();
-                    if (file) this.handleEditUpload({ target: { files: [file] } });
-                }
+                const file = item && item.getAsFile();
+                if (file) this.handleEditUpload(file);
             });
             // Mercury sheet
-            this.$('mercuryUseBtn').addEventListener('click', () => this.applyMercuryChoice(true));
-            this.$('mercuryKeepBtn').addEventListener('click', () => this.applyMercuryChoice(false));
-            // Model modal
-            this.$('closeModelModal').addEventListener('click', () => this.closeModelModal());
-            this.$('modelModalBackdrop').addEventListener('click', () => this.closeModelModal());
-            this.$('modelFilter').addEventListener('input', e => {
+            on('mercuryUseBtn', 'click', () => this.applyMercuryChoice(true));
+            on('mercuryKeepBtn', 'click', () => this.applyMercuryChoice(false));
+            // Model modal (one delegated listener instead of one per card)
+            on('modelList', 'click', e => { const card = e.target.closest('.model-card:not([disabled])'); if (card) this.selectModel(card.dataset.modelId); });
+            on('closeModelModal', 'click', () => this.closeModelModal());
+            on('modelModalBackdrop', 'click', () => this.closeModelModal());
+            on('modelFilter', 'input', e => {
                 const q = e.target.value.toLowerCase();
                 this.$('modelList').querySelectorAll('.model-card').forEach(card => {
-                    const name = card.textContent.toLowerCase();
-                    card.style.display = name.includes(q) ? '' : 'none';
+                    card.style.display = card.textContent.toLowerCase().includes(q) ? '' : 'none';
                 });
             });
             // History + settings + error modal
-            this.$('settingsMenuBtn').addEventListener('click', e => { e.stopPropagation(); this.$('settingsMenu').classList.toggle('hidden'); });
+            on('settingsMenuBtn', 'click', e => { e.stopPropagation(); this.$('settingsMenu').classList.toggle('hidden'); });
             document.addEventListener('click', () => this.$('settingsMenu').classList.add('hidden'));
-            this.$('menuHistoryBtn').addEventListener('click', () => { this.$('settingsMenu').classList.add('hidden'); this.show('historyModal'); this.renderHistory(); });
-            this.$('closeHistoryModal').addEventListener('click', () => this.hide('historyModal'));
-            this.$('historyModal').addEventListener('click', e => { if (e.target.id === 'historyModal') this.hide('historyModal'); });
-            this.$('closeError').addEventListener('click', () => this.hideErrorModal());
+            on('menuHistoryBtn', 'click', () => { this.$('settingsMenu').classList.add('hidden'); this.show('historyModal'); });
+            on('historyModalItems', 'click', e => { const b = e.target.closest('[data-restore]'); if (b) this.restoreFromHistory(parseInt(b.dataset.restore, 10)); });
+            on('clearHistoryBtn', 'click', () => this.clearHistory());
+            on('closeHistoryModal', 'click', () => this.hide('historyModal'));
+            on('historyModalBackdrop', 'click', () => this.hide('historyModal'));
+            on('closeError', 'click', () => this.hideErrorModal());
             // Keyboard: Escape closes overlays
             document.addEventListener('keydown', e => {
                 if (e.key === 'Escape') {
@@ -1557,7 +1410,6 @@
                     this.hideErrorModal();
                 }
             });
-            window.addEventListener('resize', () => { clearTimeout(this._resizeTimer); this._resizeTimer = setTimeout(() => this.updateImageBounds(), 200); });
         }
     }
 

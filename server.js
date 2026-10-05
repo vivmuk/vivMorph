@@ -60,6 +60,11 @@ async function handleListModels(req, res) {
       headers: { 'Authorization': `Bearer ${API_KEY}` }
     });
     const data = await response.json();
+    // Same filter as the Netlify function: only rows of the requested type, online.
+    if (response.ok && Array.isArray(data.data)) {
+      const filtered = data.data.filter(m => m && m.id && (!m.type || m.type === modelType) && !(m.model_spec && m.model_spec.offline));
+      if (filtered.length) data.data = filtered;
+    }
     cors(res);
     res.writeHead(response.status, {
       'Content-Type': 'application/json',
@@ -168,7 +173,7 @@ async function handleImageEdit(req, res) {
     if (body.aspect_ratio) venicePayload.aspect_ratio = body.aspect_ratio;
     // Quality tiers are supported by the newer edit models (e.g. GPT Image).
     if (body.quality) venicePayload.quality = body.quality;
-    if (body.mask) venicePayload.mask = body.mask;
+    // No mask: /image/edit has no mask parameter; masks are composited client-side.
 
     const response = await fetchWithRetry('https://api.venice.ai/api/v1/image/edit', {
       method: 'POST',

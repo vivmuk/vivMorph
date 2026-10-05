@@ -43,12 +43,22 @@ exports.handler = async (event, context) => {
 
     const data = await response.json();
 
+    // Venice tags every catalog row with its own `type`. Keep only rows of the
+    // requested type so the Edit/Combine pickers never list text-to-image models
+    // (and vice versa), and drop rows Venice reports as offline.
+    if (response.ok && Array.isArray(data.data)) {
+      const filtered = data.data.filter(m => m && m.id && (!m.type || m.type === modelType) && !(m.model_spec && m.model_spec.offline));
+      if (filtered.length) data.data = filtered;
+    }
+
     return {
       statusCode: response.status,
       headers: {
         'Access-Control-Allow-Origin': '*',
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=300'
+        'Cache-Control': 'public, max-age=300',
+        // Let Netlify's edge serve repeat catalog requests without a cold function call.
+        'Netlify-CDN-Cache-Control': response.ok ? 'public, s-maxage=300, stale-while-revalidate=3600' : 'no-store'
       },
       body: JSON.stringify(data)
     };
