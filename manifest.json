@@ -1,28 +1,49 @@
 {
-  "name": "vivMorph - AI Image Studio",
+  "id": "/",
+  "name": "vivMorph — AI Image Studio",
   "short_name": "vivMorph",
-  "description": "Create, combine, and edit images with AI. Mobile-first, powered by Venice.",
+  "description": "AI image studio in your pocket: create, combine and edit images — with precise mask painting — powered by Venice AI.",
+  "lang": "en",
+  "dir": "ltr",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#08080d",
-  "theme_color": "#7c5bf5",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "background_color": "#0b0d10",
+  "theme_color": "#e8722f",
   "orientation": "any",
   "icons": [
     {
-      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='32' fill='%236366f1'/%3E%3Cpolygon points='96 24 48 112 88 112 80 168 144 80 104 80 96 24' fill='white' stroke='white' stroke-width='4' stroke-linejoin='round'/%3E%3C/svg%3E",
+      "src": "/assets/icon-192.png",
       "sizes": "192x192",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='80' fill='%236366f1'/%3E%3Cpolygon points='256 64 128 298 234 298 214 448 384 214 278 214 256 64' fill='white' stroke='white' stroke-width='8' stroke-linejoin='round'/%3E%3C/svg%3E",
+      "src": "/assets/icon-512.png",
       "sizes": "512x512",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/favicon-32.png",
+      "sizes": "32x32",
+      "type": "image/png",
+      "purpose": "any"
     }
   ],
   "categories": [
     "photo",
+    "graphics",
     "utilities"
   ],
   "screenshots": [],

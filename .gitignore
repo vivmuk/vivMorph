@@ -44,4 +44,19 @@ coverage/
 
 # Temporary folders
 tmp/
-temp/ 
+temp/
+
+# Local runtime data (never commit generated images or stores)
+data/
+
+# Local secrets — any env file, keys and certificates
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+secrets/
+.secrets/
+
+# Netlify CLI local state (contains site id / linked account)
+.netlify/

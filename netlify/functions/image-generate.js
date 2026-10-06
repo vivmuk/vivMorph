@@ -81,6 +81,42 @@ exports.handler = async (event, context) => {
     if (requestBody.format) {
       venicePayload.format = requestBody.format;
     }
+    // --- Newer Venice generation capabilities ---
+    // Style presets come from GET /api/v1/image/styles (see image-styles.js).
+    if (requestBody.style_preset) {
+      venicePayload.style_preset = requestBody.style_preset;
+    }
+    // Style reference images: an array of base64/data-URI strings.
+    if (Array.isArray(requestBody.style_references) && requestBody.style_references.length) {
+      venicePayload.style_references = requestBody.style_references.slice(0, 3);
+    }
+    // 1-4 candidates in a single call (only honoured for return_binary=false).
+    if (requestBody.variants) {
+      const n = Number(requestBody.variants);
+      if (Number.isFinite(n) && n >= 1 && n <= 4) venicePayload.variants = Math.floor(n);
+    }
+    // Reproducibility
+    if (Number.isFinite(Number(requestBody.seed))) {
+      venicePayload.seed = Math.floor(Number(requestBody.seed));
+    }
+    // Rewrite the prompt before generating
+    if (typeof requestBody.enhance_prompt === 'boolean') {
+      venicePayload.enhance_prompt = requestBody.enhance_prompt;
+    }
+    // Let the model search the web while composing the image
+    if (typeof requestBody.enable_web_search === 'boolean') {
+      venicePayload.enable_web_search = requestBody.enable_web_search;
+    }
+    // Skip the prompt-optimisation thinking pass — noticeably faster, slightly less refined
+    if (typeof requestBody.disable_prompt_optimization_thinking === 'boolean') {
+      venicePayload.disable_prompt_optimization_thinking = requestBody.disable_prompt_optimization_thinking;
+    }
+    if (typeof requestBody.safe_mode === 'boolean') {
+      venicePayload.safe_mode = requestBody.safe_mode;
+    }
+    if (typeof requestBody.hide_watermark === 'boolean') {
+      venicePayload.hide_watermark = requestBody.hide_watermark;
+    }
 
     // Forward the request to Venice AI API with retry for transient errors
     const maxRetries = 2;

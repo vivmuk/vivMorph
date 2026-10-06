@@ -5,27 +5,55 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
     <title>vivMorph - AI Image Editor</title>
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#ffffff">
+    <meta name="theme-color" content="#0b0d10">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="vivMorph">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+    <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+    <!-- Display font loads without blocking first paint; body text uses the system stack -->
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&display=swap" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&display=swap"></noscript>
+    <!-- Critical CSS inlined: first paint needs zero network round-trips.
+         Mirrors the head of src/styles.css so the splash renders before /styles.css lands. -->
+    <style>
+      :root{--c-bg:#0b0d10;--c-surface:#14171c;--c-surface2:#1c2027;--c-surface3:#2a2f38;--c-border:#252a32;--c-glow:#e8722f;--c-glow-hi:#f0a04b;--c-glow-soft:rgba(232,114,47,.12);--c-glow2:#2ec4a6;--c-glow2-deep:#1f9e8a;--c-glow3:#ff5a4e;--c-danger:#ff6b5e;--c-text:#f2f0ec;--c-dim:#a7adb5;--c-label:#8b9199;--f-sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;--f-mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;color-scheme:dark}
+      html,body{margin:0;background:var(--c-bg);color:var(--c-text);font-family:var(--f-sans)}
+      #splash{position:fixed;inset:0;z-index:1000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:#0b0d10;pointer-events:none;transition:opacity .24s ease,transform .24s ease}
+      #splash.out{opacity:0;transform:scale(1.04)}
+      .splash-stage{position:relative;width:132px;height:132px;display:flex;align-items:center;justify-content:center}
+      .splash-blob{position:absolute;inset:14px;background:linear-gradient(135deg,#f0a04b,#e8722f 55%,#1f9e8a);filter:blur(16px);opacity:.55;border-radius:50%;animation:vm-morph .9s cubic-bezier(.6,0,.4,1) infinite alternate}
+      .splash-mark{position:relative;width:76px;height:76px;animation:vm-pop .45s cubic-bezier(.2,.9,.3,1.2) both}
+      .splash-word{font:800 18px/1 var(--f-sans);letter-spacing:-.02em;color:#f2f0ec;animation:vm-fade .4s .1s ease both}
+      .splash-word span{color:#f0a04b}
+      @keyframes vm-morph{0%{border-radius:50%;transform:scale(1) rotate(0deg)}50%{border-radius:38% 62% 55% 45% / 52% 40% 60% 48%}100%{border-radius:22%;transform:scale(.86) rotate(45deg)}}
+      @keyframes vm-pop{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:none}}
+      @keyframes vm-fade{from{opacity:0}to{opacity:1}}
+    </style>
     <!-- Precompiled Tailwind + app styles (src/styles.css → npm run build:css) -->
     <link rel="stylesheet" href="/styles.css">
 </head>
 <body class="font-sans select-none" style="height: 100vh; height: 100dvh;">
+    <!-- SPLASH — cold start only. Renders from inline markup, so it paints before any
+         network request. pointer-events:none means it can never block a tap: anything
+         the user does falls straight through to the app and dismisses it. -->
+    <div id="splash" aria-hidden="true">
+        <div class="splash-stage">
+            <div class="splash-blob"></div>
+            <img class="splash-mark" src="/assets/logo.svg" width="76" height="76" alt="">
+        </div>
+        <div class="splash-word">viv<span>Morph</span></div>
+    </div>
     <div id="app" class="w-full flex flex-col" style="height: 100vh; height: 100dvh;">
         <!-- TOP BAR -->
         <header class="app-header shrink-0 px-4 py-2.5 flex items-center justify-between" style="padding-top: max(0.625rem, env(safe-area-inset-top));">
             <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background: linear-gradient(135deg, #7a58ff, #14b88a);">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                </div>
+                <img src="/assets/logo.svg" width="32" height="32" alt="" class="rounded-xl" style="width:32px;height:32px;display:block;">
                 <div>
                     <h1 class="text-sm font-bold tracking-tight leading-none">
-                        <span>viv</span><span style="background: linear-gradient(135deg, #6c47ff, #0e9f76); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">Morph</span>
+                        <span>viv</span><span style="background: linear-gradient(135deg, #e8722f, #2ec4a6); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">Morph</span>
                     </h1>
                     <p class="text-[9px] font-mono mt-0.5" style="color: var(--c-label);">AI Image Studio</p>
                 </div>
@@ -107,6 +135,41 @@
                     <div class="flex flex-wrap gap-1.5" id="createResChips"></div>
                 </div>
 
+                <div class="mb-4">
+                    <h3 class="section-label mb-2">Style</h3>
+                    <div class="chip-row" id="createStyleChips">
+                        <button class="tag on" data-style="">None</button>
+                    </div>
+                    <p class="text-[10px] mt-1" style="color: var(--c-label);" id="createStyleHint">Loading Venice's style presets…</p>
+                </div>
+
+                <div class="mb-4">
+                    <button id="createAdvToggle" class="w-full flex items-center justify-between px-4 py-2.5 card text-left" aria-expanded="false">
+                        <span class="text-[12px] font-semibold">Advanced</span>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color: var(--c-label);"><path d="M6 9l6 6 6-6"/></svg>
+                    </button>
+                    <div id="createAdv" class="hidden mt-3 card p-3">
+                        <div class="mb-3">
+                            <h3 class="section-label mb-1">Negative prompt</h3>
+                            <textarea id="createNegative" class="prompt-area w-full h-16 p-2" placeholder="What you don't want in the image…"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <h3 class="section-label mb-1">Variants</h3>
+                            <div class="flex flex-wrap gap-1.5" id="createVariantChips"></div>
+                            <p class="text-[10px] mt-1" style="color: var(--c-label);">Ask for up to 4 in one call, then pick the best.</p>
+                        </div>
+                        <div class="mb-3">
+                            <h3 class="section-label mb-1">Seed</h3>
+                            <input id="createSeed" type="number" inputmode="numeric" class="text-input w-full text-[16px] px-3 py-1.5" placeholder="Random — set a number to repeat a result">
+                        </div>
+                        <div class="flex flex-col gap-2 text-[12px]">
+                            <label class="flex items-center gap-2" style="cursor:pointer;"><input type="checkbox" id="createEnhance"> <span>Enhance my prompt automatically</span></label>
+                            <label class="flex items-center gap-2" style="cursor:pointer;"><input type="checkbox" id="createWebSearch"> <span>Let the model search the web first</span></label>
+                            <label class="flex items-center gap-2" style="cursor:pointer;"><input type="checkbox" id="createFast"> <span>Fast mode — skip prompt optimisation</span></label>
+                        </div>
+                    </div>
+                </div>
+
                 <button id="createGenerateBtn" class="glow-btn w-full h-12 flex items-center justify-center gap-2 text-sm mt-2">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
                     <span>Generate</span>
@@ -116,6 +179,7 @@
                     <div class="card overflow-hidden">
                         <img id="createResultImg" class="w-full" alt="Generated image" decoding="async">
                     </div>
+                    <div id="createVariantStrip" class="hidden flex gap-2 mt-3 overflow-x-auto"></div>
                     <div class="flex gap-2 mt-3">
                         <button id="createDownloadBtn" class="btn-soft flex-1 py-2.5 text-sm">Download</button>
                         <button id="createUseEditBtn" class="btn-soft flex-1 py-2.5 text-sm">Use as edit input</button>
@@ -195,7 +259,7 @@
                                 <span id="editMaskBtnLabel">Paint mask</span>
                             </button>
                             <button id="editChangeBtn" class="btn-soft px-4 py-2 text-sm">Change photo</button>
-                            <span id="editMaskBadge" class="hidden self-center text-[11px] font-semibold px-2 py-1 rounded-lg" style="background: rgba(224,40,125,0.08); color: var(--c-glow3);">Mask on</span>
+                            <span id="editMaskBadge" class="hidden self-center text-[11px] font-semibold px-2 py-1 rounded-lg" style="background: rgba(255,90,78,0.08); color: var(--c-glow3);">Mask on</span>
                         </div>
                         <div id="editMaskTools" class="hidden mt-3 card p-3">
                             <div class="flex items-center gap-2 flex-wrap">
@@ -266,57 +330,101 @@
                 </div>
             </div>
 
-            <!-- ABOUT TAB -->
-            <div id="tab-about" class="tab-content p-4 max-w-3xl mx-auto w-full text-sm" style="color: var(--c-dim);">
-                <h2 class="text-lg font-bold mb-4" style="color: var(--c-text);">How to use</h2>
+                            <!-- ABOUT TAB — visual, annotated walkthroughs. Every screen below is a
+                     live HTML mock of the real UI; the numbered pins sit exactly where you
+                     tap. Mask gets the full animated brush replay. -->
+                <div id="tab-about" class="tab-content p-4 max-w-3xl mx-auto w-full text-sm" style="color: var(--c-dim);">
 
-                <div class="mb-6">
-                    <h3 class="font-semibold mb-2" style="color: var(--c-text);">Create</h3>
-                    <ul class="list-disc pl-5 space-y-1 text-[13px]">
-                        <li>Enter a prompt describing the image you want.</li>
-                        <li>Pick aspect ratio and model (prices shown in picker).</li>
-                        <li>Tap Generate. Result appears below.</li>
-                        <li>Use "Use as edit input" or "Iterate" to continue.</li>
-                    </ul>
-                </div>
+                    <img class="about-hero mb-5" src="/assets/hero.webp" alt="vivMorph" width="2752" height="1536" loading="lazy" decoding="async">
 
-                <div class="mb-6">
-                    <h3 class="font-semibold mb-2" style="color: var(--c-text);">Combine</h3>
-                    <ul class="list-disc pl-5 space-y-1 text-[13px]">
-                        <li>Add 1-3 images (max 25MB each, HEIC supported).</li>
-                        <li>Write a prompt describing the blend.</li>
-                        <li>Select a combine-capable model.</li>
-                        <li>Tap Blend to generate the merged result.</li>
-                    </ul>
-                </div>
+                    <h2 class="text-lg font-bold mb-1" style="color: var(--c-text);">See it, then do it</h2>
+                    <p class="text-[13px] mb-4">Pick a feature, then step through the exact taps. The pins sit on the real control — tap a pin or a step to jump.</p>
 
-                <div class="mb-6">
-                    <h3 class="font-semibold mb-2" style="color: var(--c-text);">Edit</h3>
-                    <ul class="list-disc pl-5 space-y-1 text-[13px]">
-                        <li>Upload a single photo (drag, paste or tap).</li>
-                        <li>Optional: tap "Paint mask" and brush over the part to change. Only that area is replaced.</li>
-                        <li>Write your edit prompt and choose an edit model.</li>
-                        <li>Tap Apply Edit. Press and hold the result to compare with the original.</li>
-                    </ul>
-                </div>
+                    <div class="walk-chips mb-4" id="walkChips">
+                        <button class="tag" data-walk="create">Create</button>
+                        <button class="tag" data-walk="combine">Combine</button>
+                        <button class="tag" data-walk="edit">Edit</button>
+                        <button class="tag on" data-walk="mask">Mask</button>
+                    </div>
 
-                <div class="mb-6 p-4 card">
-                    <h3 class="font-semibold mb-2" style="color: var(--c-text);">Models + pricing</h3>
-                    <p class="text-[13px]">All models come from the live Venice catalog. Create lists text-to-image models; Edit and Combine list only Venice's image-edit models. Prices are shown in the model picker.</p>
-                </div>
+                    <div class="phone mb-4" id="walkPhone" data-step="1">
+                        <!-- title bar -->
+                        <div style="top:0;left:0;right:0;height:26px;background:#14171c;border-bottom:1px solid #252a32;display:flex;align-items:center;padding:0 10px;">
+                            <span id="walkTitle" style="font-size:9px;font-weight:800;color:#f2f0ec;letter-spacing:.02em;">EDIT</span>
+                            <span class="not1" style="margin-left:auto;font-size:8px;color:#a7adb5;">mask on</span>
+                        </div>
 
-                <div class="mb-6 p-4 card">
-                    <h3 class="font-semibold mb-2" style="color: var(--c-text);">Privacy</h3>
-                    <p class="text-[13px]">Models run with the privacy level shown per model in the picker (anonymized or private). History stays on this device.</p>
-                </div>
+                        <!-- the image being worked on -->
+                        <div data-t="2 3" style="top:30px;left:12px;width:208px;height:168px;border-radius:10px;background:linear-gradient(140deg,#2a2f38,#14171c 60%,#1f9e8a33);border:1px solid #252a32;overflow:hidden;">
+                            <svg viewBox="0 0 208 168" style="width:100%;height:100%;display:block;" aria-hidden="true">
+                                <circle cx="150" cy="52" r="22" fill="#f0a04b" opacity="0.22"/>
+                                <path d="M0 132 L52 88 L96 122 L140 76 L208 128 L208 168 L0 168 Z" fill="#2ec4a6" opacity="0.20"/>
+                                <!-- the mask: drawn on over the photo -->
+                                <path class="m-stroke" pathLength="100" d="M56 118 C 78 56, 132 56, 154 112"/>
+                                <circle class="m-brush" r="9" fill="#ff3b30" opacity="0.85">
+                                    <animateMotion dur="2.6s" repeatCount="indefinite" path="M56 118 C 78 56, 132 56, 154 112"/>
+                                </circle>
+                            </svg>
+                        </div>
 
-                <div class="p-4 card">
-                    <h3 class="font-semibold mb-2" style="color: var(--c-text);">Mercury optimizer</h3>
-                    <p class="text-[13px]">Optional. Tap the star button next to any prompt to rewrite it. Preview the optimized version before applying. Never automatic.</p>
+                        <!-- secondary row: style chips (Create) / brush size (Mask) -->
+                        <div class="s2up" style="top:206px;left:12px;width:208px;height:30px;align-items:center;gap:5px;overflow:hidden;">
+                            <span class="ph-chip" id="walkChipA">Cinematic</span>
+                            <span class="ph-chip" id="walkChipB">Watercolor</span>
+                            <span class="ph-chip on" id="walkChipC">Photographic</span>
+                        </div>
+
+                        <!-- prompt box -->
+                        <div class="s2up" style="top:244px;left:12px;width:208px;height:54px;border-radius:10px;background:#14171c;border:1px solid #252a32;padding:8px 9px;">
+                            <span id="walkPrompt" style="font-size:9px;color:#a7adb5;line-height:1.4;display:block;">replace the sky with a warm sunset</span>
+                        </div>
+
+                        <!-- primary action -->
+                        <div class="s3up" style="top:306px;left:12px;width:208px;height:34px;border-radius:10px;background:linear-gradient(135deg,#e8722f,#f0a04b);align-items:center;justify-content:center;">
+                            <span id="walkBtn" style="font-size:10px;font-weight:800;color:#0b0d10;">Morph</span>
+                        </div>
+
+                        <!-- bottom tab bar -->
+                        <div style="top:366px;left:0;right:0;height:48px;background:#14171c;border-top:1px solid #252a32;display:flex;align-items:center;">
+                            <span class="ph-chip" data-walk-tab="create" style="flex:1;text-align:center;border:none;background:none;">Create</span>
+                            <span class="ph-chip" data-walk-tab="combine" style="flex:1;text-align:center;border:none;background:none;">Combine</span>
+                            <span class="ph-chip on" data-walk-tab="edit" style="flex:1;text-align:center;border:none;background:none;">Edit</span>
+                            <span class="ph-chip" data-walk-tab="about" style="flex:1;text-align:center;border:none;background:none;">About</span>
+                        </div>
+
+                        <!-- pins are injected here so they always sit on top -->
+                        <div id="walkPins" style="top:0;left:0;right:0;bottom:0;pointer-events:none;"></div>
+                    </div>
+
+                    <p class="text-[11px] mb-2" style="color: var(--c-label);">Tap a pin or a step to replay it. The brush replay on the mask step is pure CSS — nothing is downloaded.</p>
+
+                    <ol class="steps mb-6" id="walkSteps"></ol>
+
+                    <div class="mb-4 p-4 card">
+                        <h3 class="font-semibold mb-2" style="color: var(--c-text);">Why the mask matters</h3>
+                        <p class="text-[13px]">Without a mask, an edit model is free to redraw the whole picture. With one, only the painted area is replaced and everything else stays pixel-for-pixel. That is the difference between "an image like mine" and "my image, changed here".</p>
+                    </div>
+
+                    <div class="mb-4 p-4 card">
+                        <h3 class="font-semibold mb-2" style="color: var(--c-text);">Styles, variants and speed</h3>
+                        <p class="text-[13px]">Create can apply any of Venice's 76 style presets, ask for up to 4 variants in one call so you can pick the best, and turn on web search or prompt enhancement. The fast toggle skips the prompt-optimisation pass when you want a result quickly.</p>
+                    </div>
+
+                    <div class="mb-4 p-4 card">
+                        <h3 class="font-semibold mb-2" style="color: var(--c-text);">Models + pricing</h3>
+                        <p class="text-[13px]">All models come from the live Venice catalog. Create lists text-to-image models; Edit and Combine list only Venice's image-edit models. Prices are shown in the model picker.</p>
+                    </div>
+
+                    <div class="p-4 card">
+                        <h3 class="font-semibold mb-2" style="color: var(--c-text);">Leaving and coming back</h3>
+                        <p class="text-[13px]">Switch apps, lock the phone, close the tab — it is fine. In-flight work is written down before it starts and your results are stored on this device, so reopening vivMorph puts you back where you were with the image still there. Nothing is uploaded anywhere except to Venice to make the image.</p>
+                    </div>
                 </div>
-            </div>
-        </main>
+            </main>
     </div>
+
+    <!-- TOASTS — non-blocking feedback (the CSS lives in styles.css as #toastHost/.toast) -->
+    <div id="toastHost" aria-live="polite"></div>
 
     <!-- MODEL PICKER MODAL (shared) -->
     <div id="modelModal" class="fixed inset-0 z-[100] hidden">
@@ -382,7 +490,7 @@
         </div>
     </div>
 
-    <div id="loadingOverlay" class="hidden fixed inset-0 z-[150] flex items-center justify-center" style="background: rgba(247,246,251,0.88);">
+    <div id="loadingOverlay" class="hidden fixed inset-0 z-[150] flex items-center justify-center" style="background: rgba(11,13,16,0.88);">
         <div class="text-center">
             <div class="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 mx-auto card">
                 <svg class="spinner h-7 w-7" style="color: var(--c-glow);" fill="none" viewBox="0 0 24 24">
@@ -392,7 +500,7 @@
             </div>
             <p id="progressText" class="text-xs font-medium mb-3">Processing...</p>
             <div class="w-48 h-1.5 rounded-full overflow-hidden mx-auto" style="background: var(--c-surface3);">
-                <div id="progressBar" class="h-full rounded-full transition-all duration-500" style="width:0%; background: linear-gradient(90deg, #6c47ff, #0e9f76);"></div>
+                <div id="progressBar" class="h-full rounded-full transition-all duration-500" style="width:0%; background: linear-gradient(90deg, #e8722f, #2ec4a6);"></div>
             </div>
         </div>
     </div>
@@ -461,18 +569,38 @@
             return 'data:' + mime + ';base64,' + b64;
         }
 
-        async fetchJSON(url, opts, timeoutMs = 180000) {
+        async fetchJSON(url, opts, timeoutMs = 180000, _attempt = 0) {
             const ctrl = new AbortController();
             const t = setTimeout(() => ctrl.abort(), timeoutMs);
             try {
                 const r = await fetch(url, { ...opts, signal: ctrl.signal });
+                // Retry only transient failures: 429 and 5xx. Every other 4xx is a real
+                // answer (bad prompt, no credit, bad key) and retrying would just burn time.
+                if ((r.status === 429 || r.status >= 500) && _attempt < 2) {
+                    clearTimeout(t);
+                    await new Promise(res => setTimeout(res, 1000 * Math.pow(3, _attempt)));
+                    return this.fetchJSON(url, opts, timeoutMs, _attempt + 1);
+                }
                 const data = await r.json().catch(() => ({}));
-                if (!r.ok) throw new Error(data.error || data.message || ('Request failed (' + r.status + ')'));
+                if (!r.ok) throw new Error(this.friendlyError(r.status, data));
                 return data;
             } catch (e) {
-                if (e.name === 'AbortError') throw new Error('Request timed out. Please try again.');
+                if (e.name === 'AbortError') throw new Error('That took too long and was stopped. Check your connection and try again.');
+                if (e instanceof TypeError) throw new Error("Can't reach the image service — check you're online and try again.");
                 throw e;
             } finally { clearTimeout(t); }
+        }
+
+        // Turn an HTTP status into something a person can act on.
+        friendlyError(status, data) {
+            const server = data && (data.error || data.message);
+            if (status === 401 || status === 403) return 'The image service rejected this request — check the API key set in Netlify.';
+            if (status === 402) return 'This API key is out of credit. Top it up with Venice and try again.';
+            if (status === 404) return 'That model is no longer offered. Pick another one.';
+            if (status === 413) return 'That image is too large to send. Try a smaller one.';
+            if (status === 429) return 'Too many requests at once. Wait a few seconds and try again.';
+            if (status >= 500) return 'The image service hiccuped. Try again — the second attempt usually works.';
+            return server || ('Request failed (' + status + ')');
         }
 
         canvasOf(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
@@ -483,6 +611,7 @@
             this.setupEventListeners();
             this.initMask();
             this.registerServiceWorker();
+            this.setupCreateExtras();
             this.loadHistory(); // async, IndexedDB - does not block the UI
             await this.fetchModels();
         }
@@ -501,8 +630,16 @@
         }
 
         registerServiceWorker() {
-            if ('serviceWorker' in navigator && location.protocol === 'https:') {
+            // Service workers need a secure context: HTTPS in production, or localhost
+            // during development. The previous check required HTTPS outright, which
+            // silently disabled the SW (and therefore offline + resume) on localhost.
+            const isLocalhost = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
+            if ('serviceWorker' in navigator && (location.protocol === 'https:' || isLocalhost)) {
                 navigator.serviceWorker.register('/sw.js').catch(() => {});
+            }
+            // Ask the OS not to evict the images we keep in IndexedDB under storage pressure.
+            if (navigator.storage && navigator.storage.persist) {
+                navigator.storage.persist().catch(() => {});
             }
         }
 
@@ -911,7 +1048,7 @@
             ctx.globalCompositeOperation = this.mask.tool === 'eraser' ? 'destination-out' : 'source-over';
             // Opaque ink; the canvas's CSS opacity makes it a translucent overlay, so
             // overlapping strokes don't build up darker.
-            ctx.fillStyle = ctx.strokeStyle = '#e0287d';
+            ctx.fillStyle = ctx.strokeStyle = '#ff5a4e';
             ctx.lineCap = ctx.lineJoin = 'round';
             ctx.lineWidth = this.mask.size * 2 * scale;
             ctx.beginPath();
@@ -980,6 +1117,107 @@
         }
 
         // ==================== ACTIONS ====================
+        // Non-blocking feedback. Falls back to the status line if the host is missing.
+        toast(msg, kind = '', timeout = 5000) {
+            const host = this.$('toastHost');
+            if (!host) { this.setStatus(msg); return; }
+            const el = document.createElement('div');
+            el.className = 'toast ' + kind;
+            el.innerHTML = '<span class="msg"></span><button aria-label="Dismiss">&times;</button>';
+            el.querySelector('.msg').textContent = msg;   // textContent: never inject a server string as HTML
+            el.querySelector('button').addEventListener('click', () => el.remove());
+            host.appendChild(el);
+            setTimeout(() => {
+                el.classList.add('out');
+                setTimeout(() => el.remove(), 200);
+            }, timeout);
+        }
+
+        // ==================== CREATE: style presets + advanced options ====================
+        setupCreateExtras() {
+            this.createStyle = '';
+            this.createVariants = 1;
+
+            const advBtn = this.$('createAdvToggle'), adv = this.$('createAdv');
+            if (advBtn && adv) {
+                advBtn.addEventListener('click', () => {
+                    adv.classList.toggle('hidden');
+                    const isOpen = !adv.classList.contains('hidden');
+                    advBtn.setAttribute('aria-expanded', String(isOpen));
+                    const chev = advBtn.querySelector('svg');
+                    if (chev) chev.style.transform = isOpen ? 'rotate(180deg)' : '';
+                });
+            }
+
+            const vc = this.$('createVariantChips');
+            if (vc) {
+                vc.innerHTML = [1, 2, 3, 4].map(n =>
+                    '<button class="tag' + (n === 1 ? ' on' : '') + '" data-v="' + n + '">' + n + '</button>').join('');
+                vc.addEventListener('click', (e) => {
+                    const b = e.target.closest('[data-v]');
+                    if (!b) return;
+                    this.createVariants = Number(b.getAttribute('data-v'));
+                    vc.querySelectorAll('[data-v]').forEach(x => x.classList.toggle('on', x === b));
+                });
+            }
+
+            this.loadStyles();
+        }
+
+        async loadStyles() {
+            const host = this.$('createStyleChips');
+            const hint = this.$('createStyleHint');
+            if (!host) return;
+            const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+            try {
+                const data = await this.fetchJSON('/.netlify/functions/image-styles', { method: 'GET' }, 20000);
+                const styles = (data && data.styles) || [];
+                if (!styles.length) throw new Error('empty');
+                host.innerHTML = '<button class="tag on" data-style="">None</button>' +
+                    styles.map(s => '<button class="tag" data-style="' + esc(s) + '">' + esc(s) + '</button>').join('');
+                host.addEventListener('click', (e) => {
+                    const b = e.target.closest('[data-style]');
+                    if (!b) return;
+                    this.createStyle = b.getAttribute('data-style');
+                    host.querySelectorAll('[data-style]').forEach(x => x.classList.toggle('on', x === b));
+                    if (hint) hint.textContent = this.createStyle ? 'Style: ' + this.createStyle : styles.length + ' styles available';
+                });
+                if (hint) hint.textContent = styles.length + ' styles available — scroll sideways';
+            } catch (e) {
+                if (hint) hint.textContent = 'Style presets unavailable right now.';
+            }
+        }
+
+        // A single call can return up to 4 candidates; show the first and let the user swap.
+        renderCreateVariants(list, prompt) {
+            const main = this.$('createResultImg');
+            const strip = this.$('createVariantStrip');
+            const show = (b64) => { main.src = this.b64ToDataUrl(b64); this._createResultB64 = b64; };
+            show(list[0]);
+            this.show('createResult');
+            list.forEach(b64 => this.addToHistory(prompt, this.createModel.id, b64));
+
+            if (list.length > 1 && strip) {
+                strip.innerHTML = list.map((b64, i) =>
+                    '<button data-variant="' + i + '" style="padding:0;border:0;background:none;cursor:pointer;flex:0 0 auto;">' +
+                    '<img src="' + this.b64ToDataUrl(b64) + '" alt="Variant ' + (i + 1) + '" style="width:64px;height:64px;object-fit:cover;border-radius:10px;display:block;border:2px solid ' +
+                    (i === 0 ? 'var(--c-glow)' : 'transparent') + ';border-color:' + (i === 0 ? 'var(--c-glow)' : 'transparent') + ';"></button>').join('');
+                strip.classList.remove('hidden');
+                strip.querySelectorAll('[data-variant]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const i = Number(btn.getAttribute('data-variant'));
+                        show(list[i]);
+                        strip.querySelectorAll('[data-variant] img').forEach((img, j) => {
+                            img.style.border = '2px solid ' + (j === i ? 'var(--c-glow)' : 'transparent');
+                        });
+                    });
+                });
+            } else if (strip) {
+                strip.innerHTML = '';
+                strip.classList.add('hidden');
+            }
+        }
+
         async generateImage() {
             const prompt = this.$('createPrompt').value.trim();
             if (!prompt) { this.setStatus('Write a prompt first'); return; }
@@ -987,19 +1225,28 @@
             const payload = { model: this.createModel.id, prompt, format: 'png' };
             if (this.createAspectRatio && this.createAspectRatio !== 'auto') payload.aspect_ratio = this.createAspectRatio;
             if (this.createResolution) payload.resolution = this.createResolution;
+            // Venice capabilities the app previously did not use.
+            if (this.createStyle) payload.style_preset = this.createStyle;
+            const neg = this.$('createNegative');
+            if (neg && neg.value.trim()) payload.negative_prompt = neg.value.trim();
+            if (this.createVariants > 1) payload.variants = this.createVariants;
+            const seedEl = this.$('createSeed');
+            if (seedEl && seedEl.value !== '' && Number.isFinite(Number(seedEl.value))) payload.seed = Math.floor(Number(seedEl.value));
+            if (this.$('createEnhance') && this.$('createEnhance').checked) payload.enhance_prompt = true;
+            if (this.$('createWebSearch') && this.$('createWebSearch').checked) payload.enable_web_search = true;
+            if (this.$('createFast') && this.$('createFast').checked) payload.disable_prompt_optimization_thinking = true;
+
             this.showProgress('Generating with ' + this.modelName(this.createModel, 'create') + '...');
             try {
                 const data = await this.fetchJSON('/.netlify/functions/image-generate', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
                 });
-                const b64 = (data.images && data.images[0]) || data.image;
-                if (!b64) throw new Error('No image in response');
+                const list = (data.images && data.images.length) ? data.images : (data.image ? [data.image] : []);
+                if (!list.length) throw new Error('No image came back from the service.');
                 this.completeProgress();
-                this.$('createResultImg').src = this.b64ToDataUrl(b64);
-                this.show('createResult');
-                this._createResultB64 = b64;
-                this.addToHistory(prompt, this.createModel.id, b64);
-                this.setStatus('Image generated');
+                this.renderCreateVariants(list, prompt);
+                this.setStatus(list.length > 1 ? list.length + ' variants ready' : 'Image generated');
+                if (list.length > 1) this.toast(list.length + ' variants generated — tap one to keep it', 'ok');
             } catch (e) {
                 this.showError(e.message);
             } finally {
@@ -1416,6 +1663,174 @@
     // Boot
     window.vivMorph = new VivMorph();
     window.vivMorph.init();
+    </script>
+    <script>
+    // ==================== SPLASH (cold start only) ====================
+    // Runs as a plain inline script so it executes the instant the markup is parsed —
+    // no waiting on the app bundle, no network. It can never trap the user: the splash
+    // is pointer-events:none, and any interaction dismisses it immediately.
+    (function () {
+      var el = document.getElementById('splash');
+      if (!el) return;
+      var KEY = 'vivmorph_splash_shown';
+      var seen = false;
+      try { seen = sessionStorage.getItem(KEY) === '1'; } catch (e) {}
+      if (seen) { el.remove(); return; }          // only on a genuine cold start
+      try { sessionStorage.setItem(KEY, '1'); } catch (e) {}
+      var done = false;
+      function dismiss() {
+        if (done) return;
+        done = true;
+        el.classList.add('out');
+        setTimeout(function () { el.remove(); }, 260);
+      }
+      ['pointerdown', 'touchstart', 'keydown', 'wheel'].forEach(function (t) {
+        window.addEventListener(t, dismiss, { passive: true, once: true });
+      });
+      setTimeout(dismiss, 850);                    // well under a second
+      window.__vmSplashDone = dismiss;
+    })();
+
+    // Init timing, so "is it actually fast?" is measurable rather than a feeling.
+    try {
+      performance.mark('vivmorph-init-start');
+      window.addEventListener('load', function () {
+        performance.mark('vivmorph-init-end');
+        var t = performance.getEntriesByName('vivmorph-init-start')[0];
+        var e = performance.getEntriesByName('vivmorph-init-end')[0];
+        if (t && e) console.log('[vivMorph] interactive in ' + Math.round(e.startTime - t.startTime) + 'ms');
+      }, { once: true });
+    } catch (e) {}
+    
+    // ==================== ABOUT: annotated walkthroughs ====================
+    // One live HTML mock of the app, driven by step data. The pins are positioned from
+    // the same data, so a pin can never drift away from the control it describes.
+    (function () {
+      var X = { create: 29, combine: 87, edit: 116, about: 203 };
+      var TABY = 390, PHOTO = 114, CHIPS = 221, PROMPT = 271, ACTION = 323;
+
+      var WALKS = {
+        create: [
+          { tab:'create', title:'CREATE', chipA:'Cinematic', chipB:'Watercolor', chipC:'Photographic',
+            prompt:'a lighthouse in a storm', btn:'Generate', px:X.create, py:TABY,
+            b:'Tap Create', p:'The Create tab starts a new image from words alone.' },
+          { tab:'create', title:'CREATE', chipA:'Cinematic', chipB:'Watercolor', chipC:'Photographic',
+            prompt:'a lighthouse in a storm, cinematic light', btn:'Generate', px:116, py:PROMPT,
+            b:'Describe it', p:'Type what you want. Tap Optimize to have the prompt rewritten first.' },
+          { tab:'create', title:'CREATE', chipA:'Cinematic', chipB:'Watercolor', chipC:'Photographic',
+            prompt:'a lighthouse in a storm, cinematic light', btn:'Generate', px:116, py:CHIPS,
+            b:'Pick a style', p:'76 style presets plus aspect ratio and resolution. A style changes the look, not the content.' },
+          { tab:'create', title:'CREATE', chipA:'Cinematic', chipB:'Watercolor', chipC:'Photographic',
+            prompt:'a lighthouse in a storm, cinematic light', btn:'Generate', px:116, py:ACTION,
+            b:'Generate', p:'Ask for up to 4 variants in one call, then keep the one you like.' }
+        ],
+        combine: [
+          { tab:'combine', title:'COMBINE', chipA:'2 images', chipB:'3 images', chipC:'HEIC ok',
+            prompt:'', btn:'Blend', px:X.combine, py:TABY,
+            b:'Tap Combine', p:'Combine merges 2-3 photos into a single new image.' },
+          { tab:'combine', title:'COMBINE', chipA:'2 images', chipB:'3 images', chipC:'HEIC ok',
+            prompt:'', btn:'Blend', px:116, py:PHOTO,
+            b:'Add your images', p:'Tap, drag or paste. Photos straight from an iPhone work.' },
+          { tab:'combine', title:'COMBINE', chipA:'2 images', chipB:'3 images', chipC:'HEIC ok',
+            prompt:'put them in one studio scene, matching light', btn:'Blend', px:116, py:PROMPT,
+            b:'Describe the merge', p:'Say how they should sit together. A relationship beats a list of objects.' },
+          { tab:'combine', title:'COMBINE', chipA:'2 images', chipB:'3 images', chipC:'HEIC ok',
+            prompt:'put them in one studio scene, matching light', btn:'Blend', px:116, py:ACTION,
+            b:'Blend', p:'Only combine-capable models are offered on this tab.' }
+        ],
+        edit: [
+          { tab:'edit', title:'EDIT', chipA:'brush', chipB:'eraser', chipC:'clear',
+            prompt:'', btn:'Morph', px:X.edit, py:TABY,
+            b:'Tap Edit', p:'Edit works on a single photo you already have.' },
+          { tab:'edit', title:'EDIT', chipA:'brush', chipB:'eraser', chipC:'clear',
+            prompt:'', btn:'Morph', px:116, py:PHOTO,
+            b:'Add a photo', p:'It stays on your device until you actually generate.' },
+          { tab:'edit', title:'EDIT', chipA:'brush', chipB:'eraser', chipC:'clear',
+            prompt:'', btn:'Morph', px:116, py:CHIPS,
+            b:'Optional: Paint mask', p:'Mask the part you want changed. Skip it and the model may redraw anything.' },
+          { tab:'edit', title:'EDIT', chipA:'brush', chipB:'eraser', chipC:'clear',
+            prompt:'make the jacket deep green', btn:'Morph', px:116, py:PROMPT,
+            b:'Say the change', p:'Describe only the change. Press and hold the result to compare with the original.' }
+        ],
+        mask: [
+          { tab:'edit', title:'EDIT', chipA:'brush', chipB:'eraser', chipC:'clear',
+            prompt:'', btn:'Morph', px:X.edit, py:TABY,
+            b:'Open Edit', p:'Start in Edit with the photo you want to change.' },
+          { tab:'edit', title:'EDIT', chipA:'brush', chipB:'eraser', chipC:'clear',
+            prompt:'', btn:'Morph', px:116, py:CHIPS,
+            b:'Tap Paint mask', p:'The mask tools appear: brush size, eraser, clear and undo.' },
+          { tab:'edit', title:'EDIT', chipA:'brush', chipB:'eraser', chipC:'clear',
+            prompt:'', btn:'Morph', px:116, py:PHOTO,
+            b:'Brush the area', p:'Paint over exactly what should change. Watch the red stroke replay above.' },
+          { tab:'edit', title:'EDIT', chipA:'brush', chipB:'eraser', chipC:'clear',
+            prompt:'replace the sky with a warm sunset', btn:'Morph', px:116, py:ACTION,
+            b:'Describe it, then Morph', p:'Only the painted area is replaced. Everything else stays untouched.', mask:true }
+        ]
+      };
+
+      var phone = document.getElementById('walkPhone');
+      var pinsHost = document.getElementById('walkPins');
+      var stepsHost = document.getElementById('walkSteps');
+      if (!phone || !pinsHost || !stepsHost) return;
+
+      var strokeSvg = phone.querySelector('.m-stroke') ? phone.querySelector('.m-stroke').ownerSVGElement : null;
+      var walk = 'mask', step = 0;
+
+      function pin(i) {
+        return '<span class="pin' + (i === step ? ' on' : '') + '" data-goto="' + i + '" ' +
+               'style="left:' + WALKS[walk][i].px + 'px;top:' + WALKS[walk][i].py + 'px;position:absolute;">' + (i + 1) + '</span>';
+      }
+
+      function render() {
+        var s = WALKS[walk][step];
+
+        phone.setAttribute('data-step', String(step + 1));
+        document.getElementById('walkTitle').textContent = s.title;
+        document.getElementById('walkPrompt').textContent = s.prompt || 'Your prompt goes here';
+        document.getElementById('walkBtn').textContent = s.btn;
+        document.getElementById('walkChipA').textContent = s.chipA;
+        document.getElementById('walkChipB').textContent = s.chipB;
+        document.getElementById('walkChipC').textContent = s.chipC;
+
+        phone.querySelectorAll('[data-walk-tab]').forEach(function (t) {
+          t.classList.toggle('on', t.getAttribute('data-walk-tab') === s.tab);
+        });
+
+        // The red mask stroke only belongs to the mask walkthrough, from step 3 on.
+        // An inline opacity beats the stylesheet, so '' hands control back to the CSS rules.
+        if (strokeSvg) strokeSvg.style.opacity = (walk === 'mask' && step >= 2) ? '' : '0';
+
+        pinsHost.innerHTML = WALKS[walk].map(function (_, i) { return pin(i); }).join('');
+
+        stepsHost.innerHTML = WALKS[walk].map(function (x, i) {
+          return '<li class="step' + (i === step ? ' on' : '') + '" data-goto="' + i + '">' +
+                 '<span class="step-n">' + (i + 1) + '</span>' +
+                 '<div><b>' + x.b + '</b><p>' + x.p + '</p></div></li>';
+        }).join('');
+      }
+
+      function goto(i) { step = i; render(); }
+
+      document.addEventListener('click', function (ev) {
+        var pinBtn = ev.target.closest ? ev.target.closest('.pin') : null;
+        var stepBtn = ev.target.closest ? ev.target.closest('.step') : null;
+        var chipBtn = ev.target.closest ? ev.target.closest('[data-walk]') : null;
+
+        if (pinBtn) { goto(Number(pinBtn.getAttribute('data-goto'))); return; }
+        if (stepBtn) { goto(Number(stepBtn.getAttribute('data-goto'))); return; }
+        if (chipBtn) {
+          walk = chipBtn.getAttribute('data-walk');
+          step = 0;
+          document.querySelectorAll('#walkChips .tag').forEach(function (t) {
+            t.classList.toggle('on', t.getAttribute('data-walk') === walk);
+          });
+          render();
+        }
+      });
+
+      render();
+    })();
+
     </script>
 </body>
 </html>
